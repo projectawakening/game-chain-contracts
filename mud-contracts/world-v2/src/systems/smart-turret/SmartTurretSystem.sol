@@ -19,8 +19,9 @@ import { SMART_TURRET } from "../constants.sol";
 import { EveSystem } from "../EveSystem.sol";
 
 contract SmartTurretSystem is EveSystem {
-  ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
+  error SmartTurret_NotConfigured(uint256 smartObjectId);
 
+  ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
   /**
       * @notice Create and anchor a Smart Turret
       * @param smartObjectId is smart object id of the Smart Turret

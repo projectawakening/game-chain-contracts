@@ -15,6 +15,8 @@ import { TargetPriority, Turret, SmartTurretTarget } from "../../systems/smart-t
  * @dev This interface is automatically generated from the corresponding system contract. Do not edit manually.
  */
 interface ISmartTurretSystem {
+  error SmartTurret_NotConfigured(uint256 smartObjectId);
+
   function evefrontier__createAndAnchorSmartTurret(
     uint256 smartObjectId,
     EntityRecordData memory entityRecordData,
