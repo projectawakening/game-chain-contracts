@@ -3,7 +3,7 @@
 
 ### Overview
 
-The Smart Object Framework (SOF) is a comprehensive abstraction layer built on top of MUD that provides structured on-chain entity management, system scoping, and execution context tracking.  while maintaining security and clear permission boundaries.
+The Smart Object Framework (SOF) is a comprehensive abstraction layer built on top of the [MUD Framework](https://github.com/latticexyz/mud) that provides structured on-chain entity management, system scoping, and execution context tracking.  while maintaining security and clear permission boundaries.
 
 ### Design Goals
 
@@ -178,9 +178,9 @@ This scoping model provides a robust and efficient way to manage system permissi
 
 1. Tag Assignment (configuring system-to-entity associations)
 
-	- Systems are tagged to Classes using [TagSystem](src/namespaces/evefrontier/systems/tag-system/TagSystem.sol)
-	- Classes maintain list of tagged Systems
-	- Systems maintain a list of tagged Classes
+	- Systems are tagged to Classes
+	- Classes maintain list of thier tagged Systems
+	- For each SystemTag a list of tagged Classes is maintained
 	- SystemTag to Class relation data is stored in a mapping table
 
 2. Scope Validation (the `scope` modifier)
