@@ -76,7 +76,7 @@ contract InventorySystem is EveSystem {
       });
       world().call(
         entityRecordUtils,
-        abi.encodeCall(EntityRecordSystem.createEntityRecord, (smartObjectId, entityRecord))
+        abi.encodeCall(EntityRecordSystem.createEntityRecord, (items[i].inventoryItemId, entityRecord))
       );
     }
 
