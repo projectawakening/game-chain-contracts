@@ -4,7 +4,7 @@
   "private": true,
   "license": "MIT",
   "scripts": {
-    "build": "pnpm run build:mud && pnpm run build:abi && pnpm run build:abi-ts",
+    "build": "mud build",
     "clean": "forge clean && rm -rf src/codegen && rm -rf out && rm -rf cache",
     "deploy:garnet": "mud deploy --profile=garnet",
     "deploy:local": "PRIVATE_KEY=$PRIVATE_KEY mud deploy --rpc $RPC_URL --alwaysRunPostDeploy",
