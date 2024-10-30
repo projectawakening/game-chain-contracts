@@ -8,16 +8,16 @@ import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.
 import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 import { System } from "@latticexyz/world/src/System.sol";
 
-import { State, SmartObjectData } from "@eveworld/world-v2/src/systems/deployable/types.sol";
-import { Coord, WorldPosition } from "@eveworld/world-v2/src/systems/location/types.sol";
-import { GlobalDeployableState } from "@eveworld/world-v2/src/codegen/tables/GlobalDeployableState.sol";
-import { DeployableUtils } from "@eveworld/world-v2/src/systems/deployable/DeployableUtils.sol";
-import { DeployableSystem } from "@eveworld/world-v2/src/systems/deployable/DeployableSystem.sol";
-import { SmartGateSystem } from "@eveworld/world-v2/src/systems/smart-gate/SmartGateSystem.sol";
-import { SmartGateUtils } from "@eveworld/world-v2/src/systems/smart-gate/SmartGateUtils.sol";
-import { FuelSystem } from "@eveworld/world-v2/src/systems/fuel/FuelSystem.sol";
-import { FuelUtils } from "@eveworld/world-v2/src/systems/fuel/FuelUtils.sol";
-import { EntityRecordData, EntityMetadata } from "@eveworld/world-v2/src/systems/entity-record/types.sol";
+import { State, SmartObjectData } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/types.sol";
+import { Coord, WorldPosition } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/location/types.sol";
+import { GlobalDeployableState } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/GlobalDeployableState.sol";
+import { DeployableUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
+import { DeployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
+import { SmartGateSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-gate/SmartGateSystem.sol";
+import { SmartGateUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-gate/SmartGateUtils.sol";
+import { FuelSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/fuel/FuelSystem.sol";
+import { FuelUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
+import { EntityRecordData, EntityMetadata } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/entity-record/types.sol";
 
 contract ConfigureSmartGate is Script {
   using WorldResourceIdInstance for ResourceId;

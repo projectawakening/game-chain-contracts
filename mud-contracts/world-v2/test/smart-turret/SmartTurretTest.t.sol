@@ -7,23 +7,23 @@ import { World } from "@latticexyz/world/src/World.sol";
 import { ResourceId, WorldResourceIdLib, WorldResourceIdInstance } from "@latticexyz/world/src/WorldResourceId.sol";
 import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 
-import { SmartAssembly } from "../../src/codegen/tables/SmartAssembly.sol";
-import { SmartTurretConfig } from "../../src/codegen/tables/SmartTurretConfig.sol";
-import { State, SmartObjectData } from "../../src/systems/deployable/types.sol";
-import { DeployableUtils } from "../../src/systems/deployable/DeployableUtils.sol";
-import { SmartCharacterUtils } from "../../src/systems/smart-character/SmartCharacterUtils.sol";
-import { FuelUtils } from "../../src/systems/fuel/FuelUtils.sol";
-import { SmartTurretUtils } from "../../src/systems/smart-turret/SmartTurretUtils.sol";
+import { SmartAssembly } from "../../src/namespaces/evefrontier/codegen/tables/SmartAssembly.sol";
+import { SmartTurretConfig } from "../../src/namespaces/evefrontier/codegen/tables/SmartTurretConfig.sol";
+import { State, SmartObjectData } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
+import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
+import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
+import { FuelUtils } from "../../src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
+import { SmartTurretUtils } from "../../src/namespaces/evefrontier/systems/smart-turret/SmartTurretUtils.sol";
 import { SmartTurretCustomMock } from "./SmartTurretCustomMock.sol";
-import { DeployableSystem } from "../../src/systems/deployable/DeployableSystem.sol";
-import { SmartCharacterSystem } from "../../src/systems/smart-character/SmartCharacterSystem.sol";
-import { EntityRecordData, EntityMetadata } from "../../src/systems/entity-record/types.sol";
-import { WorldPosition, Coord } from "../../src/systems/location/types.sol";
-import { SmartTurretSystem } from "../../src/systems/smart-turret/SmartTurretSystem.sol";
-import { FuelSystem } from "../../src/systems/fuel/FuelSystem.sol";
+import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
+import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
+import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
+import { WorldPosition, Coord } from "../../src/namespaces/evefrontier/systems/location/types.sol";
+import { SmartTurretSystem } from "../../src/namespaces/evefrontier/systems/smart-turret/SmartTurretSystem.sol";
+import { FuelSystem } from "../../src/namespaces/evefrontier/systems/fuel/FuelSystem.sol";
 
-import { SMART_TURRET } from "../../src/systems/constants.sol";
-import { TargetPriority, Turret, SmartTurretTarget } from "../../src/systems/smart-turret/types.sol";
+import { SMART_TURRET } from "../../src/namespaces/evefrontier/systems/constants.sol";
+import { TargetPriority, Turret, SmartTurretTarget } from "../../src/namespaces/evefrontier/systems/smart-turret/types.sol";
 
 /**
  * @title SmartTurretTest

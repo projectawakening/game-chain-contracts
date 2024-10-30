@@ -5,8 +5,8 @@ import { StoreSwitch } from "@latticexyz/store/src/StoreSwitch.sol";
 import { ResourceId, WorldResourceIdLib } from "@latticexyz/world/src/WorldResourceId.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 
-import { DeployableUtils } from "@eveworld/world-v2/src/systems/deployable/DeployableUtils.sol";
-import { DeployableSystem } from "@eveworld/world-v2/src/systems/deployable/DeployableSystem.sol";
+import { DeployableUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
+import { DeployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
 
 contract BringOffline is Script {
   // assumes CreateAndAnchor.s.sol and Deposit fuel has been run

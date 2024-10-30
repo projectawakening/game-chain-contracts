@@ -10,22 +10,21 @@ import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/Function
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
 import { IWorld } from "../../src/codegen/world/IWorld.sol";
-import { Fuel } from "../../src/codegen/index.sol";
-import { IFuelSystem } from "../../src/codegen/world/IFuelSystem.sol";
-import { FuelSystem } from "../../src/systems/fuel/FuelSystem.sol";
-import { Fuel, FuelData } from "../../src/codegen/tables/Fuel.sol";
-import { DeployableSystem } from "../../src/systems/deployable/DeployableSystem.sol";
-import { SmartCharacterSystem } from "../../src/systems/smart-character/SmartCharacterSystem.sol";
-import { SmartCharacterUtils } from "../../src/systems/smart-character/SmartCharacterUtils.sol";
-import { DeployableState, DeployableStateData } from "../../src/codegen/tables/DeployableState.sol";
-import { State, SmartObjectData } from "../../src/systems/deployable/types.sol";
-import { Location, LocationData } from "../../src/codegen/tables/Location.sol";
+import { Fuel } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { FuelSystem } from "../../src/namespaces/evefrontier/systems/fuel/FuelSystem.sol";
+import { Fuel, FuelData } from "../../src/namespaces/evefrontier/codegen/tables/Fuel.sol";
+import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
+import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
+import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
+import { DeployableState, DeployableStateData } from "../../src/namespaces/evefrontier/codegen/tables/DeployableState.sol";
+import { State, SmartObjectData } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
+import { Location, LocationData } from "../../src/namespaces/evefrontier/codegen/tables/Location.sol";
 
-import { DeployableUtils } from "../../src/systems/deployable/DeployableUtils.sol";
-import { EntityRecordData, EntityMetadata } from "../../src/systems/entity-record/types.sol";
-import { FuelUtils } from "../../src/systems/fuel/FuelUtils.sol";
+import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
+import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
+import { FuelUtils } from "../../src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
 
-import { DECIMALS, ONE_UNIT_IN_WEI } from "../../src/systems/constants.sol";
+import { DECIMALS, ONE_UNIT_IN_WEI } from "../../src/namespaces/evefrontier/systems/constants.sol";
 
 import { DeployableTest } from "../deployable/DeployableTest.t.sol";
 

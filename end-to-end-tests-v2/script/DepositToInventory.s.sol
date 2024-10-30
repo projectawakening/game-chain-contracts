@@ -5,9 +5,9 @@ import { StoreSwitch } from "@latticexyz/store/src/StoreSwitch.sol";
 import { ResourceId, WorldResourceIdLib } from "@latticexyz/world/src/WorldResourceId.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 
-import { InventoryItem } from "@eveworld/world-v2/src/systems/inventory/types.sol";
-import { InventoryUtils } from "@eveworld/world-v2/src/systems/inventory/InventoryUtils.sol";
-import { InventorySystem } from "@eveworld/world-v2/src/systems/inventory/InventorySystem.sol";
+import { InventoryItem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/types.sol";
+import { InventoryUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
+import { InventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/InventorySystem.sol";
 
 contract DepositToInventory is Script {
   function run(address worldAddress) public {

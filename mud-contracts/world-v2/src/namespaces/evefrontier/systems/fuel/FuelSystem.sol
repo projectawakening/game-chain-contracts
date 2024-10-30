@@ -5,7 +5,7 @@ import { System } from "@latticexyz/world/src/System.sol";
 import { Fuel, FuelData } from "../../codegen/index.sol";
 import { DeployableState, GlobalDeployableState, GlobalDeployableStateData } from "../../codegen/index.sol";
 
-import { State } from "../../codegen/common.sol";
+import { State } from "../../../../codegen/common.sol";
 import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
 
 /**

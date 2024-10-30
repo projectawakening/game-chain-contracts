@@ -8,23 +8,23 @@ import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.
 import { ResourceId, WorldResourceIdLib, WorldResourceIdInstance } from "@latticexyz/world/src/WorldResourceId.sol";
 import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 
-import { DeployableState, DeployableStateData } from "../../src/codegen/tables/DeployableState.sol";
-import { State, SmartObjectData } from "../../src/systems/deployable/types.sol";
-import { EntityRecord } from "../../src/codegen/index.sol";
-import { InventoryItemData, InventoryItem as InventoryItemTable } from "../../src/codegen/index.sol";
-import { EphemeralInvItemData, EphemeralInvItem } from "../../src/codegen/index.sol";
-import { EntityRecordData, EntityMetadata } from "../../src/systems/entity-record/types.sol";
-import { DEPLOYMENT_NAMESPACE } from "../../src/systems/constants.sol";
-import { SmartCharacterSystem } from "../../src/systems/smart-character/SmartCharacterSystem.sol";
-import { InventoryItem } from "../../src/systems/inventory/types.sol";
-import { InventoryUtils } from "../../src/systems/inventory/InventoryUtils.sol";
-import { SmartCharacterUtils } from "../../src/systems/smart-character/SmartCharacterUtils.sol";
-import { DeployableUtils } from "../../src/systems/deployable/DeployableUtils.sol";
-import { EphemeralInventorySystem } from "../../src/systems/inventory/EphemeralInventorySystem.sol";
-import { InventorySystem } from "../../src/systems/inventory/InventorySystem.sol";
-import { DeployableSystem } from "../../src/systems/deployable/DeployableSystem.sol";
-import { InventoryInteractSystem } from "../../src/systems/inventory/InventoryInteractSystem.sol";
-import { TransferItem } from "../../src/systems/inventory/types.sol";
+import { DeployableState, DeployableStateData } from "../../src/namespaces/evefrontier/codegen/tables/DeployableState.sol";
+import { State, SmartObjectData } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
+import { EntityRecord } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { InventoryItemData, InventoryItem as InventoryItemTable } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { EphemeralInvItemData, EphemeralInvItem } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
+import { DEPLOYMENT_NAMESPACE } from "../../src/namespaces/evefrontier/systems/constants.sol";
+import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
+import { InventoryItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
+import { InventoryUtils } from "../../src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
+import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
+import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
+import { EphemeralInventorySystem } from "../../src/namespaces/evefrontier/systems/inventory/EphemeralInventorySystem.sol";
+import { InventorySystem } from "../../src/namespaces/evefrontier/systems/inventory/InventorySystem.sol";
+import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
+import { InventoryInteractSystem } from "../../src/namespaces/evefrontier/systems/inventory/InventoryInteractSystem.sol";
+import { TransferItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
 import { VendingMachineMock } from "./VendingMachineMock.sol";
 
 contract InventoryInteractTest is MudTest {

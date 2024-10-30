@@ -2,8 +2,8 @@
 pragma solidity >=0.8.24;
 
 import { System } from "@latticexyz/world/src/System.sol";
-import { TargetPriority, Turret, SmartTurretTarget } from "../../src/systems/smart-turret/types.sol";
-import { Characters, CharactersData } from "../../src/codegen/tables/Characters.sol";
+import { TargetPriority, Turret, SmartTurretTarget } from "../../src/namespaces/evefrontier/systems/smart-turret/types.sol";
+import { Characters, CharactersData } from "../../src/namespaces/evefrontier/codegen/tables/Characters.sol";
 
 contract SmartTurretCustomMock is System {
   function inProximity(

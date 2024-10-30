@@ -10,14 +10,13 @@ import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/Function
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
 import { IWorld } from "../../src/codegen/world/IWorld.sol";
-import { EntityRecord } from "../../src/codegen/index.sol";
-import { IEntityRecordSystem } from "../../src/codegen/world/IEntityRecordSystem.sol";
-import { EntityRecordSystem } from "../../src/systems/entity-record/EntityRecordSystem.sol";
-import { EntityRecord, EntityRecordData } from "../../src/codegen/tables/EntityRecord.sol";
-import { EntityRecordMetadata, EntityRecordMetadataData } from "../../src/codegen/tables/EntityRecordMetadata.sol";
-import { EntityRecordData as EntityRecordInput, EntityMetadata } from "../../src/systems/entity-record/types.sol";
+import { EntityRecord } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { EntityRecordSystem } from "../../src/namespaces/evefrontier/systems/entity-record/EntityRecordSystem.sol";
+import { EntityRecord, EntityRecordData } from "../../src/namespaces/evefrontier/codegen/tables/EntityRecord.sol";
+import { EntityRecordMetadata, EntityRecordMetadataData } from "../../src/namespaces/evefrontier/codegen/tables/EntityRecordMetadata.sol";
+import { EntityRecordData as EntityRecordInput, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
 
-import { EntityRecordUtils } from "../../src/systems/entity-record/EntityRecordUtils.sol";
+import { EntityRecordUtils } from "../../src/namespaces/evefrontier/systems/entity-record/EntityRecordUtils.sol";
 
 contract EntityRecordTest is MudTest {
   IBaseWorld world;

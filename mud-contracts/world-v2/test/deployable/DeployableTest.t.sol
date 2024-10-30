@@ -6,26 +6,26 @@ import { MudTest } from "@latticexyz/world/test/MudTest.t.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 import { World } from "@latticexyz/world/src/World.sol";
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
-import { State, SmartObjectData } from "../../src/systems/deployable/types.sol";
+import { State, SmartObjectData } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
 
 import { IWorld } from "../../src/codegen/world/IWorld.sol";
 import { State } from "../../src/codegen/common.sol";
-import { GlobalDeployableState, DeployableState, DeployableToken } from "../../src/codegen/index.sol";
-import { SmartCharacterSystem } from "../../src/systems/smart-character/SmartCharacterSystem.sol";
-import { GlobalDeployableStateData } from "../../src/codegen/tables/GlobalDeployableState.sol";
-import { DeployableState, DeployableStateData } from "../../src/codegen/tables/DeployableState.sol";
-import { Location, LocationData } from "../../src/codegen/tables/Location.sol";
-import { Fuel, FuelData } from "../../src/codegen/tables/Fuel.sol";
-import { FuelSystem } from "../../src/systems/fuel/FuelSystem.sol";
-import { DeployableUtils } from "../../src/systems/deployable/DeployableUtils.sol";
-import { SmartCharacterUtils } from "../../src/systems/smart-character/SmartCharacterUtils.sol";
-import { LocationUtils } from "../../src/systems/location/LocationUtils.sol";
-import { DeployableSystem } from "../../src/systems/deployable/DeployableSystem.sol";
-import { SmartCharacterSystem } from "../../src/systems/smart-character/SmartCharacterSystem.sol";
-import { FuelUtils } from "../../src/systems/fuel/FuelUtils.sol";
-import { EntityRecordData, EntityMetadata } from "../../src/systems/entity-record/types.sol";
+import { GlobalDeployableState, DeployableState, DeployableToken } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
+import { GlobalDeployableStateData } from "../../src/namespaces/evefrontier/codegen/tables/GlobalDeployableState.sol";
+import { DeployableState, DeployableStateData } from "../../src/namespaces/evefrontier/codegen/tables/DeployableState.sol";
+import { Location, LocationData } from "../../src/namespaces/evefrontier/codegen/tables/Location.sol";
+import { Fuel, FuelData } from "../../src/namespaces/evefrontier/codegen/tables/Fuel.sol";
+import { FuelSystem } from "../../src/namespaces/evefrontier/systems/fuel/FuelSystem.sol";
+import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
+import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
+import { LocationUtils } from "../../src/namespaces/evefrontier/systems/location/LocationUtils.sol";
+import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
+import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
+import { FuelUtils } from "../../src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
+import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
 
-import { ONE_UNIT_IN_WEI } from "../../src/systems/constants.sol";
+import { ONE_UNIT_IN_WEI } from "../../src/namespaces/evefrontier/systems/constants.sol";
 
 contract DeployableTest is MudTest {
   IBaseWorld world;

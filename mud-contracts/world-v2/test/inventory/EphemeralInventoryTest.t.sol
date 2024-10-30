@@ -6,23 +6,23 @@ import { MudTest } from "@latticexyz/world/test/MudTest.t.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
-import { DeployableState, DeployableStateData } from "../../src/codegen/tables/DeployableState.sol";
-import { EphemeralInvCapacity } from "../../src/codegen/tables/EphemeralInvCapacity.sol";
-import { EphemeralInv, EphemeralInvData } from "../../src/codegen/tables/EphemeralInv.sol";
+import { DeployableState, DeployableStateData } from "../../src/namespaces/evefrontier/codegen/tables/DeployableState.sol";
+import { EphemeralInvCapacity } from "../../src/namespaces/evefrontier/codegen/tables/EphemeralInvCapacity.sol";
+import { EphemeralInv, EphemeralInvData } from "../../src/namespaces/evefrontier/codegen/tables/EphemeralInv.sol";
 import { State } from "../../src/codegen/common.sol";
-import { EntityRecord } from "../../src/codegen/index.sol";
-import { EphemeralInvItem, EphemeralInvItemData } from "../../src/codegen/tables/EphemeralInvItem.sol";
+import { EntityRecord } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { EphemeralInvItem, EphemeralInvItemData } from "../../src/namespaces/evefrontier/codegen/tables/EphemeralInvItem.sol";
 import { IWorld } from "../../src/codegen/world/IWorld.sol";
 
-import { InventoryUtils } from "../../src/systems/inventory/InventoryUtils.sol";
-import { SmartCharacterUtils } from "../../src/systems/smart-character/SmartCharacterUtils.sol";
-import { DeployableUtils } from "../../src/systems/deployable/DeployableUtils.sol";
-import { SmartCharacterSystem } from "../../src/systems/smart-character/SmartCharacterSystem.sol";
-import { EphemeralInventorySystem } from "../../src/systems/inventory/EphemeralInventorySystem.sol";
-import { DeployableSystem } from "../../src/systems/deployable/DeployableSystem.sol";
+import { InventoryUtils } from "../../src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
+import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
+import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
+import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
+import { EphemeralInventorySystem } from "../../src/namespaces/evefrontier/systems/inventory/EphemeralInventorySystem.sol";
+import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
 
-import { EntityRecordData, EntityMetadata } from "../../src/systems/entity-record/types.sol";
-import { InventoryItem } from "../../src/systems/inventory/types.sol";
+import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
+import { InventoryItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
 
 contract EphemeralInventoryTest is MudTest {
   IBaseWorld world;

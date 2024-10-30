@@ -5,18 +5,18 @@ import { StoreSwitch } from "@latticexyz/store/src/StoreSwitch.sol";
 import { ResourceId, WorldResourceIdLib } from "@latticexyz/world/src/WorldResourceId.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 
-import { GlobalDeployableState } from "@eveworld/world-v2/src/codegen/tables/GlobalDeployableState.sol";
-import { Characters } from "@eveworld/world-v2/src/codegen/tables/Characters.sol";
-import { CharactersByAddress } from "@eveworld/world-v2/src/codegen/tables/CharactersByAddress.sol";
-import { EntityRecordData, EntityMetadata } from "@eveworld/world-v2/src/systems/entity-record/types.sol";
-import { SmartCharacterUtils } from "@eveworld/world-v2/src/systems/smart-character/SmartCharacterUtils.sol";
-import { SmartStorageUnitUtils } from "@eveworld/world-v2/src/systems/smart-storage-unit/SmartStorageUnitUtils.sol";
-import { DeployableUtils } from "@eveworld/world-v2/src/systems/deployable/DeployableUtils.sol";
-import { DeployableSystem } from "@eveworld/world-v2/src/systems/deployable/DeployableSystem.sol";
-import { SmartCharacterSystem } from "@eveworld/world-v2/src/systems/smart-character/SmartCharacterSystem.sol";
-import { State, SmartObjectData } from "@eveworld/world-v2/src/systems/deployable/types.sol";
-import { SmartStorageUnitSystem } from "@eveworld/world-v2/src/systems/smart-storage-unit/SmartStorageUnitSystem.sol";
-import { Coord, WorldPosition } from "@eveworld/world-v2/src/systems/location/types.sol";
+import { GlobalDeployableState } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/GlobalDeployableState.sol";
+import { Characters } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/Characters.sol";
+import { CharactersByAddress } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/CharactersByAddress.sol";
+import { EntityRecordData, EntityMetadata } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/entity-record/types.sol";
+import { SmartCharacterUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
+import { SmartStorageUnitUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-storage-unit/SmartStorageUnitUtils.sol";
+import { DeployableUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
+import { DeployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
+import { SmartCharacterSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
+import { State, SmartObjectData } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/types.sol";
+import { SmartStorageUnitSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-storage-unit/SmartStorageUnitSystem.sol";
+import { Coord, WorldPosition } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/location/types.sol";
 
 contract AnchorSSU is Script {
   function run(address worldAddress) public {

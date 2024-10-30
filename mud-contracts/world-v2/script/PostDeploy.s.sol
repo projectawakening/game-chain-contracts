@@ -15,19 +15,16 @@ import { ERC20MetadataData } from "@latticexyz/world-modules/src/modules/erc20-p
 import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/FunctionSelectors.sol";
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
-import { ISmartCharacterSystem } from "../src/codegen/world/ISmartCharacterSystem.sol";
-import { ERC721MetadataData } from "../src/codegen/tables/ERC721Metadata.sol";
-import { SmartCharacterSystem } from "../src/systems/smart-character/SmartCharacterSystem.sol";
-import { registerERC721 } from "../src/systems/eve-erc721-puppet/registerERC721.sol";
-import { IERC721Mintable } from "../src/systems/eve-erc721-puppet/IERC721Mintable.sol";
-import { StaticDataSystem } from "../src/systems/static-data/StaticDataSystem.sol";
-import { DeployableSystem } from "../src/systems/deployable/DeployableSystem.sol";
+import { ERC721MetadataData } from "../src/namespaces/evefrontier/codegen/tables/ERC721Metadata.sol";
+import { SmartCharacterSystem } from "../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
+import { registerERC721 } from "../src/namespaces/evefrontier/systems/eve-erc721-puppet/registerERC721.sol";
+import { IERC721Mintable } from "../src/namespaces/evefrontier/systems/eve-erc721-puppet/IERC721Mintable.sol";
+import { StaticDataSystem } from "../src/namespaces/evefrontier/systems/static-data/StaticDataSystem.sol";
+import { DeployableSystem } from "../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
 
-import { SmartCharacterUtils } from "../src/systems/smart-character/SmartCharacterUtils.sol";
-import { StaticDataUtils } from "../src/systems/static-data/StaticDataUtils.sol";
-import { DeployableUtils } from "../src/systems/deployable/DeployableUtils.sol";
-
-import { DEPLOYMENT_NAMESPACE } from "../src/systems/constants.sol";
+import { SmartCharacterUtils } from "../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
+import { StaticDataUtils } from "../src/namespaces/evefrontier/systems/static-data/StaticDataUtils.sol";
+import { DeployableUtils } from "../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
 
 contract PostDeploy is Script {
   using SmartCharacterUtils for bytes14;

@@ -6,21 +6,21 @@ import { MudTest } from "@latticexyz/world/test/MudTest.t.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
-import { DeployableState, DeployableStateData } from "../../src/codegen/tables/DeployableState.sol";
+import { DeployableState, DeployableStateData } from "../../src/namespaces/evefrontier/codegen/tables/DeployableState.sol";
 import { State } from "../../src/codegen/common.sol";
-import { Inventory, InventoryData } from "../../src/codegen/tables/Inventory.sol";
-import { InventoryItemData, InventoryItem as InventoryItemTable } from "../../src/codegen/tables/InventoryItem.sol";
+import { Inventory, InventoryData } from "../../src/namespaces/evefrontier/codegen/tables/Inventory.sol";
+import { InventoryItemData, InventoryItem as InventoryItemTable } from "../../src/namespaces/evefrontier/codegen/tables/InventoryItem.sol";
 
-import { EntityRecordData, EntityMetadata } from "../../src/systems/entity-record/types.sol";
-import { SmartCharacterUtils } from "../../src/systems/smart-character/SmartCharacterUtils.sol";
-import { DeployableUtils } from "../../src/systems/deployable/DeployableUtils.sol";
-import { FuelUtils } from "../../src/systems/fuel/FuelUtils.sol";
-import { SmartCharacterSystem } from "../../src/systems/smart-character/SmartCharacterSystem.sol";
-import { InventorySystem } from "../../src/systems/inventory/InventorySystem.sol";
-import { DeployableSystem } from "../../src/systems/deployable/DeployableSystem.sol";
-import { InventoryUtils } from "../../src/systems/inventory/InventoryUtils.sol";
-import { InventoryItem } from "../../src/systems/inventory/types.sol";
-import { EntityRecord } from "../../src/codegen/index.sol";
+import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
+import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
+import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
+import { FuelUtils } from "../../src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
+import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
+import { InventorySystem } from "../../src/namespaces/evefrontier/systems/inventory/InventorySystem.sol";
+import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
+import { InventoryUtils } from "../../src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
+import { InventoryItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
+import { EntityRecord } from "../../src/namespaces/evefrontier/codegen/index.sol";
 import { IWorld } from "../../src/codegen/world/IWorld.sol";
 
 contract InventoryTest is MudTest {

@@ -6,26 +6,26 @@ import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.
 import { World } from "@latticexyz/world/src/World.sol";
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
-import { SmartStorageUnitSystem } from "../../src/systems/smart-storage-unit/SmartStorageUnitSystem.sol";
-import { DeployableSystem } from "../../src/systems/deployable/DeployableSystem.sol";
-import { SmartStorageUnitUtils } from "../../src/systems/smart-storage-unit/SmartStorageUnitUtils.sol";
-import { DeployableUtils } from "../../src/systems/deployable/DeployableUtils.sol";
-import { SmartCharacterUtils } from "../../src/systems/smart-character/SmartCharacterUtils.sol";
-import { InventoryUtils } from "../../src/systems/inventory/InventoryUtils.sol";
-import { InventorySystem } from "../../src/systems/inventory/InventorySystem.sol";
-import { SmartCharacterSystem } from "../../src/systems/smart-character/SmartCharacterSystem.sol";
-import { State, SmartObjectData } from "../../src/systems/deployable/types.sol";
-import { EntityRecordData, EntityMetadata } from "../../src/systems/entity-record/types.sol";
-import { WorldPosition, Coord } from "../../src/systems/location/types.sol";
-import { InventoryItem } from "../../src/systems/inventory/types.sol";
-import { InventoryData, Inventory } from "../../src/codegen/tables/Inventory.sol";
-import { InventoryItemData, InventoryItem as InventoryItemTable } from "../../src/codegen/tables/InventoryItem.sol";
-import { DeployableState, DeployableStateData } from "../../src/codegen/tables/DeployableState.sol";
-import { EphemeralInventorySystem } from "../../src/systems/inventory/EphemeralInventorySystem.sol";
-import { EphemeralInv, EphemeralInvData } from "../../src/codegen/tables/EphemeralInv.sol";
-import { EphemeralInvCapacity } from "../../src/codegen/tables/EphemeralInvCapacity.sol";
-import { EphemeralInvItem, EphemeralInvItemData } from "../../src/codegen/tables/EphemeralInvItem.sol";
-import { LocationData, Location } from "../../src/codegen/tables/Location.sol";
+import { SmartStorageUnitSystem } from "../../src/namespaces/evefrontier/systems/smart-storage-unit/SmartStorageUnitSystem.sol";
+import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
+import { SmartStorageUnitUtils } from "../../src/namespaces/evefrontier/systems/smart-storage-unit/SmartStorageUnitUtils.sol";
+import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
+import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
+import { InventoryUtils } from "../../src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
+import { InventorySystem } from "../../src/namespaces/evefrontier/systems/inventory/InventorySystem.sol";
+import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
+import { State, SmartObjectData } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
+import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
+import { WorldPosition, Coord } from "../../src/namespaces/evefrontier/systems/location/types.sol";
+import { InventoryItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
+import { InventoryData, Inventory } from "../../src/namespaces/evefrontier/codegen/tables/Inventory.sol";
+import { InventoryItemData, InventoryItem as InventoryItemTable } from "../../src/namespaces/evefrontier/codegen/tables/InventoryItem.sol";
+import { DeployableState, DeployableStateData } from "../../src/namespaces/evefrontier/codegen/tables/DeployableState.sol";
+import { EphemeralInventorySystem } from "../../src/namespaces/evefrontier/systems/inventory/EphemeralInventorySystem.sol";
+import { EphemeralInv, EphemeralInvData } from "../../src/namespaces/evefrontier/codegen/tables/EphemeralInv.sol";
+import { EphemeralInvCapacity } from "../../src/namespaces/evefrontier/codegen/tables/EphemeralInvCapacity.sol";
+import { EphemeralInvItem, EphemeralInvItemData } from "../../src/namespaces/evefrontier/codegen/tables/EphemeralInvItem.sol";
+import { LocationData, Location } from "../../src/namespaces/evefrontier/codegen/tables/Location.sol";
 
 contract SmartStorageUnitTest is MudTest {
   IBaseWorld world;

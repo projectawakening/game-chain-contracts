@@ -7,11 +7,11 @@ import { MudTest } from "@latticexyz/world/test/MudTest.t.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 import { World } from "@latticexyz/world/src/World.sol";
 
-import { EntityRecord, EntityRecordData as EntityRecordTableData } from "../../src/codegen/tables/EntityRecord.sol";
-import { SmartAssembly } from "../../src/codegen/index.sol";
-import { EntityRecordData } from "../../src/systems/entity-record/types.sol";
-import { SmartAssemblyUtils } from "../../src/systems/smart-assembly/SmartAssemblyUtils.sol";
-import { SmartAssemblySystem } from "../../src/systems/smart-assembly/SmartAssemblySystem.sol";
+import { EntityRecord, EntityRecordData as EntityRecordTableData } from "../../src/namespaces/evefrontier/codegen/tables/EntityRecord.sol";
+import { SmartAssembly } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { EntityRecordData } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
+import { SmartAssemblyUtils } from "../../src/namespaces/evefrontier/systems/smart-assembly/SmartAssemblyUtils.sol";
+import { SmartAssemblySystem } from "../../src/namespaces/evefrontier/systems/smart-assembly/SmartAssemblySystem.sol";
 
 contract SmartAssemblyTest is MudTest {
   IBaseWorld world;

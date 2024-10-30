@@ -15,14 +15,13 @@ import { registerERC721 } from "@latticexyz/world-modules/src/modules/erc721-pup
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
 import { IWorld } from "../../src/codegen/world/IWorld.sol";
-import { Characters, CharactersData } from "../../src/codegen/index.sol";
-import { ISmartCharacterSystem } from "../../src/codegen/world/ISmartCharacterSystem.sol";
-import { SmartCharacterSystem } from "../../src/systems/smart-character/SmartCharacterSystem.sol";
-import { EntityRecord, EntityRecordData as RecordData } from "../../src/codegen/index.sol";
-import { EntityRecordData, EntityMetadata } from "../../src/systems/entity-record/types.sol";
-import { Characters, CharacterToken } from "../../src/codegen/index.sol";
+import { Characters, CharactersData } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
+import { EntityRecord, EntityRecordData as RecordData } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
+import { Characters, CharacterToken } from "../../src/namespaces/evefrontier/codegen/index.sol";
 
-import { SmartCharacterUtils } from "../../src/systems/smart-character/SmartCharacterUtils.sol";
+import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
 
 contract SmartCharacterTest is MudTest {
   IBaseWorld world;

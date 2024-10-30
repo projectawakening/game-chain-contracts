@@ -7,10 +7,10 @@ import { StoreSwitch } from "@latticexyz/store/src/StoreSwitch.sol";
 import { ResourceId, WorldResourceIdLib } from "@latticexyz/world/src/WorldResourceId.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 
-import { InventoryItem } from "@eveworld/world-v2/src/systems/inventory/types.sol";
-import { InventoryUtils } from "@eveworld/world-v2/src/systems/inventory/InventoryUtils.sol";
-import { EphemeralInventorySystem } from "@eveworld/world-v2/src/systems/inventory/EphemeralInventorySystem.sol";
-import { EphemeralInvItem, EphemeralInvItemData } from "@eveworld/world-v2/src/codegen/tables/EphemeralInvItem.sol";
+import { InventoryItem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/types.sol";
+import { InventoryUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
+import { EphemeralInventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/EphemeralInventorySystem.sol";
+import { EphemeralInvItem, EphemeralInvItemData } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/EphemeralInvItem.sol";
 
 contract WithdrawFromEphemeral is Script {
   function run(address worldAddress) public {

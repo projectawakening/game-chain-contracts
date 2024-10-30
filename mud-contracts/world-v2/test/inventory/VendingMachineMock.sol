@@ -5,13 +5,13 @@ import { System } from "@latticexyz/world/src/System.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
-import { DeployableToken } from "../../src/codegen/tables/DeployableToken.sol";
-import { TransferItem } from "../../src/systems/inventory/types.sol";
-import { InventoryUtils } from "../../src/systems/inventory/InventoryUtils.sol";
-import { InventoryInteractSystem } from "../../src/systems/inventory/InventoryInteractSystem.sol";
-import { IERC721 } from "../../src/systems/eve-erc721-puppet/IERC721.sol";
+import { DeployableToken } from "../../src/namespaces/evefrontier/codegen/tables/DeployableToken.sol";
+import { TransferItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
+import { InventoryUtils } from "../../src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
+import { InventoryInteractSystem } from "../../src/namespaces/evefrontier/systems/inventory/InventoryInteractSystem.sol";
+import { IERC721 } from "../../src/namespaces/evefrontier/systems/eve-erc721-puppet/IERC721.sol";
 
-import { EveSystem } from "../../src/systems/EveSystem.sol";
+import { EveSystem } from "../../src/namespaces/evefrontier/systems/EveSystem.sol";
 
 contract VendingMachineMock is EveSystem {
   ResourceId inventorySystemId = InventoryUtils.inventorySystemId();

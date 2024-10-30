@@ -7,23 +7,23 @@ import { World } from "@latticexyz/world/src/World.sol";
 import { ResourceId, WorldResourceIdLib, WorldResourceIdInstance } from "@latticexyz/world/src/WorldResourceId.sol";
 import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 
-import { SmartGateConfig } from "../../src/codegen/tables/SmartGateConfig.sol";
-import { DeployableState } from "../../src/codegen/tables/DeployableState.sol";
-import { SmartAssembly } from "../../src/codegen/tables/SmartAssembly.sol";
-import { State, SmartObjectData } from "../../src/systems/deployable/types.sol";
+import { SmartGateConfig } from "../../src/namespaces/evefrontier/codegen/tables/SmartGateConfig.sol";
+import { DeployableState } from "../../src/namespaces/evefrontier/codegen/tables/DeployableState.sol";
+import { SmartAssembly } from "../../src/namespaces/evefrontier/codegen/tables/SmartAssembly.sol";
+import { State, SmartObjectData } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
 import { SmartGateCustomMock } from "./SmartGateCustomMock.sol";
-import { DeployableUtils } from "../../src/systems/deployable/DeployableUtils.sol";
-import { SmartCharacterUtils } from "../../src/systems/smart-character/SmartCharacterUtils.sol";
-import { SmartGateUtils } from "../../src/systems/smart-gate/SmartGateUtils.sol";
-import { FuelUtils } from "../../src/systems/fuel/FuelUtils.sol";
-import { DeployableSystem } from "../../src/systems/deployable/DeployableSystem.sol";
-import { SmartCharacterSystem } from "../../src/systems/smart-character/SmartCharacterSystem.sol";
-import { EntityRecordData, EntityMetadata } from "../../src/systems/entity-record/types.sol";
-import { WorldPosition, Coord } from "../../src/systems/location/types.sol";
-import { FuelSystem } from "../../src/systems/fuel/FuelSystem.sol";
-import { SmartGateSystem } from "../../src/systems/smart-gate/SmartGateSystem.sol";
+import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
+import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
+import { SmartGateUtils } from "../../src/namespaces/evefrontier/systems/smart-gate/SmartGateUtils.sol";
+import { FuelUtils } from "../../src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
+import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
+import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
+import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
+import { WorldPosition, Coord } from "../../src/namespaces/evefrontier/systems/location/types.sol";
+import { FuelSystem } from "../../src/namespaces/evefrontier/systems/fuel/FuelSystem.sol";
+import { SmartGateSystem } from "../../src/namespaces/evefrontier/systems/smart-gate/SmartGateSystem.sol";
 
-import { SMART_GATE } from "../../src/systems/constants.sol";
+import { SMART_GATE } from "../../src/namespaces/evefrontier/systems/constants.sol";
 
 contract SmartGateTest is MudTest {
   IBaseWorld world;
