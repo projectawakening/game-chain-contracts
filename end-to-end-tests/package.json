@@ -53,7 +53,6 @@
     "@eveworld/common-constants": "0.0.13",
     "@eveworld/smart-object-framework": "0.0.8",
     "@eveworld/world": "0.0.17",
-    "@eveworld/world-core": "0.0.2",
     "@latticexyz/cli": "2.2.8",
     "@latticexyz/gas-report": "2.2.8",
     "@latticexyz/schema-type": "2.2.8",
