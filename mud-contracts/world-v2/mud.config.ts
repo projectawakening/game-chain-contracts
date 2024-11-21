@@ -362,6 +362,28 @@ export default defineWorld({
           },
           key: ["sourceGateId"],
         },
+
+        /*************************
+         * SMART CRUDE LIFT MODULE *
+         *************************/
+
+        CrudeLift: {
+          schema: {
+            smartObjectId: "uint256",
+            lensId: "uint256",
+            startMiningTime: "uint256",
+          },
+          key: ["smartObjectId"],
+        },
+
+        Lens: {
+          schema: {
+            lensId: "uint256",
+            durability: "uint256",
+            exhausted: "bool",
+          },
+          key: ["lensId"],
+        },
       },
     },
   },
