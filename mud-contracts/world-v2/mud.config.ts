@@ -372,6 +372,7 @@ export default defineWorld({
             smartObjectId: "uint256",
             lensId: "uint256",
             startMiningTime: "uint256",
+            miningRiftId: "uint256",
           },
           key: ["smartObjectId"],
         },
@@ -383,6 +384,15 @@ export default defineWorld({
             exhausted: "bool",
           },
           key: ["lensId"],
+        },
+
+        Rift: {
+          schema: {
+            riftId: "uint256",
+            createdAt: "uint256",
+            crudeAmount: "uint256",
+          },
+          key: ["riftId"],
         },
       },
     },

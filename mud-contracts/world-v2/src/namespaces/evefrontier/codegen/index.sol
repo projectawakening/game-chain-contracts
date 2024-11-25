@@ -34,3 +34,4 @@ import { SmartGateConfig, SmartGateConfigData } from "./tables/SmartGateConfig.s
 import { SmartGateLink, SmartGateLinkData } from "./tables/SmartGateLink.sol";
 import { CrudeLift, CrudeLiftData } from "./tables/CrudeLift.sol";
 import { Lens, LensData } from "./tables/Lens.sol";
+import { Rift, RiftData } from "./tables/Rift.sol";

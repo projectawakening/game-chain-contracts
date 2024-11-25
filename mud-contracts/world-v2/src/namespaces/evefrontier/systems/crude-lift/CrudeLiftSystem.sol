@@ -5,6 +5,7 @@ import { System } from "@latticexyz/world/src/System.sol";
 import { EveSystem } from "../EveSystem.sol";
 import { InventorySystem } from "../inventory/InventorySystem.sol";
 import { EphemeralInventorySystem } from "../inventory/EphemeralInventorySystem.sol";
+import { InventoryInteractSystem } from "../inventory/InventoryInteractSystem.sol";
 import { DeployableSystem } from "../deployable/DeployableSystem.sol";
 import { DeployableUtils } from "../deployable/DeployableUtils.sol";
 import { InventoryUtils } from "../inventory/InventoryUtils.sol";
@@ -16,7 +17,8 @@ import { DeployableSystem } from "../deployable/DeployableSystem.sol";
 import { State, SmartObjectData } from "../deployable/types.sol";
 import { WorldPosition } from "../location/types.sol";
 import { CRUDE_LIFT } from "../constants.sol";
-import { EntityRecordData, CrudeLift, CrudeLiftData, LocationData, Lens, DeployableToken } from "../../codegen/index.sol";
+import { EntityRecordData } from "../entity-record/types.sol";
+import { CrudeLift, CrudeLiftData, LocationData, Lens, DeployableToken, Rift, InventoryItem as InventoryItemTable, Inventory, EntityRecord } from "../../codegen/index.sol";
 
 uint256 constant CRUDE_MATTER = 1;
 uint256 constant LENS = 2;
@@ -27,6 +29,7 @@ contract CrudeLiftSystem is EveSystem {
   ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
   ResourceId inventorySystemId = InventoryUtils.inventorySystemId();
   ResourceId ephemeralInventorySystemId = InventoryUtils.ephemeralInventorySystemId();
+  ResourceId inventoryInteractSystemId = InventoryUtils.inventoryInteractSystemId();
 
   error LensNotInserted();
   error LensExhausted();
@@ -34,6 +37,12 @@ contract CrudeLiftSystem is EveSystem {
   error CannotRemoveLensWhileMining();
   error AlreadyMining();
   error NotMining();
+  error RiftNotFoundOrDepleted();
+
+  modifier onlyServer() {
+    // TODO: Implement
+    _;
+  }
 
   function createAndAnchorCrudeLift(
     uint256 smartObjectId,
@@ -45,7 +54,7 @@ contract CrudeLiftSystem is EveSystem {
     uint256 fuelMaxCapacity,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
-  ) public {
+  ) public onlyServer {
     LocationData memory locationData = LocationData({
       solarSystemId: worldPosition.solarSystemId,
       x: worldPosition.position.x,
@@ -80,37 +89,50 @@ contract CrudeLiftSystem is EveSystem {
     );
   }
 
-  function insertLens(uint256 smartObjectId) public {
+  function insertLens(uint256 smartObjectId, address player) public onlyServer {
     if (CrudeLift.getLensId(smartObjectId) != 0) revert LensAlreadyInserted();
-    if (Lens.getExhausted(lensId)) revert LensExhausted();
+
+    uint256[] memory items = Inventory.getItems(smartObjectId);
+    uint256 foundLensId = 0;
+    for (uint256 i = 0; i < items.length; i++) {
+      // how do i do this?
+      if (EntityRecord.getTypeId(items[i]) == LENS) {
+        foundLensId = items[i];
+        break;
+      }
+    }
+    if (foundLensId == 0) revert LensNotInserted();
+    if (Lens.getExhausted(foundLensId)) revert LensExhausted();
 
     // get lens from ephemeral inventory
-    TransferItem[] memory items = new TransferItem[](1);
-    items[0] = TransferItem({ inventoryItemId: lensId, owner: getOwner(smartObjectId), quantity: 1 });
-    _world().call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.ephemeralToInventoryTransfer, (smartObjectId, items))
+    TransferItem[] memory transferItems = new TransferItem[](1);
+    transferItems[0] = TransferItem({ inventoryItemId: foundLensId, owner: player, quantity: 1 });
+    world().call(
+      inventoryInteractSystemId,
+      abi.encodeCall(InventoryInteractSystem.ephemeralToInventoryTransfer, (smartObjectId, player, transferItems))
     );
 
     // If durability is 0 but not exhausted, it means the lens has not been initialized onchain yet
-    if (Lens.getDurability(lensId) == 0) {
+    if (Lens.getDurability(foundLensId) == 0) {
       // TODO decide on a default durability. Maybe store this somewhere else
-      Lens.setDurability(lensId, 100);
+      Lens.setDurability(foundLensId, 100);
     }
 
-    CrudeLift.setLensId(smartObjectId, lensId);
+    CrudeLift.setLensId(smartObjectId, foundLensId);
   }
 
-  function startMining(uint256 smartObjectId) public {
+  function startMining(uint256 smartObjectId, uint256 riftId) public onlyServer {
     CrudeLiftData memory lift = CrudeLift.get(smartObjectId);
 
-    if (!lift.lensInserted) revert LensNotInserted();
+    if (lift.lensId == 0) revert LensNotInserted();
     if (lift.startMiningTime != 0) revert AlreadyMining();
+    if (Rift.getCrudeAmount(riftId) == 0) revert RiftNotFoundOrDepleted();
 
     CrudeLift.setStartMiningTime(smartObjectId, block.timestamp);
+    CrudeLift.setMiningRiftId(smartObjectId, riftId);
   }
 
-  function stopMining(uint256 smartObjectId) public {
+  function stopMining(uint256 smartObjectId) public onlyServer {
     CrudeLiftData memory lift = CrudeLift.get(smartObjectId);
     if (lift.startMiningTime == 0) revert NotMining();
 
@@ -131,39 +153,22 @@ contract CrudeLiftSystem is EveSystem {
     // Reset mining state
     CrudeLift.setStartMiningTime(smartObjectId, 0);
 
-    InventoryItem[] memory items = new InventoryItem[](1);
-    address owner = getOwner(smartObjectId);
-    // TODO: no idea how to fill this out
-    items[0] = InventoryItem({
-      owner: owner,
-      typeId: CRUDE_MATTER,
-      itemId: 1,
-      volume: crudeMined,
-      quantity: crudeMined
-    });
-    _world().call(inventorySystemId, abi.encodeCall(InventorySystem.depositToInventory, (smartObjectId, items)));
+    // Transfer Crude ERC20 from Rift to Lift
+    // TODO: figure out how crude is stored on a ship
   }
 
-  function removeLens(uint256 smartObjectId) public {
+  function removeLens(uint256 smartObjectId, address receiver) public onlyServer {
     if (CrudeLift.getLensId(smartObjectId) == 0) revert LensNotInserted();
     if (CrudeLift.getStartMiningTime(smartObjectId) != 0) revert CannotRemoveLensWhileMining();
 
     CrudeLift.setLensId(smartObjectId, 0);
 
     TransferItem[] memory items = new TransferItem[](1);
-    items[0] = TransferItem({ inventoryItemId: CrudeLift.getLensId(smartObjectId), quantity: 1 });
-    _world().call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(
-        EphemeralInventorySystem.inventoryToEphemeralTransfer,
-        (smartObjectId, getOwner(smartObjectId), items)
-      )
+    items[0] = TransferItem({ inventoryItemId: CrudeLift.getLensId(smartObjectId), quantity: 1, owner: receiver });
+    world().call(
+      inventoryInteractSystemId,
+      abi.encodeCall(InventoryInteractSystem.inventoryToEphemeralTransfer, (smartObjectId, receiver, items))
     );
-  }
-
-  function getOwner(uint256 smartObjectId) public view returns (address) {
-    address erc721Address = DeployableToken.getErc721Address();
-    return IERC721(erc721Address).ownerOf(smartObjectId);
   }
 
   function calculateCrudeMined(uint256 duration) internal pure returns (uint256) {
