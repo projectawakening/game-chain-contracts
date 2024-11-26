@@ -201,6 +201,14 @@ contract CrudeLiftSystem is EveSystem {
     Rift.setMiningCrudeLiftId(riftId, 0);
   }
 
+  // TODO implement crude capacity
+  function retrieveCrude(uint256 smartObjectId, uint256 shipId, uint256 amount) public onlyServer {
+    if (CrudeOwned.getCrudeAmount(smartObjectId) < amount) revert InsufficientCrude();
+
+    CrudeOwned.setCrudeAmount(smartObjectId, CrudeOwned.getCrudeAmount(smartObjectId) - amount);
+    CrudeOwned.setCrudeAmount(shipId, CrudeOwned.getCrudeAmount(shipId) + amount);
+  }
+
   function commitToStopMining(uint256 smartObjectId) public onlyServer {
     if (CrudeLift.getStartMiningTime(smartObjectId) == 0) revert NotMining();
     if (CrudeLift.getStopMiningBlockNumber(smartObjectId) != 0) revert AlreadyCommittedToStopMining();
