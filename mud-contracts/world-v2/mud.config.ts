@@ -177,6 +177,54 @@ export default defineWorld({
             tableIdArgument: true,
           },
         },
+
+        /************************************************************************
+         *
+         *    ERC20 MODULE
+         *
+         ************************************************************************/
+        ERC20Metadata: {
+          schema: {
+            decimals: "uint8",
+            name: "string",
+            symbol: "string",
+          },
+          key: [],
+          codegen: {
+            tableIdArgument: true,
+          },
+        },
+        Allowances: {
+          schema: {
+            account: "address",
+            spender: "address",
+            value: "uint256",
+          },
+          key: ["account", "spender"],
+          codegen: {
+            tableIdArgument: true,
+          },
+        },
+        TotalSupply: {
+          schema: {
+            totalSupply: "uint256",
+          },
+          key: [],
+          codegen: {
+            tableIdArgument: true,
+          },
+        },
+        ERC20Registry: {
+          schema: {
+            namespaceId: "ResourceId",
+            tokenAddress: "address",
+          },
+          key: ["namespaceId"],
+          codegen: {
+            tableIdArgument: true,
+          },
+        },
+
         /*******************
          * LOCATION MODULE *
          *******************/
