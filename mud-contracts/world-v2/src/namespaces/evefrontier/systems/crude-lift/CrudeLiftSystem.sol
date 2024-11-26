@@ -18,7 +18,7 @@ import { State, SmartObjectData } from "../deployable/types.sol";
 import { WorldPosition } from "../location/types.sol";
 import { CRUDE_LIFT } from "../constants.sol";
 import { EntityRecordData } from "../entity-record/types.sol";
-import { CrudeLift, CrudeLiftData, LocationData, Lens, DeployableToken, Rift, InventoryItem as InventoryItemTable, Inventory, EntityRecord } from "../../codegen/index.sol";
+import { CrudeLift, CrudeLiftData, LocationData, Lens, DeployableToken, Rift, InventoryItem as InventoryItemTable, Inventory, EntityRecord, CrudeOwned } from "../../codegen/index.sol";
 
 uint256 constant CRUDE_MATTER = 1;
 uint256 constant LENS = 2;
@@ -39,6 +39,8 @@ contract CrudeLiftSystem is EveSystem {
   error NotMining();
   error RiftNotFoundOrDepleted();
   error InvalidMiningRate(uint256 miningRate);
+  error InvalidStopMiningBlockNumber(uint256 stopMiningBlockNumber);
+  error AlreadyCommittedToStopMining();
 
   modifier onlyServer() {
     // TODO: Implement
@@ -138,6 +140,9 @@ contract CrudeLiftSystem is EveSystem {
   }
 
   function stopMining(uint256 smartObjectId) public onlyServer {
+    uint256 stopMiningBlockNumber = CrudeLift.getStopMiningBlockNumber(smartObjectId);
+    if (stopMiningBlockNumber == 0) revert InvalidStopMiningBlockNumber(stopMiningBlockNumber);
+
     CrudeLiftData memory lift = CrudeLift.get(smartObjectId);
     if (lift.startMiningTime == 0) revert NotMining();
 
@@ -153,8 +158,9 @@ contract CrudeLiftSystem is EveSystem {
       Lens.setDurability(CrudeLift.getLensId(smartObjectId), remainingLensDurability - miningDuration);
     }
 
+    uint256 riftId = CrudeLift.getMiningRiftId(smartObjectId);
     uint256 crudeMined = calculateCrudeMined(
-      Rift.getRichness(Rift.getMiningCrudeLiftId(smartObjectId)),
+      Rift.getRichness(riftId),
       CrudeLift.getMiningRate(smartObjectId),
       miningDuration
     );
@@ -165,15 +171,41 @@ contract CrudeLiftSystem is EveSystem {
     }
     Rift.setCrudeAmount(riftId, remainingCrudeAmount - crudeMined);
 
+    CrudeOwned.setCrudeAmount(smartObjectId, CrudeOwned.getCrudeAmount(smartObjectId) + crudeMined);
+
+    bool didCollapse;
+    if (block.number - 256 > stopMiningBlockNumber) {
+      // We cannot get a seed from a block that is too old
+      // It always collapses in this case
+      didCollapse = true;
+    } else {
+      uint256 collapseChance = calculateCollapseChance(
+        CrudeLift.getMiningRate(smartObjectId),
+        Rift.getStability(riftId)
+      );
+      uint256 collapseSeed = uint256(keccak256(abi.encodePacked(blockhash(stopMiningBlockNumber), smartObjectId))) %
+        100_000;
+      didCollapse = collapseSeed < collapseChance;
+    }
+
+    if (didCollapse) {
+      Rift.setCrudeAmount(riftId, 0);
+      // TODO should there be a special way to handle collapse?
+      // Right now collapse is createdAt != 0 and crudeMined == 0
+    }
+
     // Reset mining state
     CrudeLift.setStartMiningTime(smartObjectId, 0);
     CrudeLift.setMiningRiftId(smartObjectId, 0);
 
-    uint256 riftId = Rift.getMiningCrudeLiftId(smartObjectId);
     Rift.setMiningCrudeLiftId(riftId, 0);
+  }
 
-    // Transfer Crude ERC20 from Rift to Lift
-    // TODO: figure out how crude is stored on a ship
+  function commitToStopMining(uint256 smartObjectId) public onlyServer {
+    if (CrudeLift.getStartMiningTime(smartObjectId) == 0) revert NotMining();
+    if (CrudeLift.getStopMiningBlockNumber(smartObjectId) != 0) revert AlreadyCommittedToStopMining();
+
+    CrudeLift.setStopMiningBlockNumber(smartObjectId, block.number);
   }
 
   function removeLens(uint256 smartObjectId, address receiver) public onlyServer {

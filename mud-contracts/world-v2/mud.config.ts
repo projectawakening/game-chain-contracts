@@ -422,6 +422,17 @@ export default defineWorld({
             startMiningTime: "uint256",
             miningRiftId: "uint256",
             miningRate: "uint256",
+            // Must commit to stop mining at a specific block number
+            // in order to seed the randomness of collapse
+            stopMiningBlockNumber: "uint256",
+          },
+          key: ["smartObjectId"],
+        },
+
+        CrudeOwned: {
+          schema: {
+            smartObjectId: "uint256",
+            crudeAmount: "uint256",
           },
           key: ["smartObjectId"],
         },
