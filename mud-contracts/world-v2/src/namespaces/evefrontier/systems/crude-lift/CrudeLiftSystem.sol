@@ -38,6 +38,7 @@ contract CrudeLiftSystem is EveSystem {
   error AlreadyMining();
   error NotMining();
   error RiftNotFoundOrDepleted();
+  error InvalidMiningRate(uint256 miningRate);
 
   modifier onlyServer() {
     // TODO: Implement
@@ -121,9 +122,10 @@ contract CrudeLiftSystem is EveSystem {
     CrudeLift.setLensId(smartObjectId, foundLensId);
   }
 
-  function startMining(uint256 smartObjectId, uint256 riftId) public onlyServer {
+  function startMining(uint256 smartObjectId, uint256 riftId, uint256 miningRate) public onlyServer {
     CrudeLiftData memory lift = CrudeLift.get(smartObjectId);
 
+    if (miningRate < 1_000 || miningRate > 200_000) revert InvalidMiningRate(miningRate);
     if (lift.lensId == 0) revert LensNotInserted();
     if (lift.startMiningTime != 0) revert AlreadyMining();
     if (Rift.getCrudeAmount(riftId) == 0) revert RiftNotFoundOrDepleted();
@@ -131,6 +133,7 @@ contract CrudeLiftSystem is EveSystem {
 
     CrudeLift.setStartMiningTime(smartObjectId, block.timestamp);
     CrudeLift.setMiningRiftId(smartObjectId, riftId);
+    CrudeLift.setMiningRate(smartObjectId, miningRate);
     Rift.setMiningCrudeLiftId(riftId, smartObjectId);
   }
 
@@ -150,7 +153,17 @@ contract CrudeLiftSystem is EveSystem {
       Lens.setDurability(CrudeLift.getLensId(smartObjectId), remainingLensDurability - miningDuration);
     }
 
-    uint256 crudeMined = calculateCrudeMined(miningDuration);
+    uint256 crudeMined = calculateCrudeMined(
+      Rift.getRichness(Rift.getMiningCrudeLiftId(smartObjectId)),
+      CrudeLift.getMiningRate(smartObjectId),
+      miningDuration
+    );
+
+    uint256 remainingCrudeAmount = Rift.getCrudeAmount(riftId);
+    if (crudeMined > remainingCrudeAmount) {
+      crudeMined = remainingCrudeAmount;
+    }
+    Rift.setCrudeAmount(riftId, remainingCrudeAmount - crudeMined);
 
     // Reset mining state
     CrudeLift.setStartMiningTime(smartObjectId, 0);
@@ -158,12 +171,6 @@ contract CrudeLiftSystem is EveSystem {
 
     uint256 riftId = Rift.getMiningCrudeLiftId(smartObjectId);
     Rift.setMiningCrudeLiftId(riftId, 0);
-
-    uint256 remainingCrudeAmount = Rift.getCrudeAmount(riftId);
-    if (crudeMined > remainingCrudeAmount) {
-      crudeMined = remainingCrudeAmount;
-    }
-    Rift.setCrudeAmount(riftId, remainingCrudeAmount - crudeMined);
 
     // Transfer Crude ERC20 from Rift to Lift
     // TODO: figure out how crude is stored on a ship
@@ -183,8 +190,13 @@ contract CrudeLiftSystem is EveSystem {
     );
   }
 
-  function calculateCrudeMined(uint256 duration) internal pure returns (uint256) {
-    // Implement the logic to calculate crude mined based on duration
-    return duration * 10; // Example calculation
+  function calculateCrudeMined(uint256 richness, uint256 miningRate, uint256 duration) internal pure returns (uint256) {
+    return (duration * richness * miningRate) / 100_000;
+  }
+
+  function calculateCollapseChance(uint256 miningRate, uint256 stability) internal pure returns (uint256) {
+    uint256 collapseChance = (stability * miningRate) / 100_000;
+
+    return collapseChance > 100_000 ? 100_000 : collapseChance;
   }
 }

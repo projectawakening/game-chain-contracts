@@ -421,6 +421,7 @@ export default defineWorld({
             lensId: "uint256",
             startMiningTime: "uint256",
             miningRiftId: "uint256",
+            miningRate: "uint256",
           },
           key: ["smartObjectId"],
         },
@@ -440,6 +441,13 @@ export default defineWorld({
             createdAt: "uint256",
             crudeAmount: "uint256",
             miningCrudeLiftId: "uint256",
+            // 0-100_000, determines the amount of crude mined per second
+            // a percentage with 3 digits of precision
+            // i.e. 100_000 = 100%
+            richness: "uint256",
+            // 0-100_000, determines the chance of a rift collapsing
+            // i.e. 100_000 = 100% chance of collapse
+            stability: "uint256",
           },
           key: ["riftId"],
         },

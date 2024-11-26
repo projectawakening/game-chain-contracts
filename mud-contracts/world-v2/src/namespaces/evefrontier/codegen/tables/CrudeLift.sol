@@ -20,6 +20,7 @@ struct CrudeLiftData {
   uint256 lensId;
   uint256 startMiningTime;
   uint256 miningRiftId;
+  uint256 miningRate;
 }
 
 library CrudeLift {
@@ -27,12 +28,12 @@ library CrudeLift {
   ResourceId constant _tableId = ResourceId.wrap(0x746265766566726f6e7469657200000043727564654c69667400000000000000);
 
   FieldLayout constant _fieldLayout =
-    FieldLayout.wrap(0x0060030020202000000000000000000000000000000000000000000000000000);
+    FieldLayout.wrap(0x0080040020202020000000000000000000000000000000000000000000000000);
 
   // Hex-encoded key schema of (uint256)
   Schema constant _keySchema = Schema.wrap(0x002001001f000000000000000000000000000000000000000000000000000000);
-  // Hex-encoded value schema of (uint256, uint256, uint256)
-  Schema constant _valueSchema = Schema.wrap(0x006003001f1f1f00000000000000000000000000000000000000000000000000);
+  // Hex-encoded value schema of (uint256, uint256, uint256, uint256)
+  Schema constant _valueSchema = Schema.wrap(0x008004001f1f1f1f000000000000000000000000000000000000000000000000);
 
   /**
    * @notice Get the table's key field names.
@@ -48,10 +49,11 @@ library CrudeLift {
    * @return fieldNames An array of strings with the names of value fields.
    */
   function getFieldNames() internal pure returns (string[] memory fieldNames) {
-    fieldNames = new string[](3);
+    fieldNames = new string[](4);
     fieldNames[0] = "lensId";
     fieldNames[1] = "startMiningTime";
     fieldNames[2] = "miningRiftId";
+    fieldNames[3] = "miningRate";
   }
 
   /**
@@ -195,6 +197,48 @@ library CrudeLift {
   }
 
   /**
+   * @notice Get miningRate.
+   */
+  function getMiningRate(uint256 smartObjectId) internal view returns (uint256 miningRate) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = bytes32(uint256(smartObjectId));
+
+    bytes32 _blob = StoreSwitch.getStaticField(_tableId, _keyTuple, 3, _fieldLayout);
+    return (uint256(bytes32(_blob)));
+  }
+
+  /**
+   * @notice Get miningRate.
+   */
+  function _getMiningRate(uint256 smartObjectId) internal view returns (uint256 miningRate) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = bytes32(uint256(smartObjectId));
+
+    bytes32 _blob = StoreCore.getStaticField(_tableId, _keyTuple, 3, _fieldLayout);
+    return (uint256(bytes32(_blob)));
+  }
+
+  /**
+   * @notice Set miningRate.
+   */
+  function setMiningRate(uint256 smartObjectId, uint256 miningRate) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = bytes32(uint256(smartObjectId));
+
+    StoreSwitch.setStaticField(_tableId, _keyTuple, 3, abi.encodePacked((miningRate)), _fieldLayout);
+  }
+
+  /**
+   * @notice Set miningRate.
+   */
+  function _setMiningRate(uint256 smartObjectId, uint256 miningRate) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = bytes32(uint256(smartObjectId));
+
+    StoreCore.setStaticField(_tableId, _keyTuple, 3, abi.encodePacked((miningRate)), _fieldLayout);
+  }
+
+  /**
    * @notice Get the full data.
    */
   function get(uint256 smartObjectId) internal view returns (CrudeLiftData memory _table) {
@@ -227,8 +271,14 @@ library CrudeLift {
   /**
    * @notice Set the full data using individual values.
    */
-  function set(uint256 smartObjectId, uint256 lensId, uint256 startMiningTime, uint256 miningRiftId) internal {
-    bytes memory _staticData = encodeStatic(lensId, startMiningTime, miningRiftId);
+  function set(
+    uint256 smartObjectId,
+    uint256 lensId,
+    uint256 startMiningTime,
+    uint256 miningRiftId,
+    uint256 miningRate
+  ) internal {
+    bytes memory _staticData = encodeStatic(lensId, startMiningTime, miningRiftId, miningRate);
 
     EncodedLengths _encodedLengths;
     bytes memory _dynamicData;
@@ -242,8 +292,14 @@ library CrudeLift {
   /**
    * @notice Set the full data using individual values.
    */
-  function _set(uint256 smartObjectId, uint256 lensId, uint256 startMiningTime, uint256 miningRiftId) internal {
-    bytes memory _staticData = encodeStatic(lensId, startMiningTime, miningRiftId);
+  function _set(
+    uint256 smartObjectId,
+    uint256 lensId,
+    uint256 startMiningTime,
+    uint256 miningRiftId,
+    uint256 miningRate
+  ) internal {
+    bytes memory _staticData = encodeStatic(lensId, startMiningTime, miningRiftId, miningRate);
 
     EncodedLengths _encodedLengths;
     bytes memory _dynamicData;
@@ -258,7 +314,12 @@ library CrudeLift {
    * @notice Set the full data using the data struct.
    */
   function set(uint256 smartObjectId, CrudeLiftData memory _table) internal {
-    bytes memory _staticData = encodeStatic(_table.lensId, _table.startMiningTime, _table.miningRiftId);
+    bytes memory _staticData = encodeStatic(
+      _table.lensId,
+      _table.startMiningTime,
+      _table.miningRiftId,
+      _table.miningRate
+    );
 
     EncodedLengths _encodedLengths;
     bytes memory _dynamicData;
@@ -273,7 +334,12 @@ library CrudeLift {
    * @notice Set the full data using the data struct.
    */
   function _set(uint256 smartObjectId, CrudeLiftData memory _table) internal {
-    bytes memory _staticData = encodeStatic(_table.lensId, _table.startMiningTime, _table.miningRiftId);
+    bytes memory _staticData = encodeStatic(
+      _table.lensId,
+      _table.startMiningTime,
+      _table.miningRiftId,
+      _table.miningRate
+    );
 
     EncodedLengths _encodedLengths;
     bytes memory _dynamicData;
@@ -289,12 +355,14 @@ library CrudeLift {
    */
   function decodeStatic(
     bytes memory _blob
-  ) internal pure returns (uint256 lensId, uint256 startMiningTime, uint256 miningRiftId) {
+  ) internal pure returns (uint256 lensId, uint256 startMiningTime, uint256 miningRiftId, uint256 miningRate) {
     lensId = (uint256(Bytes.getBytes32(_blob, 0)));
 
     startMiningTime = (uint256(Bytes.getBytes32(_blob, 32)));
 
     miningRiftId = (uint256(Bytes.getBytes32(_blob, 64)));
+
+    miningRate = (uint256(Bytes.getBytes32(_blob, 96)));
   }
 
   /**
@@ -308,7 +376,7 @@ library CrudeLift {
     EncodedLengths,
     bytes memory
   ) internal pure returns (CrudeLiftData memory _table) {
-    (_table.lensId, _table.startMiningTime, _table.miningRiftId) = decodeStatic(_staticData);
+    (_table.lensId, _table.startMiningTime, _table.miningRiftId, _table.miningRate) = decodeStatic(_staticData);
   }
 
   /**
@@ -338,9 +406,10 @@ library CrudeLift {
   function encodeStatic(
     uint256 lensId,
     uint256 startMiningTime,
-    uint256 miningRiftId
+    uint256 miningRiftId,
+    uint256 miningRate
   ) internal pure returns (bytes memory) {
-    return abi.encodePacked(lensId, startMiningTime, miningRiftId);
+    return abi.encodePacked(lensId, startMiningTime, miningRiftId, miningRate);
   }
 
   /**
@@ -352,9 +421,10 @@ library CrudeLift {
   function encode(
     uint256 lensId,
     uint256 startMiningTime,
-    uint256 miningRiftId
+    uint256 miningRiftId,
+    uint256 miningRate
   ) internal pure returns (bytes memory, EncodedLengths, bytes memory) {
-    bytes memory _staticData = encodeStatic(lensId, startMiningTime, miningRiftId);
+    bytes memory _staticData = encodeStatic(lensId, startMiningTime, miningRiftId, miningRate);
 
     EncodedLengths _encodedLengths;
     bytes memory _dynamicData;

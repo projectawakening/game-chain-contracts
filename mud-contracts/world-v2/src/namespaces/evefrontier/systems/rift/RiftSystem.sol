@@ -35,10 +35,12 @@ contract RiftSystem is EveSystem {
 
   // A rift is created with only an amount onchain
   // Location is "shielded" by the game server
-  function createRift(uint256 riftId, uint256 crudeAmount) public onlyServer {
+  function createRift(uint256 riftId, uint256 crudeAmount, uint256 richness, uint256 stability) public onlyServer {
     if (Rift.getCreatedAt(riftId) != 0) revert RiftAlreadyExists();
 
     Rift.setCrudeAmount(riftId, crudeAmount);
+    Rift.setRichness(riftId, richness);
+    Rift.setStability(riftId, stability);
     Rift.setCreatedAt(riftId, block.timestamp);
 
     // Mint Crude ERC20 or equivalent
