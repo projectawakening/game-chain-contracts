@@ -440,6 +440,7 @@ export default defineWorld({
         Lens: {
           schema: {
             lensId: "uint256",
+            createdAt: "uint256",
             durability: "uint256",
             exhausted: "bool",
           },

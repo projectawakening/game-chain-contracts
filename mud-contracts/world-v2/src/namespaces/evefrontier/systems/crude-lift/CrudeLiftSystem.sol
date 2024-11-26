@@ -22,6 +22,7 @@ import { CrudeLift, CrudeLiftData, LocationData, Lens, DeployableToken, Rift, In
 
 uint256 constant CRUDE_MATTER = 1;
 uint256 constant LENS = 2;
+uint256 constant LENS_EXPIRY_TIME = 90 days;
 
 contract CrudeLiftSystem is EveSystem {
   using WorldResourceIdLib for ResourceId;
@@ -34,6 +35,7 @@ contract CrudeLiftSystem is EveSystem {
   error LensNotInserted();
   error LensExhausted();
   error LensAlreadyInserted();
+  error LensExpired();
   error CannotRemoveLensWhileMining();
   error AlreadyMining();
   error NotMining();
@@ -106,6 +108,7 @@ contract CrudeLiftSystem is EveSystem {
     }
     if (foundLensId == 0) revert LensNotInserted();
     if (Lens.getExhausted(foundLensId)) revert LensExhausted();
+    if (Lens.getCreatedAt(foundLensId) + LENS_EXPIRY_TIME < block.timestamp) revert LensExpired();
 
     // get lens from ephemeral inventory
     TransferItem[] memory transferItems = new TransferItem[](1);
