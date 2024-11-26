@@ -439,6 +439,7 @@ export default defineWorld({
             riftId: "uint256",
             createdAt: "uint256",
             crudeAmount: "uint256",
+            miningCrudeLiftId: "uint256",
           },
           key: ["riftId"],
         },

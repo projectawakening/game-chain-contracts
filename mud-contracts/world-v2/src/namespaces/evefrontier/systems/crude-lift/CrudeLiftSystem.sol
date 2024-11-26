@@ -127,9 +127,11 @@ contract CrudeLiftSystem is EveSystem {
     if (lift.lensId == 0) revert LensNotInserted();
     if (lift.startMiningTime != 0) revert AlreadyMining();
     if (Rift.getCrudeAmount(riftId) == 0) revert RiftNotFoundOrDepleted();
+    if (Rift.getMiningCrudeLiftId(riftId) != 0) revert AlreadyMining();
 
     CrudeLift.setStartMiningTime(smartObjectId, block.timestamp);
     CrudeLift.setMiningRiftId(smartObjectId, riftId);
+    Rift.setMiningCrudeLiftId(riftId, smartObjectId);
   }
 
   function stopMining(uint256 smartObjectId) public onlyServer {
@@ -152,6 +154,16 @@ contract CrudeLiftSystem is EveSystem {
 
     // Reset mining state
     CrudeLift.setStartMiningTime(smartObjectId, 0);
+    CrudeLift.setMiningRiftId(smartObjectId, 0);
+
+    uint256 riftId = Rift.getMiningCrudeLiftId(smartObjectId);
+    Rift.setMiningCrudeLiftId(riftId, 0);
+
+    uint256 remainingCrudeAmount = Rift.getCrudeAmount(riftId);
+    if (crudeMined > remainingCrudeAmount) {
+      crudeMined = remainingCrudeAmount;
+    }
+    Rift.setCrudeAmount(riftId, remainingCrudeAmount - crudeMined);
 
     // Transfer Crude ERC20 from Rift to Lift
     // TODO: figure out how crude is stored on a ship
