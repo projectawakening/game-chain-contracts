@@ -18,7 +18,7 @@ import { State, SmartObjectData } from "../deployable/types.sol";
 import { WorldPosition } from "../location/types.sol";
 import { CRUDE_LIFT } from "../constants.sol";
 import { EntityRecordData } from "../entity-record/types.sol";
-import { CrudeLift, CrudeLiftData, LocationData, Lens, DeployableToken, Rift, InventoryItem as InventoryItemTable, Inventory, EntityRecord, CrudeOwned } from "../../codegen/index.sol";
+import { CrudeLift, CrudeLiftData, LocationData, Lens, DeployableToken, Rift, InventoryItem as InventoryItemTable, Inventory, EntityRecord } from "../../codegen/index.sol";
 
 uint256 constant CRUDE_MATTER = 1;
 uint256 constant LENS = 2;
@@ -43,6 +43,7 @@ contract CrudeLiftSystem is EveSystem {
   error InvalidMiningRate(uint256 miningRate);
   error InvalidStopMiningBlockNumber(uint256 stopMiningBlockNumber);
   error AlreadyCommittedToStopMining();
+  error InsufficientCrude();
 
   modifier onlyServer() {
     // TODO: Implement
@@ -133,7 +134,7 @@ contract CrudeLiftSystem is EveSystem {
     if (miningRate < 1_000 || miningRate > 200_000) revert InvalidMiningRate(miningRate);
     if (lift.lensId == 0) revert LensNotInserted();
     if (lift.startMiningTime != 0) revert AlreadyMining();
-    if (Rift.getCrudeAmount(riftId) == 0) revert RiftNotFoundOrDepleted();
+    if (getCrudeAmount(riftId) == 0) revert RiftNotFoundOrDepleted();
     if (Rift.getMiningCrudeLiftId(riftId) != 0) revert AlreadyMining();
 
     CrudeLift.setStartMiningTime(smartObjectId, block.timestamp);
@@ -168,13 +169,12 @@ contract CrudeLiftSystem is EveSystem {
       miningDuration
     );
 
-    uint256 remainingCrudeAmount = Rift.getCrudeAmount(riftId);
+    uint256 remainingCrudeAmount = getCrudeAmount(riftId);
     if (crudeMined > remainingCrudeAmount) {
       crudeMined = remainingCrudeAmount;
     }
-    Rift.setCrudeAmount(riftId, remainingCrudeAmount - crudeMined);
-
-    CrudeOwned.setCrudeAmount(smartObjectId, CrudeOwned.getCrudeAmount(smartObjectId) + crudeMined);
+    removeCrude(riftId, crudeMined);
+    addCrude(smartObjectId, crudeMined);
 
     bool didCollapse;
     if (block.number - 256 > stopMiningBlockNumber) {
@@ -192,9 +192,8 @@ contract CrudeLiftSystem is EveSystem {
     }
 
     if (didCollapse) {
-      Rift.setCrudeAmount(riftId, 0);
-      // TODO should there be a special way to handle collapse?
-      // Right now collapse is createdAt != 0 and crudeMined == 0
+      Rift.setCollapsedAt(riftId, block.timestamp);
+      removeCrude(riftId, getCrudeAmount(riftId));
     }
 
     // Reset mining state
@@ -204,12 +203,12 @@ contract CrudeLiftSystem is EveSystem {
     Rift.setMiningCrudeLiftId(riftId, 0);
   }
 
-  // TODO implement crude capacity
   function retrieveCrude(uint256 smartObjectId, uint256 shipId, uint256 amount) public onlyServer {
-    if (CrudeOwned.getCrudeAmount(smartObjectId) < amount) revert InsufficientCrude();
+    uint256 crudeAmount = getCrudeAmount(smartObjectId);
+    if (crudeAmount < amount) revert InsufficientCrude();
 
-    CrudeOwned.setCrudeAmount(smartObjectId, CrudeOwned.getCrudeAmount(smartObjectId) - amount);
-    CrudeOwned.setCrudeAmount(shipId, CrudeOwned.getCrudeAmount(shipId) + amount);
+    removeCrude(smartObjectId, amount);
+    addCrude(shipId, amount);
   }
 
   function commitToStopMining(uint256 smartObjectId) public onlyServer {
@@ -241,5 +240,54 @@ contract CrudeLiftSystem is EveSystem {
     uint256 collapseChance = (stability * miningRate) / 100_000;
 
     return collapseChance > 100_000 ? 100_000 : collapseChance;
+  }
+
+  function addCrude(uint256 smartObjectId, uint256 amount) public onlyServer {
+    InventoryItem[] memory items = new InventoryItem[](1);
+    items[0] = InventoryItem({
+      inventoryItemId: uint256(keccak256(abi.encodePacked("crude", CRUDE_MATTER))),
+      owner: address(0),
+      itemId: 0,
+      typeId: CRUDE_MATTER,
+      volume: amount,
+      quantity: amount
+    });
+
+    world().call(
+      inventorySystemId,
+      abi.encodeCall(InventorySystem.createAndDepositItemsToInventory, (smartObjectId, items))
+    );
+  }
+
+  function removeCrude(uint256 smartObjectId, uint256 amount) public onlyServer {
+    uint256 crudeAmount = getCrudeAmount(smartObjectId);
+    if (crudeAmount < amount) revert InsufficientCrude();
+
+    InventoryItem[] memory items = new InventoryItem[](1);
+    items[0] = InventoryItem({
+      inventoryItemId: 0,
+      owner: address(0),
+      itemId: 0,
+      typeId: CRUDE_MATTER,
+      volume: amount,
+      quantity: amount
+    });
+
+    world().call(inventorySystemId, abi.encodeCall(InventorySystem.withdrawFromInventory, (smartObjectId, items)));
+  }
+
+  function getCrudeAmount(uint256 smartObjectId) public view returns (uint256) {
+    uint256[] memory inventoryItems = Inventory.getItems(smartObjectId);
+    uint256 foundCrudeId = 0;
+    for (uint256 i = 0; i < inventoryItems.length; i++) {
+      // how do i do this?
+      if (EntityRecord.getTypeId(inventoryItems[i]) == CRUDE_MATTER) {
+        foundCrudeId = inventoryItems[i];
+        break;
+      }
+    }
+    if (foundCrudeId == 0) return 0;
+
+    return InventoryItemTable.getQuantity(smartObjectId, foundCrudeId);
   }
 }

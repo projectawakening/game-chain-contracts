@@ -429,14 +429,6 @@ export default defineWorld({
           key: ["smartObjectId"],
         },
 
-        CrudeOwned: {
-          schema: {
-            smartObjectId: "uint256",
-            crudeAmount: "uint256",
-          },
-          key: ["smartObjectId"],
-        },
-
         Lens: {
           schema: {
             lensId: "uint256",
@@ -451,7 +443,7 @@ export default defineWorld({
           schema: {
             riftId: "uint256",
             createdAt: "uint256",
-            crudeAmount: "uint256",
+            collapsedAt: "uint256",
             miningCrudeLiftId: "uint256",
             // 0-100_000, determines the amount of crude mined per second
             // a percentage with 3 digits of precision

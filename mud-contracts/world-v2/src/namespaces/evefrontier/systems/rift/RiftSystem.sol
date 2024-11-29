@@ -16,6 +16,8 @@ import { State, SmartObjectData } from "../deployable/types.sol";
 import { WorldPosition } from "../location/types.sol";
 import { CRUDE_RIFT } from "../constants.sol";
 import { EntityRecordData, Rift, RiftData, LocationData, Lens, DeployableToken } from "../../codegen/index.sol";
+import { DEPLOYMENT_NAMESPACE } from "./../constants.sol";
+import { CrudeLiftSystem } from "../crude-lift/CrudeLiftSystem.sol";
 
 uint256 constant CRUDE_MATTER = 1;
 
@@ -25,6 +27,8 @@ contract RiftSystem is EveSystem {
   ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
   ResourceId inventorySystemId = InventoryUtils.inventorySystemId();
   ResourceId ephemeralInventorySystemId = InventoryUtils.ephemeralInventorySystemId();
+  ResourceId crudeLiftSystemId =
+    WorldResourceIdLib.encode({ typeId: RESOURCE_SYSTEM, namespace: DEPLOYMENT_NAMESPACE, name: "CrudeLiftSystem" });
 
   error RiftAlreadyExists();
 
@@ -38,11 +42,11 @@ contract RiftSystem is EveSystem {
   function createRift(uint256 riftId, uint256 crudeAmount, uint256 richness, uint256 stability) public onlyServer {
     if (Rift.getCreatedAt(riftId) != 0) revert RiftAlreadyExists();
 
-    Rift.setCrudeAmount(riftId, crudeAmount);
+    world().call(inventorySystemId, abi.encodeCall(InventorySystem.setInventoryCapacity, (riftId, crudeAmount)));
+    world().call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.addCrude, (riftId, crudeAmount)));
+
     Rift.setRichness(riftId, richness);
     Rift.setStability(riftId, stability);
     Rift.setCreatedAt(riftId, block.timestamp);
-
-    // Mint Crude ERC20 or equivalent
   }
 }
