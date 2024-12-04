@@ -94,10 +94,10 @@ contract CrudeLiftSystem is EveSystem {
     );
   }
 
-  function insertLens(uint256 smartObjectId, address player) public onlyServer {
-    if (CrudeLift.getLensId(smartObjectId) != 0) revert LensAlreadyInserted();
+  function insertLens(uint256 crudeLiftId, address player) public onlyServer {
+    if (CrudeLift.getLensId(crudeLiftId) != 0) revert LensAlreadyInserted();
 
-    uint256[] memory items = Inventory.getItems(smartObjectId);
+    uint256[] memory items = Inventory.getItems(crudeLiftId);
     uint256 foundLensId = 0;
     for (uint256 i = 0; i < items.length; i++) {
       // how do i do this?
@@ -115,7 +115,7 @@ contract CrudeLiftSystem is EveSystem {
     transferItems[0] = TransferItem({ inventoryItemId: foundLensId, owner: player, quantity: 1 });
     world().call(
       inventoryInteractSystemId,
-      abi.encodeCall(InventoryInteractSystem.ephemeralToInventoryTransfer, (smartObjectId, player, transferItems))
+      abi.encodeCall(InventoryInteractSystem.ephemeralToInventoryTransfer, (crudeLiftId, player, transferItems))
     );
 
     // If durability is 0 but not exhausted, it means the lens has not been initialized onchain yet
@@ -124,11 +124,11 @@ contract CrudeLiftSystem is EveSystem {
       Lens.setDurability(foundLensId, 100);
     }
 
-    CrudeLift.setLensId(smartObjectId, foundLensId);
+    CrudeLift.setLensId(crudeLiftId, foundLensId);
   }
 
-  function startMining(uint256 smartObjectId, uint256 riftId, uint256 miningRate) public onlyServer {
-    CrudeLiftData memory lift = CrudeLift.get(smartObjectId);
+  function startMining(uint256 crudeLiftId, uint256 riftId, uint256 miningRate) public onlyServer {
+    CrudeLiftData memory lift = CrudeLift.get(crudeLiftId);
 
     if (miningRate < 1_000 || miningRate > 200_000) revert InvalidMiningRate(miningRate);
     if (lift.lensId == 0) revert LensNotInserted();
@@ -137,54 +137,45 @@ contract CrudeLiftSystem is EveSystem {
     if (Rift.getMiningCrudeLiftId(riftId) != 0) revert AlreadyMining();
     if (Rift.getCollapsedAt(riftId) != 0) revert RiftCollapsed();
 
-    CrudeLift.setStartMiningTime(smartObjectId, block.timestamp);
-    CrudeLift.setMiningRiftId(smartObjectId, riftId);
-    CrudeLift.setMiningRate(smartObjectId, miningRate);
-    Rift.setMiningCrudeLiftId(riftId, smartObjectId);
+    CrudeLift.setStartMiningTime(crudeLiftId, block.timestamp);
+    CrudeLift.setMiningRiftId(crudeLiftId, riftId);
+    CrudeLift.setMiningRate(crudeLiftId, miningRate);
+    Rift.setMiningCrudeLiftId(riftId, crudeLiftId);
   }
 
-  function stopMining(uint256 smartObjectId) public onlyServer {
-    CrudeLiftData memory lift = CrudeLift.get(smartObjectId);
+  function stopMining(uint256 crudeLiftId) public onlyServer {
+    CrudeLiftData memory lift = CrudeLift.get(crudeLiftId);
     if (lift.startMiningTime == 0) revert NotMining();
 
-    uint256 remainingLensDurability = Lens.getDurability(CrudeLift.getLensId(smartObjectId));
+    uint256 remainingLensDurability = Lens.getDurability(CrudeLift.getLensId(crudeLiftId));
     uint256 miningDuration = block.timestamp - lift.startMiningTime;
 
     // the lens was exhaused at some point during mining
     if (miningDuration >= remainingLensDurability) {
       miningDuration = remainingLensDurability;
-      Lens.setExhausted(CrudeLift.getLensId(smartObjectId), true);
-      Lens.setDurability(CrudeLift.getLensId(smartObjectId), 0);
+      Lens.setExhausted(CrudeLift.getLensId(crudeLiftId), true);
+      Lens.setDurability(CrudeLift.getLensId(crudeLiftId), 0);
     } else {
-      Lens.setDurability(CrudeLift.getLensId(smartObjectId), remainingLensDurability - miningDuration);
+      Lens.setDurability(CrudeLift.getLensId(crudeLiftId), remainingLensDurability - miningDuration);
     }
 
-    uint256 riftId = CrudeLift.getMiningRiftId(smartObjectId);
+    uint256 riftId = CrudeLift.getMiningRiftId(crudeLiftId);
     if (Rift.getCollapsedAt(riftId) != 0) revert RiftCollapsed();
 
-    uint256 crudeMined = calculateCrudeMined(CrudeLift.getMiningRate(smartObjectId), miningDuration);
+    uint256 crudeMined = calculateCrudeMined(CrudeLift.getMiningRate(crudeLiftId), miningDuration);
 
     uint256 remainingCrudeAmount = getCrudeAmount(riftId);
     if (crudeMined > remainingCrudeAmount) {
       crudeMined = remainingCrudeAmount;
     }
     removeCrude(riftId, crudeMined);
-    addCrude(smartObjectId, crudeMined);
+    addCrude(crudeLiftId, crudeMined);
 
     // Reset mining state
-    CrudeLift.setStartMiningTime(smartObjectId, 0);
-    CrudeLift.setMiningRiftId(smartObjectId, 0);
+    CrudeLift.setStartMiningTime(crudeLiftId, 0);
+    CrudeLift.setMiningRiftId(crudeLiftId, 0);
 
     Rift.setMiningCrudeLiftId(riftId, 0);
-  }
-
-  function retrieveCrude(uint256 smartObjectId, uint256 shipId, uint256 amount) public onlyServer {
-    uint256 crudeAmount = getCrudeAmount(smartObjectId);
-    if (crudeAmount < amount) revert InsufficientCrude();
-
-    // TODO normal inventoryToEphemeral transfer
-    removeCrude(smartObjectId, amount);
-    addCrude(shipId, amount);
   }
 
   function removeLens(uint256 smartObjectId, address receiver) public onlyServer {
