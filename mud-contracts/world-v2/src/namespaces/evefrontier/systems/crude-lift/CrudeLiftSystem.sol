@@ -6,9 +6,11 @@ import { EveSystem } from "../EveSystem.sol";
 import { InventorySystem } from "../inventory/InventorySystem.sol";
 import { EphemeralInventorySystem } from "../inventory/EphemeralInventorySystem.sol";
 import { InventoryInteractSystem } from "../inventory/InventoryInteractSystem.sol";
+import { FuelSystem } from "../fuel/FuelSystem.sol";
 import { DeployableSystem } from "../deployable/DeployableSystem.sol";
 import { DeployableUtils } from "../deployable/DeployableUtils.sol";
 import { InventoryUtils } from "../inventory/InventoryUtils.sol";
+import { FuelUtils } from "../fuel/FuelUtils.sol";
 import { ResourceId, WorldResourceIdLib } from "@latticexyz/world/src/WorldResourceId.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
@@ -18,7 +20,9 @@ import { State, SmartObjectData } from "../deployable/types.sol";
 import { WorldPosition } from "../location/types.sol";
 import { CRUDE_LIFT } from "../constants.sol";
 import { EntityRecordData } from "../entity-record/types.sol";
-import { CrudeLift, CrudeLiftData, LocationData, Lens, DeployableToken, Rift, InventoryItem as InventoryItemTable, Inventory, EntityRecord } from "../../codegen/index.sol";
+import { Fuel, CrudeLift, CrudeLiftData, LocationData, Lens, DeployableToken, Rift, InventoryItem as InventoryItemTable, Inventory, EntityRecord, DeployableState } from "../../codegen/index.sol";
+import { State } from "../../../../codegen/common.sol";
+import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
 
 uint256 constant CRUDE_MATTER = 1;
 uint256 constant LENS = 2;
@@ -31,6 +35,7 @@ contract CrudeLiftSystem is EveSystem {
   ResourceId inventorySystemId = InventoryUtils.inventorySystemId();
   ResourceId ephemeralInventorySystemId = InventoryUtils.ephemeralInventorySystemId();
   ResourceId inventoryInteractSystemId = InventoryUtils.inventoryInteractSystemId();
+  ResourceId fuelSystemId = FuelUtils.fuelSystemId();
 
   error LensNotInserted();
   error LensExhausted();
@@ -43,6 +48,7 @@ contract CrudeLiftSystem is EveSystem {
   error InvalidMiningRate(uint256 miningRate);
   error InsufficientCrude();
   error RiftCollapsed();
+  error CrudeLiftWrongState(uint256 crudeLiftId, State currentState);
 
   modifier onlyServer() {
     // TODO: Implement
@@ -128,6 +134,11 @@ contract CrudeLiftSystem is EveSystem {
   }
 
   function startMining(uint256 crudeLiftId, uint256 riftId, uint256 miningRate) public onlyServer {
+    State currentState = DeployableState.getCurrentState(crudeLiftId);
+    if (currentState != State.ONLINE) {
+      revert CrudeLiftWrongState(crudeLiftId, currentState);
+    }
+
     CrudeLiftData memory lift = CrudeLift.get(crudeLiftId);
 
     if (miningRate < 1_000 || miningRate > 200_000) revert InvalidMiningRate(miningRate);
@@ -147,9 +158,19 @@ contract CrudeLiftSystem is EveSystem {
     CrudeLiftData memory lift = CrudeLift.get(crudeLiftId);
     if (lift.startMiningTime == 0) revert NotMining();
 
-    uint256 remainingLensDurability = Lens.getDurability(CrudeLift.getLensId(crudeLiftId));
     uint256 miningDuration = block.timestamp - lift.startMiningTime;
 
+    bytes memory data = world().call(fuelSystemId, abi.encodeCall(FuelSystem.currentFuelAmountInWei, (crudeLiftId)));
+    uint256 currentFuel = abi.decode(data, (uint256));
+    // fuel ran out as some point in the past, need to figure out how many blocks we actually mined for
+    if (currentFuel < ONE_UNIT_IN_WEI) {
+      uint256 fuelConsumptionInterval = Fuel.getFuelConsumptionIntervalInSeconds(crudeLiftId);
+      uint256 secondsMining = (currentFuel / fuelConsumptionInterval);
+      miningDuration = secondsMining;
+    }
+    world().call(fuelSystemId, abi.encodeCall(FuelSystem.updateFuel, (crudeLiftId)));
+
+    uint256 remainingLensDurability = Lens.getDurability(CrudeLift.getLensId(crudeLiftId));
     // the lens was exhaused at some point during mining
     if (miningDuration >= remainingLensDurability) {
       miningDuration = remainingLensDurability;
