@@ -10,6 +10,9 @@ pragma solidity >=0.8.24;
  */
 interface IRiftSystem {
   error RiftAlreadyExists();
+  error RiftAlreadyCollapsed();
 
   function evefrontier__createRift(uint256 riftId, uint256 crudeAmount) external;
+
+  function evefrontier__destroyRift(uint256 riftId) external;
 }

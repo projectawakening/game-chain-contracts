@@ -8,7 +8,6 @@ import { IEveSystem } from "./IEveSystem.sol";
 import { ICrudeLiftSystem } from "./ICrudeLiftSystem.sol";
 import { IDeployableSystem } from "./IDeployableSystem.sol";
 import { IEntityRecordSystem } from "./IEntityRecordSystem.sol";
-import { IERC20System } from "./IERC20System.sol";
 import { IERC721System } from "./IERC721System.sol";
 import { IFuelSystem } from "./IFuelSystem.sol";
 import { IEphemeralInventorySystem } from "./IEphemeralInventorySystem.sol";
@@ -36,7 +35,6 @@ interface IWorld is
   ICrudeLiftSystem,
   IDeployableSystem,
   IEntityRecordSystem,
-  IERC20System,
   IERC721System,
   IFuelSystem,
   IEphemeralInventorySystem,
