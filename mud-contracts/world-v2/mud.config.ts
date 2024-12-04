@@ -422,9 +422,6 @@ export default defineWorld({
             startMiningTime: "uint256",
             miningRiftId: "uint256",
             miningRate: "uint256",
-            // Must commit to stop mining at a specific block number
-            // in order to seed the randomness of collapse
-            stopMiningBlockNumber: "uint256",
           },
           key: ["smartObjectId"],
         },
@@ -445,13 +442,6 @@ export default defineWorld({
             createdAt: "uint256",
             collapsedAt: "uint256",
             miningCrudeLiftId: "uint256",
-            // 0-100_000, determines the amount of crude mined per second
-            // a percentage with 3 digits of precision
-            // i.e. 100_000 = 100%
-            richness: "uint256",
-            // 0-100_000, determines the chance of a rift collapsing
-            // i.e. 100_000 = 100% chance of collapse
-            stability: "uint256",
           },
           key: ["riftId"],
         },

@@ -31,6 +31,7 @@ contract RiftSystem is EveSystem {
     WorldResourceIdLib.encode({ typeId: RESOURCE_SYSTEM, namespace: DEPLOYMENT_NAMESPACE, name: "CrudeLiftSystem" });
 
   error RiftAlreadyExists();
+  error RiftAlreadyCollapsed();
 
   modifier onlyServer() {
     // TODO: Implement
@@ -39,14 +40,20 @@ contract RiftSystem is EveSystem {
 
   // A rift is created with only an amount onchain
   // Location is "shielded" by the game server
-  function createRift(uint256 riftId, uint256 crudeAmount, uint256 richness, uint256 stability) public onlyServer {
+  function createRift(uint256 riftId, uint256 crudeAmount) public onlyServer {
     if (Rift.getCreatedAt(riftId) != 0) revert RiftAlreadyExists();
 
     world().call(inventorySystemId, abi.encodeCall(InventorySystem.setInventoryCapacity, (riftId, crudeAmount)));
     world().call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.addCrude, (riftId, crudeAmount)));
 
-    Rift.setRichness(riftId, richness);
-    Rift.setStability(riftId, stability);
     Rift.setCreatedAt(riftId, block.timestamp);
+  }
+
+  function destroyRift(uint256 riftId) public onlyServer {
+    if (Rift.getCollapsedAt(riftId) != 0) revert RiftAlreadyCollapsed();
+
+    world().call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.clearCrude, (riftId)));
+
+    Rift.setCollapsedAt(riftId, block.timestamp);
   }
 }

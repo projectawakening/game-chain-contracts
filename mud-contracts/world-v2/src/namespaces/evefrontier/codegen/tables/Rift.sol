@@ -20,8 +20,6 @@ struct RiftData {
   uint256 createdAt;
   uint256 collapsedAt;
   uint256 miningCrudeLiftId;
-  uint256 richness;
-  uint256 stability;
 }
 
 library Rift {
@@ -29,12 +27,12 @@ library Rift {
   ResourceId constant _tableId = ResourceId.wrap(0x746265766566726f6e7469657200000052696674000000000000000000000000);
 
   FieldLayout constant _fieldLayout =
-    FieldLayout.wrap(0x00a0050020202020200000000000000000000000000000000000000000000000);
+    FieldLayout.wrap(0x0060030020202000000000000000000000000000000000000000000000000000);
 
   // Hex-encoded key schema of (uint256)
   Schema constant _keySchema = Schema.wrap(0x002001001f000000000000000000000000000000000000000000000000000000);
-  // Hex-encoded value schema of (uint256, uint256, uint256, uint256, uint256)
-  Schema constant _valueSchema = Schema.wrap(0x00a005001f1f1f1f1f0000000000000000000000000000000000000000000000);
+  // Hex-encoded value schema of (uint256, uint256, uint256)
+  Schema constant _valueSchema = Schema.wrap(0x006003001f1f1f00000000000000000000000000000000000000000000000000);
 
   /**
    * @notice Get the table's key field names.
@@ -50,12 +48,10 @@ library Rift {
    * @return fieldNames An array of strings with the names of value fields.
    */
   function getFieldNames() internal pure returns (string[] memory fieldNames) {
-    fieldNames = new string[](5);
+    fieldNames = new string[](3);
     fieldNames[0] = "createdAt";
     fieldNames[1] = "collapsedAt";
     fieldNames[2] = "miningCrudeLiftId";
-    fieldNames[3] = "richness";
-    fieldNames[4] = "stability";
   }
 
   /**
@@ -199,90 +195,6 @@ library Rift {
   }
 
   /**
-   * @notice Get richness.
-   */
-  function getRichness(uint256 riftId) internal view returns (uint256 richness) {
-    bytes32[] memory _keyTuple = new bytes32[](1);
-    _keyTuple[0] = bytes32(uint256(riftId));
-
-    bytes32 _blob = StoreSwitch.getStaticField(_tableId, _keyTuple, 3, _fieldLayout);
-    return (uint256(bytes32(_blob)));
-  }
-
-  /**
-   * @notice Get richness.
-   */
-  function _getRichness(uint256 riftId) internal view returns (uint256 richness) {
-    bytes32[] memory _keyTuple = new bytes32[](1);
-    _keyTuple[0] = bytes32(uint256(riftId));
-
-    bytes32 _blob = StoreCore.getStaticField(_tableId, _keyTuple, 3, _fieldLayout);
-    return (uint256(bytes32(_blob)));
-  }
-
-  /**
-   * @notice Set richness.
-   */
-  function setRichness(uint256 riftId, uint256 richness) internal {
-    bytes32[] memory _keyTuple = new bytes32[](1);
-    _keyTuple[0] = bytes32(uint256(riftId));
-
-    StoreSwitch.setStaticField(_tableId, _keyTuple, 3, abi.encodePacked((richness)), _fieldLayout);
-  }
-
-  /**
-   * @notice Set richness.
-   */
-  function _setRichness(uint256 riftId, uint256 richness) internal {
-    bytes32[] memory _keyTuple = new bytes32[](1);
-    _keyTuple[0] = bytes32(uint256(riftId));
-
-    StoreCore.setStaticField(_tableId, _keyTuple, 3, abi.encodePacked((richness)), _fieldLayout);
-  }
-
-  /**
-   * @notice Get stability.
-   */
-  function getStability(uint256 riftId) internal view returns (uint256 stability) {
-    bytes32[] memory _keyTuple = new bytes32[](1);
-    _keyTuple[0] = bytes32(uint256(riftId));
-
-    bytes32 _blob = StoreSwitch.getStaticField(_tableId, _keyTuple, 4, _fieldLayout);
-    return (uint256(bytes32(_blob)));
-  }
-
-  /**
-   * @notice Get stability.
-   */
-  function _getStability(uint256 riftId) internal view returns (uint256 stability) {
-    bytes32[] memory _keyTuple = new bytes32[](1);
-    _keyTuple[0] = bytes32(uint256(riftId));
-
-    bytes32 _blob = StoreCore.getStaticField(_tableId, _keyTuple, 4, _fieldLayout);
-    return (uint256(bytes32(_blob)));
-  }
-
-  /**
-   * @notice Set stability.
-   */
-  function setStability(uint256 riftId, uint256 stability) internal {
-    bytes32[] memory _keyTuple = new bytes32[](1);
-    _keyTuple[0] = bytes32(uint256(riftId));
-
-    StoreSwitch.setStaticField(_tableId, _keyTuple, 4, abi.encodePacked((stability)), _fieldLayout);
-  }
-
-  /**
-   * @notice Set stability.
-   */
-  function _setStability(uint256 riftId, uint256 stability) internal {
-    bytes32[] memory _keyTuple = new bytes32[](1);
-    _keyTuple[0] = bytes32(uint256(riftId));
-
-    StoreCore.setStaticField(_tableId, _keyTuple, 4, abi.encodePacked((stability)), _fieldLayout);
-  }
-
-  /**
    * @notice Get the full data.
    */
   function get(uint256 riftId) internal view returns (RiftData memory _table) {
@@ -315,15 +227,8 @@ library Rift {
   /**
    * @notice Set the full data using individual values.
    */
-  function set(
-    uint256 riftId,
-    uint256 createdAt,
-    uint256 collapsedAt,
-    uint256 miningCrudeLiftId,
-    uint256 richness,
-    uint256 stability
-  ) internal {
-    bytes memory _staticData = encodeStatic(createdAt, collapsedAt, miningCrudeLiftId, richness, stability);
+  function set(uint256 riftId, uint256 createdAt, uint256 collapsedAt, uint256 miningCrudeLiftId) internal {
+    bytes memory _staticData = encodeStatic(createdAt, collapsedAt, miningCrudeLiftId);
 
     EncodedLengths _encodedLengths;
     bytes memory _dynamicData;
@@ -337,15 +242,8 @@ library Rift {
   /**
    * @notice Set the full data using individual values.
    */
-  function _set(
-    uint256 riftId,
-    uint256 createdAt,
-    uint256 collapsedAt,
-    uint256 miningCrudeLiftId,
-    uint256 richness,
-    uint256 stability
-  ) internal {
-    bytes memory _staticData = encodeStatic(createdAt, collapsedAt, miningCrudeLiftId, richness, stability);
+  function _set(uint256 riftId, uint256 createdAt, uint256 collapsedAt, uint256 miningCrudeLiftId) internal {
+    bytes memory _staticData = encodeStatic(createdAt, collapsedAt, miningCrudeLiftId);
 
     EncodedLengths _encodedLengths;
     bytes memory _dynamicData;
@@ -360,13 +258,7 @@ library Rift {
    * @notice Set the full data using the data struct.
    */
   function set(uint256 riftId, RiftData memory _table) internal {
-    bytes memory _staticData = encodeStatic(
-      _table.createdAt,
-      _table.collapsedAt,
-      _table.miningCrudeLiftId,
-      _table.richness,
-      _table.stability
-    );
+    bytes memory _staticData = encodeStatic(_table.createdAt, _table.collapsedAt, _table.miningCrudeLiftId);
 
     EncodedLengths _encodedLengths;
     bytes memory _dynamicData;
@@ -381,13 +273,7 @@ library Rift {
    * @notice Set the full data using the data struct.
    */
   function _set(uint256 riftId, RiftData memory _table) internal {
-    bytes memory _staticData = encodeStatic(
-      _table.createdAt,
-      _table.collapsedAt,
-      _table.miningCrudeLiftId,
-      _table.richness,
-      _table.stability
-    );
+    bytes memory _staticData = encodeStatic(_table.createdAt, _table.collapsedAt, _table.miningCrudeLiftId);
 
     EncodedLengths _encodedLengths;
     bytes memory _dynamicData;
@@ -403,20 +289,12 @@ library Rift {
    */
   function decodeStatic(
     bytes memory _blob
-  )
-    internal
-    pure
-    returns (uint256 createdAt, uint256 collapsedAt, uint256 miningCrudeLiftId, uint256 richness, uint256 stability)
-  {
+  ) internal pure returns (uint256 createdAt, uint256 collapsedAt, uint256 miningCrudeLiftId) {
     createdAt = (uint256(Bytes.getBytes32(_blob, 0)));
 
     collapsedAt = (uint256(Bytes.getBytes32(_blob, 32)));
 
     miningCrudeLiftId = (uint256(Bytes.getBytes32(_blob, 64)));
-
-    richness = (uint256(Bytes.getBytes32(_blob, 96)));
-
-    stability = (uint256(Bytes.getBytes32(_blob, 128)));
   }
 
   /**
@@ -430,9 +308,7 @@ library Rift {
     EncodedLengths,
     bytes memory
   ) internal pure returns (RiftData memory _table) {
-    (_table.createdAt, _table.collapsedAt, _table.miningCrudeLiftId, _table.richness, _table.stability) = decodeStatic(
-      _staticData
-    );
+    (_table.createdAt, _table.collapsedAt, _table.miningCrudeLiftId) = decodeStatic(_staticData);
   }
 
   /**
@@ -462,11 +338,9 @@ library Rift {
   function encodeStatic(
     uint256 createdAt,
     uint256 collapsedAt,
-    uint256 miningCrudeLiftId,
-    uint256 richness,
-    uint256 stability
+    uint256 miningCrudeLiftId
   ) internal pure returns (bytes memory) {
-    return abi.encodePacked(createdAt, collapsedAt, miningCrudeLiftId, richness, stability);
+    return abi.encodePacked(createdAt, collapsedAt, miningCrudeLiftId);
   }
 
   /**
@@ -478,11 +352,9 @@ library Rift {
   function encode(
     uint256 createdAt,
     uint256 collapsedAt,
-    uint256 miningCrudeLiftId,
-    uint256 richness,
-    uint256 stability
+    uint256 miningCrudeLiftId
   ) internal pure returns (bytes memory, EncodedLengths, bytes memory) {
-    bytes memory _staticData = encodeStatic(createdAt, collapsedAt, miningCrudeLiftId, richness, stability);
+    bytes memory _staticData = encodeStatic(createdAt, collapsedAt, miningCrudeLiftId);
 
     EncodedLengths _encodedLengths;
     bytes memory _dynamicData;

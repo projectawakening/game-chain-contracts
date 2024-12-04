@@ -41,9 +41,8 @@ contract CrudeLiftSystem is EveSystem {
   error NotMining();
   error RiftNotFoundOrDepleted();
   error InvalidMiningRate(uint256 miningRate);
-  error InvalidStopMiningBlockNumber(uint256 stopMiningBlockNumber);
-  error AlreadyCommittedToStopMining();
   error InsufficientCrude();
+  error RiftCollapsed();
 
   modifier onlyServer() {
     // TODO: Implement
@@ -121,7 +120,7 @@ contract CrudeLiftSystem is EveSystem {
 
     // If durability is 0 but not exhausted, it means the lens has not been initialized onchain yet
     if (Lens.getDurability(foundLensId) == 0) {
-      // TODO decide on a default durability. Maybe store this somewhere else
+      // TODO durability needs to get set when a Lens is crafted
       Lens.setDurability(foundLensId, 100);
     }
 
@@ -136,6 +135,7 @@ contract CrudeLiftSystem is EveSystem {
     if (lift.startMiningTime != 0) revert AlreadyMining();
     if (getCrudeAmount(riftId) == 0) revert RiftNotFoundOrDepleted();
     if (Rift.getMiningCrudeLiftId(riftId) != 0) revert AlreadyMining();
+    if (Rift.getCollapsedAt(riftId) != 0) revert RiftCollapsed();
 
     CrudeLift.setStartMiningTime(smartObjectId, block.timestamp);
     CrudeLift.setMiningRiftId(smartObjectId, riftId);
@@ -144,9 +144,6 @@ contract CrudeLiftSystem is EveSystem {
   }
 
   function stopMining(uint256 smartObjectId) public onlyServer {
-    uint256 stopMiningBlockNumber = CrudeLift.getStopMiningBlockNumber(smartObjectId);
-    if (stopMiningBlockNumber == 0) revert InvalidStopMiningBlockNumber(stopMiningBlockNumber);
-
     CrudeLiftData memory lift = CrudeLift.get(smartObjectId);
     if (lift.startMiningTime == 0) revert NotMining();
 
@@ -163,11 +160,9 @@ contract CrudeLiftSystem is EveSystem {
     }
 
     uint256 riftId = CrudeLift.getMiningRiftId(smartObjectId);
-    uint256 crudeMined = calculateCrudeMined(
-      Rift.getRichness(riftId),
-      CrudeLift.getMiningRate(smartObjectId),
-      miningDuration
-    );
+    if (Rift.getCollapsedAt(riftId) != 0) revert RiftCollapsed();
+
+    uint256 crudeMined = calculateCrudeMined(CrudeLift.getMiningRate(smartObjectId), miningDuration);
 
     uint256 remainingCrudeAmount = getCrudeAmount(riftId);
     if (crudeMined > remainingCrudeAmount) {
@@ -175,26 +170,6 @@ contract CrudeLiftSystem is EveSystem {
     }
     removeCrude(riftId, crudeMined);
     addCrude(smartObjectId, crudeMined);
-
-    bool didCollapse;
-    if (block.number - 256 > stopMiningBlockNumber) {
-      // We cannot get a seed from a block that is too old
-      // It always collapses in this case
-      didCollapse = true;
-    } else {
-      uint256 collapseChance = calculateCollapseChance(
-        CrudeLift.getMiningRate(smartObjectId),
-        Rift.getStability(riftId)
-      );
-      uint256 collapseSeed = uint256(keccak256(abi.encodePacked(blockhash(stopMiningBlockNumber), smartObjectId))) %
-        100_000;
-      didCollapse = collapseSeed < collapseChance;
-    }
-
-    if (didCollapse) {
-      Rift.setCollapsedAt(riftId, block.timestamp);
-      removeCrude(riftId, getCrudeAmount(riftId));
-    }
 
     // Reset mining state
     CrudeLift.setStartMiningTime(smartObjectId, 0);
@@ -207,15 +182,9 @@ contract CrudeLiftSystem is EveSystem {
     uint256 crudeAmount = getCrudeAmount(smartObjectId);
     if (crudeAmount < amount) revert InsufficientCrude();
 
+    // TODO normal inventoryToEphemeral transfer
     removeCrude(smartObjectId, amount);
     addCrude(shipId, amount);
-  }
-
-  function commitToStopMining(uint256 smartObjectId) public onlyServer {
-    if (CrudeLift.getStartMiningTime(smartObjectId) == 0) revert NotMining();
-    if (CrudeLift.getStopMiningBlockNumber(smartObjectId) != 0) revert AlreadyCommittedToStopMining();
-
-    CrudeLift.setStopMiningBlockNumber(smartObjectId, block.number);
   }
 
   function removeLens(uint256 smartObjectId, address receiver) public onlyServer {
@@ -232,8 +201,8 @@ contract CrudeLiftSystem is EveSystem {
     );
   }
 
-  function calculateCrudeMined(uint256 richness, uint256 miningRate, uint256 duration) internal pure returns (uint256) {
-    return (duration * richness * miningRate) / 100_000;
+  function calculateCrudeMined(uint256 miningRate, uint256 duration) internal pure returns (uint256) {
+    return (duration * miningRate) / 100_000;
   }
 
   function calculateCollapseChance(uint256 miningRate, uint256 stability) internal pure returns (uint256) {
@@ -274,6 +243,13 @@ contract CrudeLiftSystem is EveSystem {
     });
 
     world().call(inventorySystemId, abi.encodeCall(InventorySystem.withdrawFromInventory, (smartObjectId, items)));
+  }
+
+  function clearCrude(uint256 smartObjectId) public onlyServer {
+    uint256 crudeAmount = getCrudeAmount(smartObjectId);
+    if (crudeAmount == 0) return;
+
+    removeCrude(smartObjectId, crudeAmount);
   }
 
   function getCrudeAmount(uint256 smartObjectId) public view returns (uint256) {
