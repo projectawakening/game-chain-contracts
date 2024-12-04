@@ -189,6 +189,13 @@ contract CrudeLiftSystem is EveSystem {
     if (crudeMined > remainingCrudeAmount) {
       crudeMined = remainingCrudeAmount;
     }
+
+    uint256 remainingInventoryCapacity = Inventory.getCapacity(riftId) - Inventory.getUsedCapacity(riftId);
+    if (crudeMined > remainingInventoryCapacity) {
+      // TODO how much capacity does Crude take up?
+      crudeMined = remainingInventoryCapacity;
+    }
+
     removeCrude(riftId, crudeMined);
     addCrude(crudeLiftId, crudeMined);
 
