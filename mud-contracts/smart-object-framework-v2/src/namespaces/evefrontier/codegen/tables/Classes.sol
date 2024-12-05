@@ -21,6 +21,7 @@ import { Id } from "../../../../libs/Id.sol";
 
 struct ClassesData {
   bool exists;
+  bytes32 accessRole;
   bytes32[] systemTags;
   bytes32[] objects;
 }
@@ -30,12 +31,12 @@ library Classes {
   ResourceId constant _tableId = ResourceId.wrap(0x746265766566726f6e74696572000000436c6173736573000000000000000000);
 
   FieldLayout constant _fieldLayout =
-    FieldLayout.wrap(0x0001010201000000000000000000000000000000000000000000000000000000);
+    FieldLayout.wrap(0x0021020201200000000000000000000000000000000000000000000000000000);
 
   // Hex-encoded key schema of (bytes32)
   Schema constant _keySchema = Schema.wrap(0x002001005f000000000000000000000000000000000000000000000000000000);
-  // Hex-encoded value schema of (bool, bytes32[], bytes32[])
-  Schema constant _valueSchema = Schema.wrap(0x0001010260c1c100000000000000000000000000000000000000000000000000);
+  // Hex-encoded value schema of (bool, bytes32, bytes32[], bytes32[])
+  Schema constant _valueSchema = Schema.wrap(0x00210202605fc1c1000000000000000000000000000000000000000000000000);
 
   /**
    * @notice Get the table's key field names.
@@ -51,10 +52,11 @@ library Classes {
    * @return fieldNames An array of strings with the names of value fields.
    */
   function getFieldNames() internal pure returns (string[] memory fieldNames) {
-    fieldNames = new string[](3);
+    fieldNames = new string[](4);
     fieldNames[0] = "exists";
-    fieldNames[1] = "systemTags";
-    fieldNames[2] = "objects";
+    fieldNames[1] = "accessRole";
+    fieldNames[2] = "systemTags";
+    fieldNames[3] = "objects";
   }
 
   /**
@@ -111,6 +113,48 @@ library Classes {
     _keyTuple[0] = Id.unwrap(classId);
 
     StoreCore.setStaticField(_tableId, _keyTuple, 0, abi.encodePacked((exists)), _fieldLayout);
+  }
+
+  /**
+   * @notice Get accessRole.
+   */
+  function getAccessRole(Id classId) internal view returns (bytes32 accessRole) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(classId);
+
+    bytes32 _blob = StoreSwitch.getStaticField(_tableId, _keyTuple, 1, _fieldLayout);
+    return (bytes32(_blob));
+  }
+
+  /**
+   * @notice Get accessRole.
+   */
+  function _getAccessRole(Id classId) internal view returns (bytes32 accessRole) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(classId);
+
+    bytes32 _blob = StoreCore.getStaticField(_tableId, _keyTuple, 1, _fieldLayout);
+    return (bytes32(_blob));
+  }
+
+  /**
+   * @notice Set accessRole.
+   */
+  function setAccessRole(Id classId, bytes32 accessRole) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(classId);
+
+    StoreSwitch.setStaticField(_tableId, _keyTuple, 1, abi.encodePacked((accessRole)), _fieldLayout);
+  }
+
+  /**
+   * @notice Set accessRole.
+   */
+  function _setAccessRole(Id classId, bytes32 accessRole) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(classId);
+
+    StoreCore.setStaticField(_tableId, _keyTuple, 1, abi.encodePacked((accessRole)), _fieldLayout);
   }
 
   /**
@@ -470,8 +514,14 @@ library Classes {
   /**
    * @notice Set the full data using individual values.
    */
-  function set(Id classId, bool exists, bytes32[] memory systemTags, bytes32[] memory objects) internal {
-    bytes memory _staticData = encodeStatic(exists);
+  function set(
+    Id classId,
+    bool exists,
+    bytes32 accessRole,
+    bytes32[] memory systemTags,
+    bytes32[] memory objects
+  ) internal {
+    bytes memory _staticData = encodeStatic(exists, accessRole);
 
     EncodedLengths _encodedLengths = encodeLengths(systemTags, objects);
     bytes memory _dynamicData = encodeDynamic(systemTags, objects);
@@ -485,8 +535,14 @@ library Classes {
   /**
    * @notice Set the full data using individual values.
    */
-  function _set(Id classId, bool exists, bytes32[] memory systemTags, bytes32[] memory objects) internal {
-    bytes memory _staticData = encodeStatic(exists);
+  function _set(
+    Id classId,
+    bool exists,
+    bytes32 accessRole,
+    bytes32[] memory systemTags,
+    bytes32[] memory objects
+  ) internal {
+    bytes memory _staticData = encodeStatic(exists, accessRole);
 
     EncodedLengths _encodedLengths = encodeLengths(systemTags, objects);
     bytes memory _dynamicData = encodeDynamic(systemTags, objects);
@@ -501,7 +557,7 @@ library Classes {
    * @notice Set the full data using the data struct.
    */
   function set(Id classId, ClassesData memory _table) internal {
-    bytes memory _staticData = encodeStatic(_table.exists);
+    bytes memory _staticData = encodeStatic(_table.exists, _table.accessRole);
 
     EncodedLengths _encodedLengths = encodeLengths(_table.systemTags, _table.objects);
     bytes memory _dynamicData = encodeDynamic(_table.systemTags, _table.objects);
@@ -516,7 +572,7 @@ library Classes {
    * @notice Set the full data using the data struct.
    */
   function _set(Id classId, ClassesData memory _table) internal {
-    bytes memory _staticData = encodeStatic(_table.exists);
+    bytes memory _staticData = encodeStatic(_table.exists, _table.accessRole);
 
     EncodedLengths _encodedLengths = encodeLengths(_table.systemTags, _table.objects);
     bytes memory _dynamicData = encodeDynamic(_table.systemTags, _table.objects);
@@ -530,8 +586,10 @@ library Classes {
   /**
    * @notice Decode the tightly packed blob of static data using this table's field layout.
    */
-  function decodeStatic(bytes memory _blob) internal pure returns (bool exists) {
+  function decodeStatic(bytes memory _blob) internal pure returns (bool exists, bytes32 accessRole) {
     exists = (_toBool(uint8(Bytes.getBytes1(_blob, 0))));
+
+    accessRole = (Bytes.getBytes32(_blob, 1));
   }
 
   /**
@@ -566,7 +624,7 @@ library Classes {
     EncodedLengths _encodedLengths,
     bytes memory _dynamicData
   ) internal pure returns (ClassesData memory _table) {
-    (_table.exists) = decodeStatic(_staticData);
+    (_table.exists, _table.accessRole) = decodeStatic(_staticData);
 
     (_table.systemTags, _table.objects) = decodeDynamic(_encodedLengths, _dynamicData);
   }
@@ -595,8 +653,8 @@ library Classes {
    * @notice Tightly pack static (fixed length) data using this table's schema.
    * @return The static data, encoded into a sequence of bytes.
    */
-  function encodeStatic(bool exists) internal pure returns (bytes memory) {
-    return abi.encodePacked(exists);
+  function encodeStatic(bool exists, bytes32 accessRole) internal pure returns (bytes memory) {
+    return abi.encodePacked(exists, accessRole);
   }
 
   /**
@@ -629,10 +687,11 @@ library Classes {
    */
   function encode(
     bool exists,
+    bytes32 accessRole,
     bytes32[] memory systemTags,
     bytes32[] memory objects
   ) internal pure returns (bytes memory, EncodedLengths, bytes memory) {
-    bytes memory _staticData = encodeStatic(exists);
+    bytes memory _staticData = encodeStatic(exists, accessRole);
 
     EncodedLengths _encodedLengths = encodeLengths(systemTags, objects);
     bytes memory _dynamicData = encodeDynamic(systemTags, objects);

@@ -12,8 +12,8 @@ import { DEPLOYMENT_NAMESPACE } from "../../constants.sol";
  * @title Utils to calculate systemId by namespace and system name
  */
 library Utils {
-  function entitySystemId() internal pure returns (ResourceId systemId) {
+  function accessConfigSystemId() internal pure returns (ResourceId systemId) {
     return
-      WorldResourceIdLib.encode({ typeId: RESOURCE_SYSTEM, namespace: DEPLOYMENT_NAMESPACE, name: "EntitySystem" });
+      WorldResourceIdLib.encode({ typeId: RESOURCE_SYSTEM, namespace: DEPLOYMENT_NAMESPACE, name: "AccessConfigSyst" });
   }
 }

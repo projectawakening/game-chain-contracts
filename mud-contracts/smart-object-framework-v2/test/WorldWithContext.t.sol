@@ -30,6 +30,8 @@ import { TAG_SYSTEM } from "../src/types/tagTypes.sol";
 
 import { SmartObjectFramework } from "../src/inherit/SmartObjectFramework.sol";
 
+import { IWorldWithContext } from "../src/IWorldWithContext.sol";
+
 contract WorldWithContextTest is MudTest {
   using EntitySystemUtils for bytes14;
 
@@ -80,7 +82,7 @@ contract WorldWithContextTest is MudTest {
 
   // ensure that calling view functions directly no longer throw staticcall errors
   // NOTE: view calls are not recorded in the World transient context because they don't change state and are not relevant for any chain of internal calls in this regard
-  function testViewCall() public {
+  function testDirectViewCall() public {
     // test direct call to a view function
     bytes memory returnData = world.call(MOCK_SYSTEM_ID, abi.encodeCall(SystemMock.viewCall, ()));
     // Decode the returned data from the target system
@@ -159,4 +161,28 @@ contract WorldWithContextTest is MudTest {
     assertEq(transientContext1.msgValue, 1 ether); // primaryCall _msgValue()
     assertEq(transientContext2.msgValue, 0); // secondaryCall _msgValue()
   }
+
+  function test_callStatic() public {
+    IWorldWithContext(worldAddress).callStatic(
+      MOCK_SYSTEM_ID,
+      abi.encodeCall(SystemMock.viewCall, ())
+    );
+  }
+
+  // function test_callFromStatic() public {
+  //   // Register an unlimited delegation
+  //   address delegator = deployer;
+  //   address delegatee = alice;
+  //   vm.prank(delegator);
+  //   world.registerDelegation(delegatee, UNLIMITED_DELEGATION, new bytes(0));
+
+  //   // Static call from the delegatee on behalf of the delegator
+  //   vm.prank(delegatee);
+  //   IWorldWithContext(worldAddress).callFromStatic(
+  //     delegator,
+  //     MOCK_SYSTEM_ID,
+  //     abi.encodeCall(SystemMock.viewCall, ())
+  //   );
+  // }
+
 }

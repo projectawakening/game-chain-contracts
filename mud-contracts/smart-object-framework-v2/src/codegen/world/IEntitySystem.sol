@@ -11,13 +11,17 @@ import { Id } from "../../libs/Id.sol";
  * @dev This interface is automatically generated from the corresponding system contract. Do not edit manually.
  */
 interface IEntitySystem {
-  function evefrontier__registerClass(Id classId, Id[] memory systemTags) external;
+  function evefrontier__registerClass(Id classId, bytes32 accessRole, Id[] memory systemTags) external;
+
+  function evefrontier__setClassAccessRole(Id classId, bytes32 newAccessRole) external;
 
   function evefrontier__deleteClass(Id classId) external;
 
   function evefrontier__deleteClasses(Id[] memory classIds) external;
 
   function evefrontier__instantiate(Id classId, Id objectId) external;
+
+  function evefrontier__setObjectAccessRole(Id objectId, bytes32 newAccessRole) external;
 
   function evefrontier__deleteObject(Id objectId) external;
 

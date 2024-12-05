@@ -14,12 +14,12 @@ interface ITagSystem {
   function removeSystemTag(Id classId, Id tagId) external;
   function removeSystemTags(Id classId, Id[] memory tagIds) external;
 
-  error InvalidTagId(Id tagId);
-  error InvalidTagType(bytes2 givenType);
-  error TagAlreadyExists(Id tagId);
-  error TagDoesNotExist(Id tagId);
-  error TagNotFound(Id entityId, Id tagId);
-  error WrongTagType(bytes2 givenType, bytes2[] expectedTypes);
-  error SystemNotRegistered(ResourceId systemId);
-  error EntityAlreadyHasTag(Id entityId, Id tagId);
+  error Tag_InvalidTagId(Id tagId);
+  error Tag_InvalidTagType(bytes2 givenType);
+  error Tag_TagAlreadyExists(Id tagId);
+  error Tag_TagDoesNotExist(Id tagId);
+  error Tag_TagNotFound(Id entityId, Id tagId);
+  error Tag_WrongTagType(bytes2 givenType, bytes2[] expectedTypes);
+  error Tag_SystemNotRegistered(ResourceId systemId);
+  error Tag_EntityAlreadyHasTag(Id entityId, Id tagId);
 }

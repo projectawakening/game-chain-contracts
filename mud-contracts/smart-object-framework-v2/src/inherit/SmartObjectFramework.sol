@@ -3,21 +3,23 @@ pragma solidity >=0.8.24;
 
 import { System } from "@latticexyz/world/src/System.sol";
 import { ResourceId } from "@latticexyz/world/src/WorldResourceId.sol";
-import { IWorldKernel } from "@latticexyz/world/src/IWorldKernel.sol";
-
 import { SystemRegistry } from "@latticexyz/world/src/codegen/tables/SystemRegistry.sol";
-import { Systems } from "@latticexyz/world/src/codegen/tables/Systems.sol";
 
-import { IWorldWithContext } from "../IWorldWithContext.sol";
-import { Id, IdLib } from "../libs/Id.sol";
+import { Id } from "../libs/Id.sol";
 import { Bytes } from "../libs/Bytes.sol";
+
 import { TAG_SYSTEM } from "../types/tagTypes.sol";
 import { ENTITY_CLASS, ENTITY_OBJECT } from "../types/entityTypes.sol";
+
 import { Objects } from "../namespaces/evefrontier/codegen/tables/Objects.sol";
 import { ClassSystemTagMap } from "../namespaces/evefrontier/codegen/tables/ClassSystemTagMap.sol";
+import { ObjectSystemTagMap } from "../namespaces/evefrontier/codegen/tables/ObjectSystemTagMap.sol";
+import { AccessConfigData, AccessConfig } from "../namespaces/evefrontier/codegen/tables/AccessConfig.sol";
 
 import { IEntitySystem } from "../namespaces/evefrontier/interfaces/IEntitySystem.sol";
 import { ITagSystem } from "../namespaces/evefrontier/interfaces/ITagSystem.sol";
+
+import { IWorldWithContext } from "../IWorldWithContext.sol";
 
 /**
  * @title SmartObjectFramework
@@ -36,6 +38,23 @@ contract SmartObjectFramework is System {
    */
   error SOF_UnscopedSystemCall(Id entityId, ResourceId systemId);
 
+  /**
+   * @notice Thrown when an invalid entity type is passed to the scope() modifier
+   * @param givenType The given incorrect entity type data
+   */
+  error SOF_InvalidEntityType(bytes2 givenType);
+
+  /**
+   * @notice Thrown when a system call beyond a prohibited depth is made
+   * @param callCount The callCount at the time of reverting
+   */
+  error SOF_CallTooDeep(uint256 callCount);
+  
+  /**
+   * @notice Thrown when access logic mutates state
+   */
+  error SOF_InvalidAccessLogic();
+
   /// @notice Size of MUD context data appended to calls (address + uint256)
   uint256 constant MUD_CONTEXT_BYTES = 20 + 32;
 
@@ -44,7 +63,8 @@ contract SmartObjectFramework is System {
    * @dev Verifies the calling system and function selector match tracked context
    */
   modifier context() {
-    ResourceId systemId = _contextGuard();
+    ResourceId systemId = SystemRegistry.get(address(this));
+    _contextGuard(systemId);
     _;
   }
 
@@ -54,18 +74,37 @@ contract SmartObjectFramework is System {
    * @param entityId The entity ID to check scope fo
    */
   modifier scope(Id entityId) {
+    // check that the current system is in scope for the given entity
     ResourceId systemId = SystemRegistry.get(address(this));
     _scope(entityId, systemId);
+    // if this is a subsequent system-to-system call (callCount > 1), then check that the previous (calling) system is in scope for the given entity
+    uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
+    if (callCount > 1) {
+      (ResourceId prevSystemId, , , ) = IWorldWithContext(_world()).getWorldCallContext(
+        callCount - 1
+      );
+      _scope(entityId, prevSystemId);
+    }
+    _;
+  }
+
+  modifier access(Id entityId) {
+    bytes32 target = keccak256(abi.encodePacked(SystemRegistry.get(address(this)), msg.sig));
+    _access(entityId, target);
+    _;
+  }
+
+  modifier enforceCallCount(uint256 maxCallCount) {
+    uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
+    _enforceMaxCallCount(callCount, maxCallCount);
     _;
   }
 
   /**
    * @notice Validates that the current execution context matches the expected system and function
    * @dev Compares the current system ID and function selector against the tracked context
-   * @return systemId The ResourceId of the current system
    */
-  function _contextGuard() internal view returns (ResourceId) {
-    ResourceId systemId = SystemRegistry.get(address(this));
+  function _contextGuard(ResourceId systemId) internal view {
     (ResourceId trackedSystemId, bytes4 trackedFunctionSelector, , ) = IWorldWithContext(_world()).getWorldCallContext(
       IWorldWithContext(_world()).getWorldCallCount()
     );
@@ -74,7 +113,6 @@ contract SmartObjectFramework is System {
     ) {
       revert SOF_InvalidCall();
     }
-    return systemId;
   }
 
   /**
@@ -133,7 +171,7 @@ contract SmartObjectFramework is System {
     return Bytes.slice(callDataWithContext, 0, callDataWithContext.length - MUD_CONTEXT_BYTES);
   }
 
-  function _scope(Id entityId, ResourceId systemId) private view {
+  function _scope(Id entityId, ResourceId systemId) internal virtual view {
     if (Id.unwrap(entityId) != bytes32(0)) {
       bool classHasTag;
       if (entityId.getType() == ENTITY_CLASS) {
@@ -144,12 +182,31 @@ contract SmartObjectFramework is System {
       } else if (entityId.getType() == ENTITY_OBJECT) {
         Id classId = Objects.getClass(entityId);
         classHasTag = ClassSystemTagMap.getHasTag(classId, Id.wrap(ResourceId.unwrap(systemId)));
-        if (!(classHasTag)) {
+        bool objectHasTag = ObjectSystemTagMap.getHasTag(entityId, Id.wrap(ResourceId.unwrap(systemId)));
+        if (!(classHasTag || objectHasTag)) {
           revert SOF_UnscopedSystemCall(entityId, systemId);
         }
       } else {
-        revert IEntitySystem.InvalidEntityType(entityId.getType());
+        revert SOF_InvalidEntityType(entityId.getType());
       }
+    }
+  }
+
+  function _access(Id entityId, bytes32 target) internal virtual {
+    AccessConfigData memory accessConfig = AccessConfig.get(target);
+    // target function selector is 4 bytes, _msgSender is 20 bytes, _msgValue is 32 bytes = 56
+    bytes memory callData = Bytes.slice(msg.data, 4, msg.data.length - 56);
+    if(accessConfig.configured) {
+      IWorldWithContext(_world()).callStatic(
+        accessConfig.accessSystemId, 
+        abi.encodeWithSelector(accessConfig.accessFunctionId, entityId, callData)
+      );
+    }
+  }
+
+  function _enforceMaxCallCount(uint256 callCount, uint256 maxCallCount) internal virtual view {
+    if (callCount > maxCallCount) {
+      revert SOF_CallTooDeep(callCount);
     }
   }
 }

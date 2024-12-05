@@ -28,6 +28,8 @@ import { IWorldEvents } from "@latticexyz/world/src/IWorldEvents.sol";
 import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/FunctionSelectors.sol";
 import { Balances } from "@latticexyz/world/src/codegen/tables/Balances.sol";
 
+import { StaticSystemCall } from "./StaticSystemCall.sol";
+
 /**
  * @title World Contract
  * @author MUD (https://mud.dev) by Lattice (https://lattice.xyz)
@@ -429,6 +431,49 @@ contract WorldWithContext is StoreKernel, IWorldKernel {
     revert World_DelegationNotFound(delegator, msg.sender);
   }
 
+
+  function callStatic(
+    ResourceId systemId,
+    bytes memory callData
+  ) external view virtual prohibitDirectCallback returns (bytes memory) {
+    return StaticSystemCall.staticCallOrRevert(msg.sender, systemId, callData);
+  }
+
+  // function callFromStatic(
+  //   address delegator,
+  //   ResourceId systemId,
+  //   bytes memory callData
+  // ) external view virtual prohibitDirectCallback returns (bytes memory) {
+  //   // If the delegator is the caller, call the system directly
+  //   if (delegator == msg.sender) {
+  //     StaticSystemCall.staticCallOrRevert(msg.sender, systemId, callData);
+  //   }
+
+  //   // Check if there is an individual authorization for this caller to perform actions on behalf of the delegator
+  //   ResourceId individualDelegationId = UserDelegationControl._get({ delegator: delegator, delegatee: msg.sender });
+
+  //   if (Delegation.verify(individualDelegationId, delegator, msg.sender, systemId, callData)) {
+  //     // forward the call as `delegator`
+  //     return StaticSystemCall.staticCallOrRevert(msg.sender, systemId, callData);
+  //   }
+
+  //   // Check if the delegator has a fallback delegation control set
+  //   ResourceId userFallbackDelegationId = UserDelegationControl._get({ delegator: delegator, delegatee: address(0) });
+  //   if (Delegation.verify(userFallbackDelegationId, delegator, msg.sender, systemId, callData)) {
+  //     // forward the call as `delegator`
+  //     return StaticSystemCall.staticCallOrRevert(msg.sender, systemId, callData);
+  //   }
+
+  //   // Check if the namespace has a fallback delegation control set
+  //   ResourceId namespaceFallbackDelegationId = NamespaceDelegationControl._get(systemId.getNamespaceId());
+  //   if (Delegation.verify(namespaceFallbackDelegationId, delegator, msg.sender, systemId, callData)) {
+  //     // forward the call as `delegator`
+  //     return StaticSystemCall.staticCallOrRevert(msg.sender, systemId, callData);
+  //   }
+
+  //   revert World_DelegationNotFound(delegator, msg.sender);
+  // }
+
   /**
    * @notice Used in conjunction with the try/catch pattern to test if the current call is staticcall
    * @dev Attempts to write to max uint256 slot in transient storage to verify if the current call is staticcall
@@ -436,7 +481,7 @@ contract WorldWithContext is StoreKernel, IWorldKernel {
   function staticCallCheck() external {
     uint256 maxSlot = type(uint256).max;
     assembly {
-      tstore(maxSlot, 1)
+      tstore(maxSlot, 0)
     }
   }
 

@@ -12,6 +12,8 @@ import { ResourceId } from "@latticexyz/world/src/WorldResourceId.sol";
  * including system IDs, function selectors, msg.sender and msg.value across the world execution call stack
  */
 interface IWorldWithContext is IWorld {
+  function callStatic(ResourceId systemId, bytes memory callData) external view returns (bytes memory);
+  // function callFromStatic(address delegator, ResourceId systemId, bytes memory callData) external view returns (bytes memory);
   function getWorldCallContext() external view returns (ResourceId, bytes4, address, uint256);
   function getWorldCallContext(uint256 callCount) external view returns (ResourceId, bytes4, address, uint256);
   function getWorldCallCount() external view returns (uint256);
