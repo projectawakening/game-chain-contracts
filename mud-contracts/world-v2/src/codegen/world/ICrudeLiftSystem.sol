@@ -22,7 +22,6 @@ interface ICrudeLiftSystem {
   error AlreadyMining();
   error NotMining();
   error RiftNotFoundOrDepleted();
-  error InvalidMiningRate(uint256 miningRate);
   error InsufficientCrude();
   error RiftCollapsed();
   error CrudeLiftWrongState(uint256 crudeLiftId, State currentState);
@@ -39,7 +38,7 @@ interface ICrudeLiftSystem {
     uint256 ephemeralStorageCapacity
   ) external;
 
-  function evefrontier__insertLens(uint256 crudeLiftId, address player) external;
+  function evefrontier__insertLens(uint256 crudeLiftId) external;
 
   function evefrontier__startMining(uint256 crudeLiftId, uint256 riftId, uint256 miningRate) external;
 

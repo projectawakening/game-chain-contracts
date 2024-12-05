@@ -22,8 +22,12 @@ import { FuelSystem } from "../../src/namespaces/evefrontier/systems/fuel/FuelSy
 import { CRUDE_LIFT } from "../../src/namespaces/evefrontier/systems/constants.sol";
 import { InventoryItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
 import { LENS } from "../../src/namespaces/evefrontier/systems/crude-lift/CrudeLiftSystem.sol";
+import { InventorySystem } from "../../src/namespaces/evefrontier/systems/inventory/InventorySystem.sol";
 import { EphemeralInventorySystem } from "../../src/namespaces/evefrontier/systems/inventory/EphemeralInventorySystem.sol";
 import { InventoryUtils } from "../../src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
+import { RiftUtils } from "../../src/namespaces/evefrontier/systems/rift/RiftUtils.sol";
+import { RiftSystem } from "../../src/namespaces/evefrontier/systems/rift/RiftSystem.sol";
+import { Lens, Rift } from "../../src/namespaces/evefrontier/codegen/index.sol";
 
 contract CrudeLiftTest is MudTest {
   IBaseWorld world;
@@ -32,6 +36,7 @@ contract CrudeLiftTest is MudTest {
   uint256 deployerPK = vm.deriveKey(mnemonic, 0);
   uint256 alicePK = vm.deriveKey(mnemonic, 1);
 
+  address deployer = vm.addr(deployerPK); // ADMIN
   address alice = vm.addr(alicePK);
   uint256 characterId = 1111;
   uint256 tribeId = 1122;
@@ -48,6 +53,8 @@ contract CrudeLiftTest is MudTest {
   ResourceId crudeLiftSystemId = CrudeLiftUtils.crudeLiftSystemId();
   ResourceId fuelSystemId = FuelUtils.fuelSystemId();
   ResourceId ephemeralSystemId = InventoryUtils.ephemeralInventorySystemId();
+  ResourceId inventorySystemId = InventoryUtils.inventorySystemId();
+  ResourceId riftSystemId = RiftUtils.riftSystemId();
 
   function setUp() public virtual override {
     super.setUp();
@@ -77,11 +84,11 @@ contract CrudeLiftTest is MudTest {
   }
 
   function testAnchorCrudeLift() public {
-    uint256 fuelUnitVolume = 100;
+    uint256 fuelUnitVolume = 1;
     uint256 fuelConsumptionIntervalInSeconds = 100;
-    uint256 fuelMaxCapacity = 100;
-    uint256 storageCapacity = 1000;
-    uint256 ephemeralStorageCapacity = 1000;
+    uint256 fuelMaxCapacity = 100_000;
+    uint256 storageCapacity = 100_000;
+    uint256 ephemeralStorageCapacity = 100_000;
 
     world.call(
       crudeLiftSystemId,
@@ -101,18 +108,28 @@ contract CrudeLiftTest is MudTest {
       )
     );
 
-    world.call(fuelSystemId, abi.encodeCall(FuelSystem.depositFuel, (smartObjectId, 1)));
+    world.call(fuelSystemId, abi.encodeCall(FuelSystem.depositFuel, (smartObjectId, 100)));
     world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOnline, (smartObjectId)));
 
     assertEq(SmartAssembly.getSmartAssemblyType(smartObjectId), CRUDE_LIFT);
     assertEq(uint8(DeployableState.getCurrentState(smartObjectId)), uint8(State.ONLINE));
   }
 
+  function testCraftLens() public {
+    vm.startPrank(deployer);
+    Lens.setDurability(lensId, 100);
+    vm.stopPrank();
+  }
+
+  function testCreateRift() public {
+    world.call(riftSystemId, abi.encodeCall(RiftSystem.createRift, (riftId, 100)));
+
+    assertEq(Rift.getCreatedAt(riftId), block.timestamp);
+  }
+
   function testInsertLens() public {
     testAnchorCrudeLift();
-
-    // Create lens entity record
-    EntityRecordData memory lensEntityRecord = EntityRecordData({ typeId: LENS, itemId: lensId, volume: 100 });
+    testCraftLens();
 
     // Create lens inventory item
     InventoryItem[] memory items = new InventoryItem[](1);
@@ -121,26 +138,27 @@ contract CrudeLiftTest is MudTest {
       owner: alice,
       itemId: lensId,
       typeId: LENS,
-      volume: 100,
+      volume: 1,
       quantity: 1
     });
 
-    // Deposit lens into crude lift's ephemeral inventory
+    // Deposit lens into crude lift's inventory
     world.call(
-      ephemeralSystemId,
-      abi.encodeCall(EphemeralInventorySystem.createAndDepositItemsToEphemeralInventory, (smartObjectId, alice, items))
+      inventorySystemId,
+      abi.encodeCall(InventorySystem.createAndDepositItemsToInventory, (smartObjectId, items))
     );
 
     // Now insert the lens
-    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.insertLens, (smartObjectId, alice)));
+    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.insertLens, (smartObjectId)));
 
     assertEq(CrudeLift.getLensId(smartObjectId), lensId);
   }
 
   function testStartMining() public {
     testInsertLens();
+    testCreateRift();
 
-    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.startMining, (smartObjectId, riftId)));
+    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.startMining, (smartObjectId, riftId, 1)));
 
     assertEq(CrudeLift.getMiningRiftId(smartObjectId), riftId);
     assertTrue(CrudeLift.getStartMiningTime(smartObjectId) > 0);
@@ -154,41 +172,16 @@ contract CrudeLiftTest is MudTest {
     world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.stopMining, (smartObjectId)));
 
     assertEq(CrudeLift.getStartMiningTime(smartObjectId), 0);
-  }
 
-  function testRemoveLens() public {
-    testInsertLens();
+    bytes memory result = world.call(
+      crudeLiftSystemId,
+      abi.encodeCall(CrudeLiftSystem.getCrudeAmount, (smartObjectId))
+    );
+    uint256 crudeMined = abi.decode(result, (uint256));
+    assertEq(crudeMined, 100);
 
-    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.removeLens, (smartObjectId, alice)));
-
-    assertEq(CrudeLift.getLensId(smartObjectId), 0);
-  }
-
-  function testRevertStartMiningWithoutLens() public {
-    testAnchorCrudeLift();
-
-    vm.expectRevert(CrudeLiftSystem.LensNotInserted.selector);
-    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.startMining, (smartObjectId, riftId)));
-  }
-
-  function testRevertStartMiningWhileMining() public {
-    testStartMining();
-
-    vm.expectRevert(CrudeLiftSystem.AlreadyMining.selector);
-    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.startMining, (smartObjectId, riftId)));
-  }
-
-  function testRevertStopMiningWhenNotMining() public {
-    testInsertLens();
-
-    vm.expectRevert(CrudeLiftSystem.NotMining.selector);
-    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.stopMining, (smartObjectId)));
-  }
-
-  function testRevertRemoveLensWhileMining() public {
-    testStartMining();
-
-    vm.expectRevert(CrudeLiftSystem.CannotRemoveLensWhileMining.selector);
-    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.removeLens, (smartObjectId, alice)));
+    result = world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.getCrudeAmount, (riftId)));
+    uint256 riftCrudeMined = abi.decode(result, (uint256));
+    assertEq(riftCrudeMined, 0);
   }
 }

@@ -92,9 +92,13 @@ contract InventorySystem is EveSystem {
    */
   function depositToInventory(uint256 smartObjectId, InventoryItem[] memory items) public onlyActive {
     {
-      State currentState = DeployableState.getCurrentState(smartObjectId);
-      if (currentState != State.ONLINE) {
-        revert DeployableSystem.Deployable_IncorrectState(smartObjectId, currentState);
+      bool isDeployable = DeployableState.getCreatedAt(smartObjectId) != 0;
+
+      if (isDeployable) {
+        State currentState = DeployableState.getCurrentState(smartObjectId);
+        if (currentState != State.ONLINE) {
+          revert DeployableSystem.Deployable_IncorrectState(smartObjectId, currentState);
+        }
       }
     }
 
@@ -112,9 +116,13 @@ contract InventorySystem is EveSystem {
    */
   function withdrawFromInventory(uint256 smartObjectId, InventoryItem[] memory items) public onlyActive {
     {
-      State currentState = DeployableState.getCurrentState(smartObjectId);
-      if (!(currentState == State.ANCHORED || currentState == State.ONLINE)) {
-        revert DeployableSystem.Deployable_IncorrectState(smartObjectId, currentState);
+      bool isDeployable = DeployableState.getCreatedAt(smartObjectId) != 0;
+
+      if (isDeployable) {
+        State currentState = DeployableState.getCurrentState(smartObjectId);
+        if (!(currentState == State.ANCHORED || currentState == State.ONLINE)) {
+          revert DeployableSystem.Deployable_IncorrectState(smartObjectId, currentState);
+        }
       }
     }
 

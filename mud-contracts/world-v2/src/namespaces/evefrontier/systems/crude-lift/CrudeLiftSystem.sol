@@ -26,7 +26,8 @@ import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
 
 uint256 constant CRUDE_MATTER = 1;
 uint256 constant LENS = 2;
-uint256 constant LENS_EXPIRY_TIME = 90 days;
+
+import "forge-std/console.sol";
 
 contract CrudeLiftSystem is EveSystem {
   using WorldResourceIdLib for ResourceId;
@@ -45,7 +46,6 @@ contract CrudeLiftSystem is EveSystem {
   error AlreadyMining();
   error NotMining();
   error RiftNotFoundOrDepleted();
-  error InvalidMiningRate(uint256 miningRate);
   error InsufficientCrude();
   error RiftCollapsed();
   error CrudeLiftWrongState(uint256 crudeLiftId, State currentState);
@@ -100,7 +100,7 @@ contract CrudeLiftSystem is EveSystem {
     );
   }
 
-  function insertLens(uint256 crudeLiftId, address player) public onlyServer {
+  function insertLens(uint256 crudeLiftId) public onlyServer {
     if (CrudeLift.getLensId(crudeLiftId) != 0) revert LensAlreadyInserted();
 
     uint256[] memory items = Inventory.getItems(crudeLiftId);
@@ -114,15 +114,6 @@ contract CrudeLiftSystem is EveSystem {
     }
     if (foundLensId == 0) revert LensNotInserted();
     if (Lens.getExhausted(foundLensId)) revert LensExhausted();
-    if (Lens.getCreatedAt(foundLensId) + LENS_EXPIRY_TIME < block.timestamp) revert LensExpired();
-
-    // get lens from ephemeral inventory
-    TransferItem[] memory transferItems = new TransferItem[](1);
-    transferItems[0] = TransferItem({ inventoryItemId: foundLensId, owner: player, quantity: 1 });
-    world().call(
-      inventoryInteractSystemId,
-      abi.encodeCall(InventoryInteractSystem.ephemeralToInventoryTransfer, (crudeLiftId, player, transferItems))
-    );
 
     // If durability is 0 but not exhausted, it means the lens has not been initialized onchain yet
     if (Lens.getDurability(foundLensId) == 0) {
@@ -141,7 +132,6 @@ contract CrudeLiftSystem is EveSystem {
 
     CrudeLiftData memory lift = CrudeLift.get(crudeLiftId);
 
-    if (miningRate < 1_000 || miningRate > 200_000) revert InvalidMiningRate(miningRate);
     if (lift.lensId == 0) revert LensNotInserted();
     if (lift.startMiningTime != 0) revert AlreadyMining();
     if (getCrudeAmount(riftId) == 0) revert RiftNotFoundOrDepleted();
@@ -183,18 +173,25 @@ contract CrudeLiftSystem is EveSystem {
     uint256 riftId = CrudeLift.getMiningRiftId(crudeLiftId);
     if (Rift.getCollapsedAt(riftId) != 0) revert RiftCollapsed();
 
+    console.log("miningDuration", miningDuration);
+    console.log("miningRate", CrudeLift.getMiningRate(crudeLiftId));
     uint256 crudeMined = calculateCrudeMined(CrudeLift.getMiningRate(crudeLiftId), miningDuration);
+    console.log("crudeMined", crudeMined);
 
     uint256 remainingCrudeAmount = getCrudeAmount(riftId);
+    console.log("remainingCrudeAmount", remainingCrudeAmount);
     if (crudeMined > remainingCrudeAmount) {
       crudeMined = remainingCrudeAmount;
     }
 
-    uint256 remainingInventoryCapacity = Inventory.getCapacity(riftId) - Inventory.getUsedCapacity(riftId);
+    uint256 remainingInventoryCapacity = Inventory.getCapacity(crudeLiftId) - Inventory.getUsedCapacity(crudeLiftId);
+    console.log("remainingInventoryCapacity", remainingInventoryCapacity);
     if (crudeMined > remainingInventoryCapacity) {
       // TODO how much capacity does Crude take up?
       crudeMined = remainingInventoryCapacity;
     }
+
+    console.log("crudeMined", crudeMined);
 
     removeCrude(riftId, crudeMined);
     addCrude(crudeLiftId, crudeMined);
@@ -221,7 +218,7 @@ contract CrudeLiftSystem is EveSystem {
   }
 
   function calculateCrudeMined(uint256 miningRate, uint256 duration) internal pure returns (uint256) {
-    return (duration * miningRate) / 100_000;
+    return (duration * miningRate);
   }
 
   function calculateCollapseChance(uint256 miningRate, uint256 stability) internal pure returns (uint256) {
@@ -237,7 +234,7 @@ contract CrudeLiftSystem is EveSystem {
       owner: address(0),
       itemId: 0,
       typeId: CRUDE_MATTER,
-      volume: amount,
+      volume: 1,
       quantity: amount
     });
 
@@ -253,11 +250,11 @@ contract CrudeLiftSystem is EveSystem {
 
     InventoryItem[] memory items = new InventoryItem[](1);
     items[0] = InventoryItem({
-      inventoryItemId: 0,
+      inventoryItemId: uint256(keccak256(abi.encodePacked("crude", CRUDE_MATTER))),
       owner: address(0),
       itemId: 0,
       typeId: CRUDE_MATTER,
-      volume: amount,
+      volume: 1,
       quantity: amount
     });
 
