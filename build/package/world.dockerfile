@@ -18,7 +18,7 @@ COPY . .
 RUN rm -rf node_modules
 
 # Install module dependencies
-RUN CI=1 pnpm install --frozen-lockfile
+RUN CI=1 pnpm install --no-frozen-lockfile
 
 # Building all modules
 RUN pnpm nx run-many -t build
