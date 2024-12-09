@@ -18,6 +18,8 @@ import { EntitySystem } from "../src/namespaces/evefrontier/systems/entity-syste
 import { Utils as EntitySystemUtils } from "../src/namespaces/evefrontier/systems/entity-system/Utils.sol";
 import { IAccessConfigSystem } from "../src/namespaces/evefrontier/interfaces/IAccessConfigSystem.sol";
 import { Utils as AccessConfigSystemUtils } from "../src/namespaces/evefrontier/systems/access-config-system/Utils.sol";
+import { ITagSystem } from "../src/namespaces/evefrontier/interfaces/ITagSystem.sol";
+import { Utils as TagSystemUtils } from "../src/namespaces/evefrontier/systems/tag-system/Utils.sol";
 
 import { SystemMock } from "./mocks/SystemMock.sol";
 import { AccessSystemMock } from "./mocks/AccessSystemMock.sol";
@@ -43,6 +45,7 @@ contract SmartObjectFrameworkTest is MudTest {
   ResourceId ROLE_MANAGEMENT_SYSTEM_ID = RoleManagementSystemUtils.roleManagementSystemId();
   ResourceId ENTITY_SYSTEM_ID = EntitySystemUtils.entitySystemId();
   ResourceId ACCESS_CONFIG_SYSTEM_ID = AccessConfigSystemUtils.accessConfigSystemId();
+  ResourceId TAGS_SYSTEM_ID = TagSystemUtils.tagSystemId();
   ResourceId constant TAGGED_SYSTEM_ID =
     ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystemMock")))));
   ResourceId constant UNTAGGED_SYSTEM_ID =
@@ -165,10 +168,34 @@ contract SmartObjectFrameworkTest is MudTest {
 
     assertEq(abi.decode(returnData, (bool)), true);
 
-    // check scope direct by Object
+    // check scope direct by Object (only)
+    // remove classTag
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(ITagSystem.removeSystemTag, (classId, taggedSystemTagId)));
+
+    // revert call SystemMock using objectId (but tag was temporarily removed)
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, TAGGED_SYSTEM_ID)
+    );
+    world.call(TAGGED_SYSTEM_ID, abi.encodeCall(SystemMock.objectLevelScope, (objectId)));
+
+    // add Object tag
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(ITagSystem.setSystemTag, (objectId, taggedSystemTagId)));
+    
+    // success
+    world.call(TAGGED_SYSTEM_ID, abi.encodeCall(SystemMock.objectLevelScope, (objectId)));
   }
 
   // internal scope enforcement
+  function test_scope_internal() public {
+    // revert, if a call chains leave scope and tries to call back into scope
+    vm.expectRevert(abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, classId, UNTAGGED_SYSTEM_ID));
+    world.call(TAGGED_SYSTEM_ID, abi.encodeCall(SystemMock.entryScoped, (classId, false)));
+
+    bytes memory returnData = world.call(TAGGED_SYSTEM_ID, abi.encodeCall(SystemMock.entryScoped, (classId, true)));
+    (,,bool result) = abi.decode(returnData, (bytes32, bytes32, bool));
+    assertEq(result, true);
+    
+  }
 
   function test_context() public {
     // revert, test WorldContextProvider cannot be used to make direct calls
@@ -203,7 +230,7 @@ contract SmartObjectFrameworkTest is MudTest {
       abi.encodeCall(IAccessConfigSystem.setAccessEnforcement, (TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, true))
     );
 
-    // revert, if a non-static call was made
+    // revert, if a non-static call was made yto access logic
     vm.expectRevert(bytes(""));
     world.call(
       TAGGED_SYSTEM_ID,
@@ -216,13 +243,19 @@ contract SmartObjectFrameworkTest is MudTest {
       abi.encodeCall(IAccessConfigSystem.configureAccess, (TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, ACCESS_SYSTEM_ID, AccessSystemMock.accessController.selector))
     );
 
+    // re-set enforcement
+    world.call(
+      ACCESS_CONFIG_SYSTEM_ID,
+      abi.encodeCall(IAccessConfigSystem.setAccessEnforcement, (TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, true))
+    );
+
     // revert, to check verification data failure
     vm.expectRevert(abi.encodeWithSelector(AccessSystemMock.AccessSystemMock_IncorrectCallData.selector));
     world.call(
       TAGGED_SYSTEM_ID,
       abi.encodeCall(SystemMock.accessControlled, (classId, UNTAGGED_SYSTEM_ID, SystemMock.callEnforceCallCount1.selector))
     );
-
+    
     // successful call 
     world.call(
       TAGGED_SYSTEM_ID,

@@ -15,4 +15,8 @@ interface ISOFAccessSystem {
   function allowClassScopedSystemOrDirectObjectAccessRole(Id objectId, bytes memory targetCallData) external view;
   // TagSystem.sol access
   function allowEntitySystemOrDirectAccessRole(Id entityId, bytes memory targetCallData) external view;
+
+  error SOFAccess_RoleAccessDenied(bytes32 accessRole, address account);
+  error SOFAccess_SystemAccessDenied(Id entityId, address systemAddress);
+  error SOFAccess_DirectCall();
 }

@@ -250,6 +250,7 @@ contract TagSystemTest is MudTest {
   function test_setSystemTags() public {
     vm.startPrank(deployer);
     // check that multiple tag data is correctly updated
+    // CLASS tagging
     // before
     bytes32[] memory classSystemTagsBefore = Classes.getSystemTags(classId);
     assertEq(classSystemTagsBefore.length, 0);
@@ -296,7 +297,60 @@ contract TagSystemTest is MudTest {
     ClassSystemTagMapData memory class1Tag3MapAfter = ClassSystemTagMap.get(classId, taggedSystemTagId3);
     assertEq(class1Tag3MapAfter.hasTag, true);
     assertEq(class1Tag3MapAfter.tagIndex, 2);
+
+    // OBJECT tagging
+    // revert, if object does not exist
+    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ObjectDoesNotExist.selector, objectId));
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTags, (objectId, ids)));
+
+    // instantiate the Object
+    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (classId, objectId)));
+
+    // before
+    bytes32[] memory objectSystemTagsBefore = Objects.getSystemTags(objectId);
+    assertEq(objectSystemTagsBefore.length, 0);
+
+    bytes32[] memory systemTagObjectsBefore = SystemTags.getObjects(taggedSystemTagId);
+    assertEq(systemTagObjectsBefore.length, 0);
+
+    ObjectSystemTagMapData memory object1Tag1MapDataBefore = ObjectSystemTagMap.get(objectId, taggedSystemTagId);
+    assertEq(object1Tag1MapDataBefore.hasTag, false);
+
+    // successful call
+
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTags, (objectId, ids)));
+    // after
+    bytes32[] memory objectSystemTagsAfter = Objects.getSystemTags(objectId);
+    assertEq(objectSystemTagsAfter.length, 3);
+    assertEq(objectSystemTagsAfter[0], Id.unwrap(taggedSystemTagId));
+    assertEq(objectSystemTagsAfter[1], Id.unwrap(taggedSystemTagId2));
+    assertEq(objectSystemTagsAfter[2], Id.unwrap(taggedSystemTagId3));
+
+    bytes32[] memory systemTag1ObjectsAfter = SystemTags.getObjects(taggedSystemTagId);
+    assertEq(systemTag1ObjectsAfter.length, 1);
+    assertEq(systemTag1ObjectsAfter[0], Id.unwrap(objectId));
+
+    bytes32[] memory systemTag2ObjectsAfter = SystemTags.getObjects(taggedSystemTagId2);
+    assertEq(systemTag2ObjectsAfter.length, 1);
+    assertEq(systemTag2ObjectsAfter[0], Id.unwrap(objectId));
+
+    bytes32[] memory systemTag3ObjectsAfter = SystemTags.getObjects(taggedSystemTagId3);
+    assertEq(systemTag3ObjectsAfter.length, 1);
+    assertEq(systemTag3ObjectsAfter[0], Id.unwrap(objectId));
+
+    ObjectSystemTagMapData memory object1Tag1MapAfter = ObjectSystemTagMap.get(objectId, taggedSystemTagId);
+    assertEq(object1Tag1MapAfter.hasTag, true);
+
+    ObjectSystemTagMapData memory object1Tag2MapAfter = ObjectSystemTagMap.get(objectId, taggedSystemTagId2);
+    assertEq(object1Tag2MapAfter.hasTag, true);
+    assertEq(object1Tag2MapAfter.tagIndex, 1);
+
+    ObjectSystemTagMapData memory object1Tag3MapAfter = ObjectSystemTagMap.get(objectId, taggedSystemTagId3);
+    assertEq(object1Tag3MapAfter.hasTag, true);
+    assertEq(object1Tag3MapAfter.tagIndex, 2);
     vm.stopPrank();
+
+
   }
 
   function test_removeSystemTag() public {

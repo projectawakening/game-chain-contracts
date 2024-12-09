@@ -8,7 +8,7 @@ import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 import { Classes, ClassesData } from "../../codegen/tables/Classes.sol";
 import { ClassSystemTagMap } from "../../codegen/tables/ClassSystemTagMap.sol";
 import { ClassObjectMap, ClassObjectMapData } from "../../codegen/tables/ClassObjectMap.sol";
-import { Objects } from "../../codegen/tables/Objects.sol";
+import { Objects, ObjectsData } from "../../codegen/tables/Objects.sol";
 import { Role } from "../../codegen/tables/Role.sol";
 import { HasRole } from "../../codegen/tables/HasRole.sol";
 
@@ -113,7 +113,7 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
    * @param classId An ENTITY_CLASS type Id referencing an existing Class from which the Object will be instantiated
    * @param objectId An ENTITY_OBJECT type Id reference assigned to the newly instantiated Object
    */
-  function instantiate(Id classId, Id objectId) public context access(objectId) {
+  function instantiate(Id classId, Id objectId) public context access(classId) {
     if (!Classes.getExists(classId)) {
       revert Entity_ClassDoesNotExist(classId);
     }
@@ -157,24 +157,34 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
       revert Entity_ObjectDoesNotExist(objectId);
     }
 
-    Id classId = Objects.getClass(objectId);
-    ClassObjectMapData memory classObjectMapData = ClassObjectMap.get(classId, objectId);
+    ObjectsData memory object = Objects.get(objectId);
+    ClassObjectMapData memory classObjectMapData = ClassObjectMap.get(object.class, objectId);
 
     Classes.updateObjects(
-      classId,
+      object.class,
       classObjectMapData.objectIndex,
-      Classes.getItemObjects(classId, Classes.lengthObjects(classId) - 1)
+      Classes.getItemObjects(object.class, Classes.lengthObjects(object.class) - 1)
     );
 
     ClassObjectMap.setObjectIndex(
-      classId,
-      Id.wrap(Classes.getItemObjects(classId, Classes.lengthObjects(classId) - 1)),
+      object.class,
+      Id.wrap(Classes.getItemObjects(object.class, Classes.lengthObjects(object.class) - 1)),
       classObjectMapData.objectIndex
     );
 
-    ClassObjectMap.deleteRecord(classId, objectId);
+    ClassObjectMap.deleteRecord(object.class, objectId);
 
-    Classes.popObjects(classId);
+    Classes.popObjects(object.class);
+
+    Id[] memory systemTags = new Id[](object.systemTags.length);
+    for (uint i = 0; i < object.systemTags.length; i++) {
+      systemTags[i] = Id.wrap(object.systemTags[i]);
+    }
+
+    IWorldKernel(_world()).call(
+      TagSystemUtils.tagSystemId(),
+      abi.encodeCall(ITagSystem.removeSystemTags, (objectId, systemTags))
+    );
 
     Objects.deleteRecord(objectId);
   }

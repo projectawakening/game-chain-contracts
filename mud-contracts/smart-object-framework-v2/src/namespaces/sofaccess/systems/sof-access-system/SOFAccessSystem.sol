@@ -3,6 +3,7 @@ pragma solidity >=0.8.24;
 
 import { ResourceId, WorldResourceIdInstance } from "@latticexyz/world/src/WorldResourceId.sol";
 import { NamespaceOwner } from "@latticexyz/world/src/codegen/tables/NamespaceOwner.sol";
+import { SystemRegistry } from "@latticexyz/world/src/codegen/tables/SystemRegistry.sol";
 
 import { Objects } from "../../../evefrontier/codegen/tables/Objects.sol";
 import { Classes } from "../../../evefrontier/codegen/tables/Classes.sol";
@@ -30,10 +31,6 @@ import { SmartObjectFramework } from "../../../../inherit/SmartObjectFramework.s
 contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
   using WorldResourceIdInstance for ResourceId;
 
-  error SOFAccess_RoleAccessDenied(bytes32 accessRole, address account);
-  error SOFAccess_SystemAccessDenied(Id entityId, address systemAddress);
-  error SOFAccess_DirectCall();
-
   // EnitySystem.sol access logic
   function allowClassAccessRole(Id classId, bytes memory targetCallData) public view {
     if(!HasRole.get(Classes.getAccessRole(classId), _callMsgSender(1))) {
@@ -50,9 +47,10 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
       classId = Objects.getClass(entityId);
     }
     // a direct entrypoint call to EntitySystem.sol will put this access call at callCount = 1
-    if (callCount > 1) { // not a direct entrypoint call to EntitySystem.sol but allowable if the previous call was from an Class scoped System
-      (ResourceId systemId, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
-      if (!ClassSystemTagMap.getHasTag(classId, Id.wrap(ResourceId.unwrap(systemId)))) {
+    if (callCount > 1) { // not a direct entrypoint call to EntitySystem.sol but allowable if the previous call was from a Class scoped System
+      (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
+      ResourceId callingSystemId = SystemRegistry.get(msgSender);
+      if (!ClassSystemTagMap.getHasTag(classId, Id.wrap(ResourceId.unwrap(callingSystemId)))) {
         revert SOFAccess_SystemAccessDenied(classId, msgSender);
       }
     } else if (callCount == 1) { // if this is direct call to EntitySystem.sol, we check for Class access role membership
@@ -68,8 +66,10 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
     // a direct entrypoint call to EntitySystem.sol will put this access call at callCount = 1
     if(callCount > 1) { // not a direct entrypoint call to EntitySystem.sol but allowable if the call was from an Class scoped System
-      (ResourceId systemId, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
-      if (!ObjectSystemTagMap.getHasTag(objectId, Id.wrap(ResourceId.unwrap(systemId)))) {
+      (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
+      ResourceId callingSystemId = SystemRegistry.get(msgSender);
+      Id classId = Objects.getClass(objectId);
+      if (!ClassSystemTagMap.getHasTag(classId, Id.wrap(ResourceId.unwrap(callingSystemId)))) {
         revert SOFAccess_SystemAccessDenied(objectId, msgSender);
       }
     } else if (callCount == 1) { // if this is direct call to EntitySystem.sol, we check for Object access role membership
@@ -86,8 +86,9 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
   function allowEntitySystemOrDirectAccessRole(Id entityId, bytes memory targetCallData) public view {
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
     // a direct entrypoint call to TagSystem.sol will put this access call at callCount = 1
-    if(callCount > 1) { // if not a direct entrypoint call to TagSystem, (instead a subsequent internal call), then we only allow EntitySystem.sol as the caller of this function
+    if(callCount > 1) { // if not a direct entrypoint call to TagSystem, (instead a subsequent internal call), then we only allow EntitySystem.sol as the target System of this function
       (ResourceId systemId, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
+      
       if(systemId.unwrap() != EntitySystemUtils.entitySystemId().unwrap()) { // for TagSystem if an internal call is not from EntitySytem or a Class scoped system then we reject the call
         revert SOFAccess_SystemAccessDenied(entityId, msgSender);
       }

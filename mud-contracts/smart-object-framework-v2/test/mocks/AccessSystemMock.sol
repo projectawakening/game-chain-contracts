@@ -34,7 +34,7 @@ contract AccessSystemMock is SmartObjectFramework {
     bytes4 targetFunctionId = SystemMock.accessControlled.selector;
 
     (Id targetParam1, ResourceId targetParam2, bytes4 targetParam3) = abi.decode(targetCallData, (Id, ResourceId, bytes4));
-    
+
     // check entityId and targetCallData are passed correctly to the access logic
     if(Id.unwrap(entityId) != Id.unwrap(classId) || Id.unwrap(entityId) != Id.unwrap(targetParam1)) {
       revert AccessSystemMock_IncorrectEntityId(entityId, classId);
@@ -58,11 +58,12 @@ contract AccessSystemMock is SmartObjectFramework {
   }
 
   // check that non-view access functions throw an error
-  function invalidAccessController(Id entityId, bytes memory targetCallData) public {
+  function invalidAccessController(Id entityId, bytes memory targetCallData) public returns (Id, bytes memory) {
     // transient storage setting to ensure this is not a static call
     uint256 maxSlot = type(uint256).max;
     assembly {
       tstore(maxSlot, 0)
     }
+    return (entityId, targetCallData);
   }
 }

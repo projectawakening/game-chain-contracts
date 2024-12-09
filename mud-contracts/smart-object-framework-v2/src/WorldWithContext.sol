@@ -439,41 +439,6 @@ contract WorldWithContext is StoreKernel, IWorldKernel {
     return StaticSystemCall.staticCallOrRevert(msg.sender, systemId, callData);
   }
 
-  // function callFromStatic(
-  //   address delegator,
-  //   ResourceId systemId,
-  //   bytes memory callData
-  // ) external view virtual prohibitDirectCallback returns (bytes memory) {
-  //   // If the delegator is the caller, call the system directly
-  //   if (delegator == msg.sender) {
-  //     StaticSystemCall.staticCallOrRevert(msg.sender, systemId, callData);
-  //   }
-
-  //   // Check if there is an individual authorization for this caller to perform actions on behalf of the delegator
-  //   ResourceId individualDelegationId = UserDelegationControl._get({ delegator: delegator, delegatee: msg.sender });
-
-  //   if (Delegation.verify(individualDelegationId, delegator, msg.sender, systemId, callData)) {
-  //     // forward the call as `delegator`
-  //     return StaticSystemCall.staticCallOrRevert(msg.sender, systemId, callData);
-  //   }
-
-  //   // Check if the delegator has a fallback delegation control set
-  //   ResourceId userFallbackDelegationId = UserDelegationControl._get({ delegator: delegator, delegatee: address(0) });
-  //   if (Delegation.verify(userFallbackDelegationId, delegator, msg.sender, systemId, callData)) {
-  //     // forward the call as `delegator`
-  //     return StaticSystemCall.staticCallOrRevert(msg.sender, systemId, callData);
-  //   }
-
-  //   // Check if the namespace has a fallback delegation control set
-  //   ResourceId namespaceFallbackDelegationId = NamespaceDelegationControl._get(systemId.getNamespaceId());
-  //   if (Delegation.verify(namespaceFallbackDelegationId, delegator, msg.sender, systemId, callData)) {
-  //     // forward the call as `delegator`
-  //     return StaticSystemCall.staticCallOrRevert(msg.sender, systemId, callData);
-  //   }
-
-  //   revert World_DelegationNotFound(delegator, msg.sender);
-  // }
-
   /**
    * @notice Used in conjunction with the try/catch pattern to test if the current call is staticcall
    * @dev Attempts to write to max uint256 slot in transient storage to verify if the current call is staticcall

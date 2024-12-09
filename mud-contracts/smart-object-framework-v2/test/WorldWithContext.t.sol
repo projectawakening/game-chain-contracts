@@ -162,27 +162,11 @@ contract WorldWithContextTest is MudTest {
     assertEq(transientContext2.msgValue, 0); // secondaryCall _msgValue()
   }
 
-  function test_callStatic() public {
+  function test_callStatic() public view {
     IWorldWithContext(worldAddress).callStatic(
       MOCK_SYSTEM_ID,
       abi.encodeCall(SystemMock.viewCall, ())
     );
   }
-
-  // function test_callFromStatic() public {
-  //   // Register an unlimited delegation
-  //   address delegator = deployer;
-  //   address delegatee = alice;
-  //   vm.prank(delegator);
-  //   world.registerDelegation(delegatee, UNLIMITED_DELEGATION, new bytes(0));
-
-  //   // Static call from the delegatee on behalf of the delegator
-  //   vm.prank(delegatee);
-  //   IWorldWithContext(worldAddress).callFromStatic(
-  //     delegator,
-  //     MOCK_SYSTEM_ID,
-  //     abi.encodeCall(SystemMock.viewCall, ())
-  //   );
-  // }
 
 }

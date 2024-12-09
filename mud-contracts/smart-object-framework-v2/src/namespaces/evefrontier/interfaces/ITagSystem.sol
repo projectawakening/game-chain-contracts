@@ -9,10 +9,10 @@ import { Id } from "../../../libs/Id.sol";
  * @dev An interface for the Tags System functionality
  */
 interface ITagSystem {
-  function setSystemTag(Id classId, Id systemTagId) external;
-  function setSystemTags(Id classId, Id[] memory systemTagIds) external;
-  function removeSystemTag(Id classId, Id tagId) external;
-  function removeSystemTags(Id classId, Id[] memory tagIds) external;
+  function setSystemTag(Id entityId, Id systemTagId) external;
+  function setSystemTags(Id entityId, Id[] memory systemTagIds) external;
+  function removeSystemTag(Id entityId, Id tagId) external;
+  function removeSystemTags(Id entityId, Id[] memory tagIds) external;
 
   error Tag_InvalidTagId(Id tagId);
   error Tag_InvalidTagType(bytes2 givenType);

@@ -11,10 +11,6 @@ import { Id } from "../../libs/Id.sol";
  * @dev This interface is automatically generated from the corresponding system contract. Do not edit manually.
  */
 interface ISOFAccessSystem {
-  error SOFAccess_RoleAccessDenied(bytes32 accessRole, address account);
-  error SOFAccess_SystemAccessDenied(Id entityId, address systemAddress);
-  error SOFAccess_DirectCall();
-
   function sofaccess__allowClassAccessRole(Id classId, bytes memory targetCallData) external view;
 
   function sofaccess__allowClassScopedSystemOrDirectClassAccessRole(

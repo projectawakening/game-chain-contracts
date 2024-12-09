@@ -13,6 +13,7 @@ interface IEntitySystem {
   function deleteClass(Id classId) external;
   function deleteClasses(Id[] memory classIds) external;
   function instantiate(Id classId, Id objectId) external;
+  function setObjectAccessRole(Id objectId, bytes32 newAccessRole) external;
   function deleteObject(Id objectId) external;
   function deleteObjects(Id[] memory objectIds) external;
 
