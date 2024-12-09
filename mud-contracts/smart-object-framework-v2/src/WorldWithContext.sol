@@ -431,7 +431,6 @@ contract WorldWithContext is StoreKernel, IWorldKernel {
     revert World_DelegationNotFound(delegator, msg.sender);
   }
 
-
   function callStatic(
     ResourceId systemId,
     bytes memory callData

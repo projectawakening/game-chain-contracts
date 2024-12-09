@@ -45,10 +45,10 @@ library StaticSystemCall {
 
     // Statically call the system and forward any return data
     (success, data) = StaticWorldContextProviderLib.staticCallWithContext({
-        msgSender: caller,
-        target: systemAddress,
-        callData: callData
-      });
+      msgSender: caller,
+      target: systemAddress,
+      callData: callData
+    });
   }
 
   /**
@@ -63,11 +63,7 @@ library StaticSystemCall {
     ResourceId systemId,
     bytes memory callData
   ) internal view returns (bytes memory data) {
-    (bool success, bytes memory returnData) = staticCall({
-      caller: caller,
-      systemId: systemId,
-      callData: callData
-    });
+    (bool success, bytes memory returnData) = staticCall({ caller: caller, systemId: systemId, callData: callData });
     if (!success) revertWithBytes(returnData);
     return returnData;
   }

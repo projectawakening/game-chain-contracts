@@ -49,7 +49,7 @@ contract SmartObjectFramework is System {
    * @param callCount The callCount at the time of reverting
    */
   error SOF_CallTooDeep(uint256 callCount);
-  
+
   /**
    * @notice Thrown when access logic mutates state
    */
@@ -80,9 +80,7 @@ contract SmartObjectFramework is System {
     // if this is a subsequent system-to-system call (callCount > 1), then check that the previous (calling) system is in scope for the given entity
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
     if (callCount > 1) {
-      (ResourceId prevSystemId, , , ) = IWorldWithContext(_world()).getWorldCallContext(
-        callCount - 1
-      );
+      (ResourceId prevSystemId, , , ) = IWorldWithContext(_world()).getWorldCallContext(callCount - 1);
       _scope(entityId, prevSystemId);
     }
     _;
@@ -171,7 +169,7 @@ contract SmartObjectFramework is System {
     return Bytes.slice(callDataWithContext, 0, callDataWithContext.length - MUD_CONTEXT_BYTES);
   }
 
-  function _scope(Id entityId, ResourceId systemId) internal virtual view {
+  function _scope(Id entityId, ResourceId systemId) internal view virtual {
     if (Id.unwrap(entityId) != bytes32(0)) {
       bool classHasTag;
       if (entityId.getType() == ENTITY_CLASS) {
@@ -197,16 +195,15 @@ contract SmartObjectFramework is System {
     // target function selector is 4 bytes, _msgSender is 20 bytes, _msgValue is 32 bytes = 56
     bytes memory callData = Bytes.slice(msg.data, 4, msg.data.length - 56);
 
-    if(accessConfig.configured && accessConfig.enforcement) {
-      // console.log("HERE");
+    if (accessConfig.configured && accessConfig.enforcement) {
       IWorldWithContext(_world()).callStatic(
-        accessConfig.accessSystemId, 
+        accessConfig.accessSystemId,
         abi.encodeWithSelector(accessConfig.accessFunctionId, entityId, callData)
       );
     }
   }
 
-  function _enforceMaxCallCount(uint256 callCount, uint256 maxCallCount) internal virtual view {
+  function _enforceMaxCallCount(uint256 callCount, uint256 maxCallCount) internal view virtual {
     if (callCount > maxCallCount) {
       revert SOF_CallTooDeep(callCount);
     }

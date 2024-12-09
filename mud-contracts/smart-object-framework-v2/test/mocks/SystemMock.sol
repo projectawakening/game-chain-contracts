@@ -27,11 +27,14 @@ contract SystemMock is SmartObjectFramework {
   }
 
   function entryScoped(Id classId, bool taggedCall) public scope(classId) returns (bytes memory) {
-    ResourceId TAGGED_SYSTEM_ID =
-      ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("TaggedSystemMock")))));
-    ResourceId UNTAGGED_SYSTEM_ID =
-      ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("UnTaggedSystemMo")))));
-    if (taggedCall == true) { // make a secondary tagged system call (proving that the internal scope enforcement allows fully scoped call chains to pass)
+    ResourceId TAGGED_SYSTEM_ID = ResourceId.wrap(
+      (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("TaggedSystemMock"))))
+    );
+    ResourceId UNTAGGED_SYSTEM_ID = ResourceId.wrap(
+      (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("UnTaggedSystemMo"))))
+    );
+    if (taggedCall == true) {
+      // make a secondary tagged system call (proving that the internal scope enforcement allows fully scoped call chains to pass)
       // tagged system call
       bytes memory callData = abi.encodeCall(this.internalScoped, (classId));
       return IWorldKernel(_world()).call(TAGGED_SYSTEM_ID, callData);
@@ -42,13 +45,13 @@ contract SystemMock is SmartObjectFramework {
     }
   }
 
-
-function entryNonScoped(Id classId) public returns (bytes memory) {
-    ResourceId TAGGED_SYSTEM_ID =
-      ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("TaggedSystemMock")))));
-      // make a tagged system call
-      bytes memory callData = abi.encodeCall(this.internalScoped, (classId));
-      return IWorldKernel(_world()).call(TAGGED_SYSTEM_ID, callData);
+  function entryNonScoped(Id classId) public returns (bytes memory) {
+    ResourceId TAGGED_SYSTEM_ID = ResourceId.wrap(
+      (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("TaggedSystemMock"))))
+    );
+    // make a tagged system call
+    bytes memory callData = abi.encodeCall(this.internalScoped, (classId));
+    return IWorldKernel(_world()).call(TAGGED_SYSTEM_ID, callData);
   }
 
   function internalScoped(Id classId) public view scope(classId) returns (bool) {
@@ -138,8 +141,11 @@ function entryNonScoped(Id classId) public returns (bytes memory) {
     return true;
   }
 
-  function accessControlled(Id classId, ResourceId systemId, bytes4 functionId) public enforceCallCount(1) access(classId) returns (ResourceId, bytes4) {
+  function accessControlled(
+    Id classId,
+    ResourceId systemId,
+    bytes4 functionId
+  ) public enforceCallCount(1) access(classId) returns (ResourceId, bytes4) {
     return (systemId, functionId);
   }
-
 }

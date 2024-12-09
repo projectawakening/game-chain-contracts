@@ -27,13 +27,15 @@ import { SmartObjectFramework } from "../../../../inherit/SmartObjectFramework.s
  * @title EntitySystem
  * @author CCP Games
  * @notice Manage Class and Object creation/deletion through the use of reference Ids { see, `libs/Id.sol` and `types/entityTypes.sol`}
- * @dev IMPORTANT: all Class level functions implement the `direct()` modifier, which means (for security enforcement) they must be directly called from a MUD World entry point. However, instantiate and deleteObject do NOT, and hence care should be taken in their access() logic when using _callMsgSender() 
  */
 contract EntitySystem is IEntitySystem, SmartObjectFramework {
   /**
-   * @notice register a Class Entity into the SOF with an initial set of assigned SystemTags
-   * @param classId A unique ENTITY_CLASS type Id for referencing a newly registred Class Entity within SOF compatible Systems
-   * @param systemTags An array of TAG_SYSTEM type Ids which correlate to exsiting MUD System ResourceIds for tagging a Class with
+   * @notice Registers a new Class Entity into the SOF framework
+   * @param classId A unique ENTITY_CLASS type Id for the new Class Entity
+   * @param accessRole A bytes32 access control role Id to be assigned to the class {see, RoleManagementSystem.sol}
+   * @param systemTags An array of TAG_SYSTEM type Ids which correlating to MUD System ResourceIds
+   * @dev Validates class ID, type and existence before registration
+   * @dev Requires caller to be a member of the specified `accessRole`
    */
   function registerClass(Id classId, bytes32 accessRole, Id[] memory systemTags) public context enforceCallCount(1) {
     if (Id.unwrap(classId) == bytes32(0)) {
@@ -60,6 +62,13 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
     );
   }
 
+  /**
+   * @notice Sets a new Class Access Role for a given Class Entity
+   * @param classId A unique ENTITY_CLASS type Id for the new Class Entity
+   * @param newAccessRole A bytes32 access control role Id to be assigned to the class {see, RoleManagementSystem.sol}
+   * @dev Validates `classId`, and `accessRole` existence
+   * @dev Requires a direct caller to be a member of the current `accessRole`, or a System that is tagged to the Class
+   */
   function setClassAccessRole(Id classId, bytes32 newAccessRole) public context access(classId) {
     if (!Classes.getExists(classId)) {
       revert Entity_ClassDoesNotExist(classId);
@@ -71,9 +80,14 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
   }
 
   /**
-   * @notice delete a registered Class
-   * @dev deleting a Class may trigger/require dependent data deletions of Class data entries in any related/tagged System associated Tables. Be sure to handle these dependencies accordingly in your System logic before deleting a Class
-   * @param classId An ENTITY_CLASS type Id reference of an existing Class to be deleted
+   * @notice Delete a registered Class
+   * @param classId An ENTITY_CLASS type Id reference of an existing Class
+   * @dev Validates `classId` existence before executing
+   * @dev Handles cleanup of Class references and associated system tags
+   * @dev Require the class to not have any Objects associated with it
+   * @dev Requires a direct call to the `deleteClass` function (cannot be called from another System)
+   * @dev Requires caller to be a member of the Class `accessRole`
+   * @dev Warning: Dependent data in tagged Systems should be handled before deletion
    */
   function deleteClass(Id classId) public context enforceCallCount(1) access(classId) {
     if (!Classes.getExists(classId)) {
@@ -99,8 +113,9 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
   }
 
   /**
-   * @notice delete multiple registered Classes
-   * @param classIds An array of ENTITY_CLASS type Id references of existing Classes to be deleted
+   * @notice Deletes multiple registered Classes
+   * @param classIds An array of ENTITY_CLASS type Id references of existing Classes
+   * @dev Iteratively calls deleteClass for each classId in `classIds`
    */
   function deleteClasses(Id[] memory classIds) public {
     for (uint i = 0; i < classIds.length; i++) {
@@ -109,9 +124,12 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
   }
 
   /**
-   * @notice instantiate an Object from a given Class
-   * @param classId An ENTITY_CLASS type Id referencing an existing Class from which the Object will be instantiated
-   * @param objectId An ENTITY_OBJECT type Id reference assigned to the newly instantiated Object
+   * @notice Instantiate an Object from a given parent Class
+   * @param classId The ENTITY_CLASS type Id of the parent Class
+   * @param objectId The ENTITY_OBJECT type Id for the new instance
+   * @dev Validates `classId` existence, `objectId` non-existence, and `objectId` type
+   * @dev Maintains class-object relationships in mapping tables
+   * @dev Requires a direct caller to be a member of the parent Class `accessRole` or a System that is tagged to the parent Class
    */
   function instantiate(Id classId, Id objectId) public context access(classId) {
     if (!Classes.getExists(classId)) {
@@ -135,8 +153,13 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
     Classes.pushObjects(classId, Id.unwrap(objectId));
     Objects.set(objectId, true, classId, bytes32(0), new bytes32[](0));
   }
-
-  // initalizable via a Class Scoped system, thereafter callable directly by an Object Access role member
+  /**
+   * @notice Sets a new Object Access Role for a given Object
+   * @param objectId An Object Id for an existing Object
+   * @param newAccessRole A bytes32 access control role Id to be assigned to the object {see, RoleManagementSystem.sol}
+   * @dev Validates `objectId` existence, and `newAccessRole` existence
+   * @dev Initially only settable via a Class tagged System, thereafter callable directly by an Object accessRole member (or a System that is tagged to the Object's parent Class)
+   */
   function setObjectAccessRole(Id objectId, bytes32 newAccessRole) public context access(objectId) {
     if (!Objects.getExists(objectId)) {
       revert Entity_ObjectDoesNotExist(objectId);
@@ -148,11 +171,13 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
   }
 
   /**
-   * @notice delete an instantiated Object
-   * @dev deleting an Object may trigger/require dependent data deletions of Object data entries in any related/tagged System associated Tables. Be sure to handle these dependencies accordingly in your System logic before deleting an Object
-   * @param objectId An ENTITY_OBJECT type Id referencing an existing Object
+   * @notice Delete an instantiated Object
+   * @param objectId An ENTITY_OBJECT type Id of the object to delete
+   * @dev Handles cleanup of object references and associated system tags
+   * @dev Requires a direct caller to be a member of the Object's parent Class `accessRole` or a System that is tagged to the Object's parent Class
+   * @dev Warning: Dependent data in tagged Systems should be handled before deletion
    */
-  function deleteObject(Id objectId) public context() access(objectId) {
+  function deleteObject(Id objectId) public context access(objectId) {
     if (!Objects.getExists(objectId)) {
       revert Entity_ObjectDoesNotExist(objectId);
     }
@@ -190,8 +215,9 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
   }
 
   /**
-   * @notice delete multiple instantiated Objects
-   * @param objectIds An array of ENTITY_OBJECT type Ids referencing existing Objects
+   * @notice Deletes multiple instantiated Objects
+   * @param objectIds An array of ENTITY_OBJECT type Ids to delete
+   * @dev Iteratively calls deleteObject for each objectId in `objectIds`
    */
   function deleteObjects(Id[] memory objectIds) public {
     for (uint i = 0; i < objectIds.length; i++) {

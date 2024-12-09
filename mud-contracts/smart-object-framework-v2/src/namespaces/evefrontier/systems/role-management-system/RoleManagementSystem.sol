@@ -1,4 +1,4 @@
-  /// SPDX-License-Identifier: MIT
+/// SPDX-License-Identifier: MIT
 pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
@@ -10,12 +10,12 @@ import { IRoleManagementSystem } from "../../interfaces/IRoleManagementSystem.so
 
 import { SmartObjectFramework } from "../../../../inherit/SmartObjectFramework.sol";
 
-/** 
+/**
  * @title Role Management System
  * @author CCP Games
  * @notice Handles role-based membership management
  * @dev Implements role creation, administration, and membership management functionality
- * IMPORTANT: all state changing functions implement the `direct()` modifier, which means (for security enforcement) they must be directly called from a MUD World entry point  
+ * @dev IMPORTANT: all state changing functions implement the `enforceCallCount(1)` modifier, which means (for security enforcement) they must be directly called from a MUD World entry point, not another MUD System
  */
 contract RoleManagementSystem is IRoleManagementSystem, SmartObjectFramework {
   /**
@@ -36,19 +36,16 @@ contract RoleManagementSystem is IRoleManagementSystem, SmartObjectFramework {
    * @param role The identifier for the new role
    * @param admin The identifier for the admin role
    */
-  function createRole(
-    bytes32 role,
-    bytes32 admin
-  ) external context enforceCallCount(1) {
-    if(role == bytes32(0) || admin == bytes32(0)) {
+  function createRole(bytes32 role, bytes32 admin) external context enforceCallCount(1) {
+    if (role == bytes32(0) || admin == bytes32(0)) {
       revert RoleManagement_InvalidRole();
     }
-    
+
     if (Role.getExists(role)) {
       revert RoleManagement_RoleAlreadyCreated(role);
     }
 
-    if(role == admin) {
+    if (role == admin) {
       _createRole(role, admin);
       _grantRole(role, _callMsgSender(1));
     } else {
@@ -124,17 +121,16 @@ contract RoleManagementSystem is IRoleManagementSystem, SmartObjectFramework {
     }
   }
 
-  /** 
-    * @dev Internal role creation logic
-    * @param role Role to create
-    * @param admin Admin role to assign
-    */
+  /**
+   * @dev Internal role creation logic
+   * @param role Role to create
+   * @param admin Admin role to assign
+   */
   function _createRole(bytes32 role, bytes32 admin) internal virtual {
     Role.set(role, true, bytes32(0));
 
     _setRoleAdmin(role, admin);
   }
-
 
   /**
    * @dev Internal admin update logic
@@ -144,7 +140,7 @@ contract RoleManagementSystem is IRoleManagementSystem, SmartObjectFramework {
   function _setRoleAdmin(bytes32 role, bytes32 admin) internal virtual {
     RoleData memory roleData = Role.get(role);
     RoleData memory adminData = Role.get(admin);
-    
+
     if (!adminData.exists) {
       revert RoleManagement_RoleDoesNotExist(admin);
     }

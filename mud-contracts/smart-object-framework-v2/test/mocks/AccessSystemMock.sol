@@ -30,29 +30,34 @@ contract AccessSystemMock is SmartObjectFramework {
 
     // assume these values for verification in our test (they are the same values used in SmartObjectFramewrokTest.test_access())
     Id classId = IdLib.encode(ENTITY_CLASS, bytes30("TEST_CLASS"));
-    ResourceId targetSystemId = ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("TaggedSystemMock")))));
+    ResourceId targetSystemId = ResourceId.wrap(
+      (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("TaggedSystemMock"))))
+    );
     bytes4 targetFunctionId = SystemMock.accessControlled.selector;
 
-    (Id targetParam1, ResourceId targetParam2, bytes4 targetParam3) = abi.decode(targetCallData, (Id, ResourceId, bytes4));
+    (Id targetParam1, ResourceId targetParam2, bytes4 targetParam3) = abi.decode(
+      targetCallData,
+      (Id, ResourceId, bytes4)
+    );
 
     // check entityId and targetCallData are passed correctly to the access logic
-    if(Id.unwrap(entityId) != Id.unwrap(classId) || Id.unwrap(entityId) != Id.unwrap(targetParam1)) {
+    if (Id.unwrap(entityId) != Id.unwrap(classId) || Id.unwrap(entityId) != Id.unwrap(targetParam1)) {
       revert AccessSystemMock_IncorrectEntityId(entityId, classId);
     }
-    if(ResourceId.unwrap(targetParam2) != ResourceId.unwrap(targetSystemId) || targetParam3 != targetFunctionId) {
+    if (ResourceId.unwrap(targetParam2) != ResourceId.unwrap(targetSystemId) || targetParam3 != targetFunctionId) {
       revert AccessSystemMock_IncorrectCallData();
     }
 
     // assume our SystemMock.accessControlled has the enforceCallCount(1) modifier
     // check that the call count is not affected by this access logic call
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
-    if(callCount != 1) {
+    if (callCount != 1) {
       revert AccessSystemMock_IncorrectCallCount();
     }
-    
+
     address targetAddress = Systems.getSystem(targetSystemId);
     // check this function is being called by the correct target system
-    if(_msgSender() != targetAddress) {
+    if (_msgSender() != targetAddress) {
       revert AccessSystemMock_IncorrectCaller();
     }
   }

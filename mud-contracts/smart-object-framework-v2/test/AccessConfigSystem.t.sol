@@ -35,9 +35,12 @@ contract AccessConfigSystemTest is MudTest {
   ResourceId ACCESS_CONFIG_SYSTEM_ID = AccessConfigSystemUtils.accessConfigSystemId();
   ResourceId TARGET_SYSTEM_ID =
     ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TargetSystemMock")))));
-  ResourceId constant ACCESS_NAMESPACE_ID = ResourceId.wrap(bytes32(abi.encodePacked(RESOURCE_NAMESPACE, bytes14("AccessNamespac"))));
+  ResourceId constant ACCESS_NAMESPACE_ID =
+    ResourceId.wrap(bytes32(abi.encodePacked(RESOURCE_NAMESPACE, bytes14("AccessNamespac"))));
   ResourceId ACCESS_SYSTEM_ID =
-    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("AccessNamespac"), bytes16("AccessSystemMock")))));
+    ResourceId.wrap(
+      (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("AccessNamespac"), bytes16("AccessSystemMock"))))
+    );
   string constant mnemonic = "test test test test test test test test test test test junk";
   uint256 deployerPK = vm.deriveKey(mnemonic, 0);
   uint256 alicePK = vm.deriveKey(mnemonic, 1);
@@ -60,20 +63,40 @@ contract AccessConfigSystemTest is MudTest {
   function test_configureAccess() public {
     vm.startPrank(deployer);
     // revert, if target system is not registered
-    vm.expectRevert(abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_InvalidTargetSystem.selector, TARGET_SYSTEM_ID));
+    vm.expectRevert(
+      abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_InvalidTargetSystem.selector, TARGET_SYSTEM_ID)
+    );
     world.call(
       ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(IAccessConfigSystem.configureAccess, (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, ACCESS_SYSTEM_ID, AccessSystemMock.accessController.selector))
+      abi.encodeCall(
+        IAccessConfigSystem.configureAccess,
+        (
+          TARGET_SYSTEM_ID,
+          SystemMock.accessControlled.selector,
+          ACCESS_SYSTEM_ID,
+          AccessSystemMock.accessController.selector
+        )
+      )
     );
 
     // register target system
     world.registerSystem(TARGET_SYSTEM_ID, System(targetSystemMock), true);
 
     // revert, if access system is not registered
-    vm.expectRevert(abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_InvalidAccessSystem.selector, ACCESS_SYSTEM_ID));
+    vm.expectRevert(
+      abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_InvalidAccessSystem.selector, ACCESS_SYSTEM_ID)
+    );
     world.call(
       ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(IAccessConfigSystem.configureAccess, (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, ACCESS_SYSTEM_ID, AccessSystemMock.accessController.selector))
+      abi.encodeCall(
+        IAccessConfigSystem.configureAccess,
+        (
+          TARGET_SYSTEM_ID,
+          SystemMock.accessControlled.selector,
+          ACCESS_SYSTEM_ID,
+          AccessSystemMock.accessController.selector
+        )
+      )
     );
 
     // register access namespace and system
@@ -83,7 +106,15 @@ contract AccessConfigSystemTest is MudTest {
     // success
     world.call(
       ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(IAccessConfigSystem.configureAccess, (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, ACCESS_SYSTEM_ID, AccessSystemMock.accessController.selector))
+      abi.encodeCall(
+        IAccessConfigSystem.configureAccess,
+        (
+          TARGET_SYSTEM_ID,
+          SystemMock.accessControlled.selector,
+          ACCESS_SYSTEM_ID,
+          AccessSystemMock.accessController.selector
+        )
+      )
     );
     bytes32 target = keccak256(abi.encodePacked(TARGET_SYSTEM_ID, SystemMock.accessControlled.selector));
     // check that the access config is set correctly in the AccessConfig table
@@ -97,10 +128,20 @@ contract AccessConfigSystemTest is MudTest {
     vm.stopPrank();
 
     // revert, if the direct caller _msgSender() is not the namespace owner of the target system
-    vm.expectRevert(abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_AccessDenied.selector, TARGET_SYSTEM_ID, address(this)));
+    vm.expectRevert(
+      abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_AccessDenied.selector, TARGET_SYSTEM_ID, address(this))
+    );
     world.call(
       ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(IAccessConfigSystem.configureAccess, (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, ACCESS_SYSTEM_ID, AccessSystemMock.accessController.selector))
+      abi.encodeCall(
+        IAccessConfigSystem.configureAccess,
+        (
+          TARGET_SYSTEM_ID,
+          SystemMock.accessControlled.selector,
+          ACCESS_SYSTEM_ID,
+          AccessSystemMock.accessController.selector
+        )
+      )
     );
   }
 
@@ -114,16 +155,33 @@ contract AccessConfigSystemTest is MudTest {
     world.registerSystem(ACCESS_SYSTEM_ID, System(accessSystemMock), true);
 
     // revert, if target is not configured
-    vm.expectRevert(abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_TargetNotConfigured.selector, TARGET_SYSTEM_ID, SystemMock.accessControlled.selector));
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IAccessConfigSystem.AccessConfig_TargetNotConfigured.selector,
+        TARGET_SYSTEM_ID,
+        SystemMock.accessControlled.selector
+      )
+    );
     world.call(
       ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(IAccessConfigSystem.setAccessEnforcement, (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, true))
+      abi.encodeCall(
+        IAccessConfigSystem.setAccessEnforcement,
+        (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, true)
+      )
     );
 
     // configure access
     world.call(
       ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(IAccessConfigSystem.configureAccess, (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, ACCESS_SYSTEM_ID, AccessSystemMock.accessController.selector))
+      abi.encodeCall(
+        IAccessConfigSystem.configureAccess,
+        (
+          TARGET_SYSTEM_ID,
+          SystemMock.accessControlled.selector,
+          ACCESS_SYSTEM_ID,
+          AccessSystemMock.accessController.selector
+        )
+      )
     );
 
     // check that the access enforcement is not on
@@ -133,18 +191,26 @@ contract AccessConfigSystemTest is MudTest {
     // success
     world.call(
       ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(IAccessConfigSystem.setAccessEnforcement, (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, true))
+      abi.encodeCall(
+        IAccessConfigSystem.setAccessEnforcement,
+        (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, true)
+      )
     );
-    // check that the access enforcement is on 
+    // check that the access enforcement is on
     bool enforcementAfter = AccessConfig.getEnforcement(target);
     assertEq(enforcementAfter, true);
     vm.stopPrank();
 
     // revert, if the direct caller _msgSender() is not the namespace owner of the target system
-    vm.expectRevert(abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_AccessDenied.selector, TARGET_SYSTEM_ID, address(this)));
+    vm.expectRevert(
+      abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_AccessDenied.selector, TARGET_SYSTEM_ID, address(this))
+    );
     world.call(
       ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(IAccessConfigSystem.setAccessEnforcement, (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, true))
+      abi.encodeCall(
+        IAccessConfigSystem.setAccessEnforcement,
+        (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, true)
+      )
     );
   }
 }

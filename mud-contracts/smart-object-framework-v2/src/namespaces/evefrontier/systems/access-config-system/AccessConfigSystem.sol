@@ -21,7 +21,12 @@ import { SmartObjectFramework } from "../../../../inherit/SmartObjectFramework.s
 contract AccessConfigSystem is IAccessConfigSystem, SmartObjectFramework {
   using WorldResourceIdInstance for ResourceId;
 
-  function configureAccess(ResourceId targetSystemId, bytes4 targetFunctionId, ResourceId accessSystemId, bytes4 accessFunctionId) public context enforceCallCount(1) {
+  function configureAccess(
+    ResourceId targetSystemId,
+    bytes4 targetFunctionId,
+    ResourceId accessSystemId,
+    bytes4 accessFunctionId
+  ) public context enforceCallCount(1) {
     // check if target system is registered
     if (!ResourceIds.getExists(targetSystemId)) {
       revert AccessConfig_InvalidTargetSystem(targetSystemId);
@@ -42,14 +47,17 @@ contract AccessConfigSystem is IAccessConfigSystem, SmartObjectFramework {
     AccessConfig.set(target, true, targetSystemId, targetFunctionId, accessSystemId, accessFunctionId, false);
   }
 
-  function setAccessEnforcement(ResourceId targetSystemId, bytes4 targetFunctionId, bool enforced) public context enforceCallCount(1) {
+  function setAccessEnforcement(
+    ResourceId targetSystemId,
+    bytes4 targetFunctionId,
+    bool enforced
+  ) public context enforceCallCount(1) {
     // check access by namespace ownership (the entry point msg.sender should be the namespace owner of the target system)
     if (NamespaceOwner.getOwner(targetSystemId.getNamespaceId()) != _callMsgSender(1)) {
       revert AccessConfig_AccessDenied(targetSystemId, _callMsgSender(1));
     }
 
     bytes32 target = keccak256(abi.encodePacked(targetSystemId, targetFunctionId));
-
 
     // check if target is configured
     if (!AccessConfig.getConfigured(target)) {
@@ -58,5 +66,4 @@ contract AccessConfigSystem is IAccessConfigSystem, SmartObjectFramework {
 
     AccessConfig.setEnforcement(target, enforced);
   }
-
 }

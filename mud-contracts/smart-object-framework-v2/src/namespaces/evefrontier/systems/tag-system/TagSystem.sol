@@ -87,7 +87,13 @@ contract TagSystem is ITagSystem, SmartObjectFramework {
         revert IEntitySystem.Entity_ClassDoesNotExist(entityId);
       }
       if (!ClassSystemTagMap.getHasTag(entityId, tagId)) {
-        ClassSystemTagMap.set(entityId, tagId, true, SystemTags.lengthClasses(tagId), Classes.lengthSystemTags(entityId));
+        ClassSystemTagMap.set(
+          entityId,
+          tagId,
+          true,
+          SystemTags.lengthClasses(tagId),
+          Classes.lengthSystemTags(entityId)
+        );
         Classes.pushSystemTags(entityId, Id.unwrap(tagId));
         SystemTags.pushClasses(tagId, Id.unwrap(entityId));
       } else {
@@ -98,7 +104,13 @@ contract TagSystem is ITagSystem, SmartObjectFramework {
         revert IEntitySystem.Entity_ObjectDoesNotExist(entityId);
       }
       if (!ObjectSystemTagMap.getHasTag(entityId, tagId)) {
-        ObjectSystemTagMap.set(entityId, tagId, true, SystemTags.lengthObjects(tagId), Objects.lengthSystemTags(entityId));
+        ObjectSystemTagMap.set(
+          entityId,
+          tagId,
+          true,
+          SystemTags.lengthObjects(tagId),
+          Objects.lengthSystemTags(entityId)
+        );
         Objects.pushSystemTags(entityId, Id.unwrap(tagId));
         SystemTags.pushObjects(tagId, Id.unwrap(entityId));
       } else {
@@ -107,7 +119,6 @@ contract TagSystem is ITagSystem, SmartObjectFramework {
     } else {
       revert IEntitySystem.Entity_InvalidEntityType(entityType);
     }
-
   }
 
   function _removeSystemTag(Id entityId, Id tagId) private {
@@ -155,7 +166,7 @@ contract TagSystem is ITagSystem, SmartObjectFramework {
         revert Tag_TagNotFound(entityId, tagId);
       }
     } else if (entityType == ENTITY_OBJECT) {
-     if (!Objects.getExists(entityId)) {
+      if (!Objects.getExists(entityId)) {
         revert IEntitySystem.Entity_ObjectDoesNotExist(entityId);
       }
 

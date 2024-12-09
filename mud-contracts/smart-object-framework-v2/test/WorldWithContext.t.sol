@@ -163,10 +163,6 @@ contract WorldWithContextTest is MudTest {
   }
 
   function test_callStatic() public view {
-    IWorldWithContext(worldAddress).callStatic(
-      MOCK_SYSTEM_ID,
-      abi.encodeCall(SystemMock.viewCall, ())
-    );
+    IWorldWithContext(worldAddress).callStatic(MOCK_SYSTEM_ID, abi.encodeCall(SystemMock.viewCall, ()));
   }
-
 }

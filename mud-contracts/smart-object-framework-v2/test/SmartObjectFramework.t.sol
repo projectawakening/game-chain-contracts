@@ -50,9 +50,12 @@ contract SmartObjectFrameworkTest is MudTest {
     ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystemMock")))));
   ResourceId constant UNTAGGED_SYSTEM_ID =
     ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("UnTaggedSystemMo")))));
-  ResourceId constant ACCESS_NAMESPACE_ID = ResourceId.wrap(bytes32(abi.encodePacked(RESOURCE_NAMESPACE, bytes14("AccessNamespac"))));
+  ResourceId constant ACCESS_NAMESPACE_ID =
+    ResourceId.wrap(bytes32(abi.encodePacked(RESOURCE_NAMESPACE, bytes14("AccessNamespac"))));
   ResourceId ACCESS_SYSTEM_ID =
-    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("AccessNamespac"), bytes16("AccessSystemMock")))));
+    ResourceId.wrap(
+      (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("AccessNamespac"), bytes16("AccessSystemMock"))))
+    );
 
   Id classId = IdLib.encode(ENTITY_CLASS, bytes30("TEST_CLASS"));
   bytes32 classAccessRole = bytes32("TEST_CLASS_ACCESS_ROLE");
@@ -90,13 +93,19 @@ contract SmartObjectFrameworkTest is MudTest {
     tagIds[0] = taggedSystemTagId;
 
     // create the Class Access Role with the deployer as the only member
-    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole)));
+    world.call(
+      ROLE_MANAGEMENT_SYSTEM_ID,
+      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
+    );
 
     // register Class (with a taggedSystem tag)
     world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (classId, classAccessRole, tagIds)));
 
     // register untagged Class
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (unTaggedClassId, classAccessRole, new Id[](0))));
+    world.call(
+      ENTITY_SYSTEM_ID,
+      abi.encodeCall(EntitySystem.registerClass, (unTaggedClassId, classAccessRole, new Id[](0)))
+    );
 
     // instantiate tagged Class->Object
     world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (classId, objectId)));
@@ -180,7 +189,7 @@ contract SmartObjectFrameworkTest is MudTest {
 
     // add Object tag
     world.call(TAGS_SYSTEM_ID, abi.encodeCall(ITagSystem.setSystemTag, (objectId, taggedSystemTagId)));
-    
+
     // success
     world.call(TAGGED_SYSTEM_ID, abi.encodeCall(SystemMock.objectLevelScope, (objectId)));
   }
@@ -188,13 +197,14 @@ contract SmartObjectFrameworkTest is MudTest {
   // internal scope enforcement
   function test_scope_internal() public {
     // revert, if a call chains leave scope and tries to call back into scope
-    vm.expectRevert(abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, classId, UNTAGGED_SYSTEM_ID));
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, classId, UNTAGGED_SYSTEM_ID)
+    );
     world.call(TAGGED_SYSTEM_ID, abi.encodeCall(SystemMock.entryScoped, (classId, false)));
 
     bytes memory returnData = world.call(TAGGED_SYSTEM_ID, abi.encodeCall(SystemMock.entryScoped, (classId, true)));
-    (,,bool result) = abi.decode(returnData, (bytes32, bytes32, bool));
+    (, , bool result) = abi.decode(returnData, (bytes32, bytes32, bool));
     assertEq(result, true);
-    
   }
 
   function test_context() public {
@@ -222,12 +232,23 @@ contract SmartObjectFrameworkTest is MudTest {
     // configure Access configuration for SystemMock
     world.call(
       ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(IAccessConfigSystem.configureAccess, (TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, ACCESS_SYSTEM_ID, AccessSystemMock.invalidAccessController.selector))
+      abi.encodeCall(
+        IAccessConfigSystem.configureAccess,
+        (
+          TAGGED_SYSTEM_ID,
+          SystemMock.accessControlled.selector,
+          ACCESS_SYSTEM_ID,
+          AccessSystemMock.invalidAccessController.selector
+        )
+      )
     );
     // set enforcement
     world.call(
       ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(IAccessConfigSystem.setAccessEnforcement, (TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, true))
+      abi.encodeCall(
+        IAccessConfigSystem.setAccessEnforcement,
+        (TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, true)
+      )
     );
 
     // revert, if a non-static call was made yto access logic
@@ -240,23 +261,37 @@ contract SmartObjectFrameworkTest is MudTest {
     // re-configure Access configuration for SystemMock
     world.call(
       ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(IAccessConfigSystem.configureAccess, (TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, ACCESS_SYSTEM_ID, AccessSystemMock.accessController.selector))
+      abi.encodeCall(
+        IAccessConfigSystem.configureAccess,
+        (
+          TAGGED_SYSTEM_ID,
+          SystemMock.accessControlled.selector,
+          ACCESS_SYSTEM_ID,
+          AccessSystemMock.accessController.selector
+        )
+      )
     );
 
     // re-set enforcement
     world.call(
       ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(IAccessConfigSystem.setAccessEnforcement, (TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, true))
+      abi.encodeCall(
+        IAccessConfigSystem.setAccessEnforcement,
+        (TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, true)
+      )
     );
 
     // revert, to check verification data failure
     vm.expectRevert(abi.encodeWithSelector(AccessSystemMock.AccessSystemMock_IncorrectCallData.selector));
     world.call(
       TAGGED_SYSTEM_ID,
-      abi.encodeCall(SystemMock.accessControlled, (classId, UNTAGGED_SYSTEM_ID, SystemMock.callEnforceCallCount1.selector))
+      abi.encodeCall(
+        SystemMock.accessControlled,
+        (classId, UNTAGGED_SYSTEM_ID, SystemMock.callEnforceCallCount1.selector)
+      )
     );
-    
-    // successful call 
+
+    // successful call
     world.call(
       TAGGED_SYSTEM_ID,
       abi.encodeCall(SystemMock.accessControlled, (classId, TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector))

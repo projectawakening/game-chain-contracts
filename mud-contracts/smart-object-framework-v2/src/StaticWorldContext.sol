@@ -43,7 +43,6 @@ library StaticWorldContextProviderLib {
     );
   }
 
-
   /**
    * @notice Makes a staticcall to the target contract with context values appended to the calldata.
    * @dev Revert in the case of failure.

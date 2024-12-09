@@ -24,8 +24,6 @@ import { SystemMock } from "./mocks/SystemMock.sol";
 
 import "../src/namespaces/evefrontier/codegen/index.sol";
 
-
-
 import { Id, IdLib } from "../src/libs/Id.sol";
 import { ENTITY_CLASS, ENTITY_OBJECT } from "../src/types/entityTypes.sol";
 import { TAG_SYSTEM } from "../src/types/tagTypes.sol";
@@ -58,7 +56,6 @@ contract EntitySystemTest is MudTest {
   uint256 deployerPK = vm.deriveKey(mnemonic, 0);
   address deployer = vm.addr(deployerPK);
   function setUp() public override {
-
     // DEPLOY AND REGISTER A MUD WORLD
     worldAddress = vm.envAddress("WORLD_ADDRESS");
     world = IBaseWorld(worldAddress);
@@ -133,12 +130,17 @@ contract EntitySystemTest is MudTest {
     // reverts if classId is bytes32(0)
     vm.startPrank(deployer);
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_InvalidEntityId.selector, Id.wrap(bytes32(0))));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (Id.wrap(bytes32(0)), classAccessRole, tagIds)));
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (Id.wrap(bytes32(0)), classAccessRole, tagIds))
+    );
 
     // reverts if classId is not a Class type
     bytes2[] memory expected = new bytes2[](1);
     expected[0] = ENTITY_CLASS;
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_WrongEntityType.selector, objectId.getType(), expected));
+    vm.expectRevert(
+      abi.encodeWithSelector(IEntitySystem.Entity_WrongEntityType.selector, objectId.getType(), expected)
+    );
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (objectId, classAccessRole, tagIds)));
 
     // reverts if the entrypoint _msgSender() is not a member of the given access role
@@ -146,7 +148,10 @@ contract EntitySystemTest is MudTest {
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, tagIds)));
 
     // create the Class Access Role with the deployer as the only member
-    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole)));
+    world.call(
+      ROLE_MANAGEMENT_SYSTEM_ID,
+      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
+    );
 
     // succesful call
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, tagIds)));
@@ -167,14 +172,20 @@ contract EntitySystemTest is MudTest {
 
   function test_instantiate() public {
     vm.startPrank(deployer);
-    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole)));
+    world.call(
+      ROLE_MANAGEMENT_SYSTEM_ID,
+      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
+    );
 
     // reverts if classId has NOT been registered
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ClassDoesNotExist.selector, classId));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
 
     // register classId
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, new Id[](0))));
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, new Id[](0)))
+    );
 
     // reverts if objectId is bytes32(0)
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_InvalidEntityId.selector, Id.wrap(bytes32(0))));
@@ -213,10 +224,16 @@ contract EntitySystemTest is MudTest {
 
   function test_deleteObject() public {
     vm.startPrank(deployer);
-    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole)));
+    world.call(
+      ROLE_MANAGEMENT_SYSTEM_ID,
+      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
+    );
 
     // setup - register classId
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, new Id[](0))));
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, new Id[](0)))
+    );
 
     // reverts if objectId doesn't exist (hasn't been instantiated)
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ObjectDoesNotExist.selector, objectId));
@@ -266,10 +283,16 @@ contract EntitySystemTest is MudTest {
 
   function test_deleteObjects() public {
     vm.startPrank(deployer);
-    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole)));
+    world.call(
+      ROLE_MANAGEMENT_SYSTEM_ID,
+      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
+    );
 
     // correctly calls and executes deleteObject for multiple objectIds
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, new Id[](0))));
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, new Id[](0)))
+    );
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId2)));
 
@@ -293,7 +316,10 @@ contract EntitySystemTest is MudTest {
 
   function test_deleteClass() public {
     vm.startPrank(deployer);
-    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole)));
+    world.call(
+      ROLE_MANAGEMENT_SYSTEM_ID,
+      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
+    );
 
     // reverts if classId doesn't exist (wasn't registered)
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ClassDoesNotExist.selector, classId));
@@ -330,7 +356,10 @@ contract EntitySystemTest is MudTest {
 
   function test_deleteClasses() public {
     vm.startPrank(deployer);
-    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole)));
+    world.call(
+      ROLE_MANAGEMENT_SYSTEM_ID,
+      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
+    );
 
     // corectly calls and executes deleteClass for multiple classIds
     Id[] memory tagIds = new Id[](1);
@@ -370,7 +399,10 @@ contract EntitySystemTest is MudTest {
     Id[] memory tagIds = new Id[](1);
     tagIds[0] = taggedSystemTagId;
     // create original Class access role
-    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole)));
+    world.call(
+      ROLE_MANAGEMENT_SYSTEM_ID,
+      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
+    );
     // register Class
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, tagIds)));
     // set invalid params
@@ -390,7 +422,10 @@ contract EntitySystemTest is MudTest {
     assertEq(accessRoleBefore, classAccessRole);
 
     bytes32 newClassAccessRole = bytes32("NEW_CLASS_ACCESS_ROLE");
-    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (newClassAccessRole, newClassAccessRole)));
+    world.call(
+      ROLE_MANAGEMENT_SYSTEM_ID,
+      abi.encodeCall(IRoleManagementSystem.createRole, (newClassAccessRole, newClassAccessRole))
+    );
     // success
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.setClassAccessRole, (classId, newClassAccessRole)));
 
@@ -405,19 +440,25 @@ contract EntitySystemTest is MudTest {
     Id[] memory tagIds = new Id[](1);
     tagIds[0] = taggedSystemTagId;
     // create Class access role
-    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole)));
+    world.call(
+      ROLE_MANAGEMENT_SYSTEM_ID,
+      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
+    );
     // register Class
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, tagIds)));
     // instantiate Object
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
-    
+
     // set invalid params
     Id invalidObjectId = IdLib.encode(ENTITY_CLASS, bytes30("INVALID_OBJECT"));
     bytes32 invalidRole = bytes32("INVALID_ROLE");
 
     // reverts, if objectId in not instantiated
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ObjectDoesNotExist.selector, invalidObjectId));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.setObjectAccessRole, (invalidObjectId, classAccessRole)));
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.setObjectAccessRole, (invalidObjectId, classAccessRole))
+    );
 
     // reverts, if newAccessRole does not exist
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_RoleDoesNotExist.selector, invalidRole));

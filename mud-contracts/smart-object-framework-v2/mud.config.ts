@@ -65,8 +65,8 @@ export default defineWorld({
           key: ["role"],
         },
         HasRole: {
-          schema: { 
-            role: "bytes32", 
+          schema: {
+            role: "bytes32",
             account: "address",
             hasRole: "bool",
           },

@@ -96,7 +96,10 @@ contract TagSystemTest is MudTest {
     world.registerSystem(UNTAGGED_SYSTEM_ID, System(unTaggedSystemMock), true);
 
     // create the Class Access Role with the deployer as the only member
-    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole)));
+    world.call(
+      ROLE_MANAGEMENT_SYSTEM_ID,
+      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
+    );
 
     // register Class without any tags
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (classId, classAccessRole, new Id[](0))));
@@ -177,7 +180,10 @@ contract TagSystemTest is MudTest {
 
     // check multi-class tagging data
     // register TEST_CLASS_2 without any tags
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (classId2, classAccessRole, new Id[](0))));
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(EntitySystem.registerClass, (classId2, classAccessRole, new Id[](0)))
+    );
     // add our tag to classId2
     world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (classId2, taggedSystemTagId)));
     bytes32[] memory systemTagClassesAfter = SystemTags.getClasses(taggedSystemTagId);
@@ -211,7 +217,7 @@ contract TagSystemTest is MudTest {
     assertEq(object1Tag1MapDataBefore.hasTag, false);
     // successfull call
     world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (objectId, taggedSystemTagId)));
-    
+
     // after
     bytes32[] memory object1SystemTagsAfter = Objects.getSystemTags(objectId);
     assertEq(object1SystemTagsAfter.length, 1);
@@ -349,8 +355,6 @@ contract TagSystemTest is MudTest {
     assertEq(object1Tag3MapAfter.hasTag, true);
     assertEq(object1Tag3MapAfter.tagIndex, 2);
     vm.stopPrank();
-
-
   }
 
   function test_removeSystemTag() public {
