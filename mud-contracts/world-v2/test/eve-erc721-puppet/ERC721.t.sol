@@ -15,14 +15,14 @@ import { IWorldErrors } from "@latticexyz/world/src/IWorldErrors.sol";
 import { GasReporter } from "@latticexyz/gas-report/src/GasReporter.sol";
 import { PuppetModule } from "@latticexyz/world-modules/src/modules/puppet/PuppetModule.sol";
 
-import { ERC721Module } from "../../src/systems/eve-erc721-puppet/ERC721Module.sol";
-import { ERC721MetadataData } from "../../src/codegen/tables/ERC721Metadata.sol";
-import { IERC721Mintable } from "../../src/systems/eve-erc721-puppet/IERC721Mintable.sol";
-import { IERC721Metadata } from "../../src/systems/eve-erc721-puppet/IERC721Metadata.sol";
-import { registerERC721 } from "../../src/systems/eve-erc721-puppet/registerERC721.sol";
-import { IERC721Errors } from "../../src/systems/eve-erc721-puppet/IERC721Errors.sol";
-import { IERC721Events } from "../../src/systems/eve-erc721-puppet/IERC721Events.sol";
-import { _erc721SystemId } from "../../src/systems/eve-erc721-puppet/utils.sol";
+import { ERC721Module } from "../../src/namespaces/evefrontier/systems/eve-erc721-puppet/ERC721Module.sol";
+import { ERC721MetadataData } from "../../src/namespaces/evefrontier/codegen/tables/ERC721Metadata.sol";
+import { IERC721Mintable } from "../../src/namespaces/evefrontier/systems/eve-erc721-puppet/IERC721Mintable.sol";
+import { IERC721Metadata } from "../../src/namespaces/evefrontier/systems/eve-erc721-puppet/IERC721Metadata.sol";
+import { registerERC721 } from "../../src/namespaces/evefrontier/systems/eve-erc721-puppet/registerERC721.sol";
+import { IERC721Errors } from "../../src/namespaces/evefrontier/systems/eve-erc721-puppet/IERC721Errors.sol";
+import { IERC721Events } from "../../src/namespaces/evefrontier/systems/eve-erc721-puppet/IERC721Events.sol";
+import { _erc721SystemId } from "../../src/namespaces/evefrontier/systems/eve-erc721-puppet/utils.sol";
 
 abstract contract ERC721TokenReceiver {
   function onERC721Received(address, address, uint256, bytes calldata) external virtual returns (bytes4) {
