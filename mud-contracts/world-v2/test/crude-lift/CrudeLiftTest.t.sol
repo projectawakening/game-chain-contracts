@@ -221,6 +221,26 @@ contract CrudeLiftTest is MudTest {
     assertEq(riftCrudeRemaining, totalCrudeInRift - crudeMined, "rift crude not reduced");
   }
 
+  function testRunOutOfDurabilityBeforeMiningStopped() public {
+    testStartMining();
+
+    // 1 second remaining mining time
+    vm.startPrank(deployer);
+    Lens.setDurability(lensId, 1);
+    vm.stopPrank();
+
+    vm.warp(block.timestamp + 100); // Advance time by 100 seconds
+    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.stopMining, (liftId)));
+
+    assertEq(Lens.getDurability(lensId), 0, "lens durability not reduced");
+
+    uint256 crudeMined = getCrudeAmount(liftId);
+    assertEq(crudeMined, 1, "mining did not stop after durability ran out");
+
+    uint256 riftCrudeRemaining = getCrudeAmount(riftId);
+    assertEq(riftCrudeRemaining, totalCrudeInRift - crudeMined, "rift crude not reduced");
+  }
+
   function getCrudeAmount(uint256 smartObjectId) public returns (uint256) {
     bytes memory result = world.call(
       crudeLiftSystemId,
