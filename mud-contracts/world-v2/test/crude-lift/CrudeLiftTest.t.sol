@@ -241,6 +241,20 @@ contract CrudeLiftTest is MudTest {
     assertEq(riftCrudeRemaining, totalCrudeInRift - crudeMined, "rift crude not reduced");
   }
 
+  function testRiftCollapsedBeforeMiningStopped() public {
+    testStartMining();
+
+    vm.startPrank(deployer);
+    Rift.setCollapsedAt(riftId, CrudeLift.getStartMiningTime(liftId) + 10);
+    vm.stopPrank();
+
+    vm.warp(block.timestamp + 100); // Advance time by 100 seconds
+    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.stopMining, (liftId)));
+
+    uint256 crudeMined = getCrudeAmount(liftId);
+    assertEq(crudeMined, 10, "mining did not stop after rift collapsed");
+  }
+
   function getCrudeAmount(uint256 smartObjectId) public returns (uint256) {
     bytes memory result = world.call(
       crudeLiftSystemId,

@@ -150,6 +150,13 @@ contract CrudeLiftSystem is EveSystem {
 
     uint256 miningDuration = block.timestamp - lift.startMiningTime;
 
+    uint256 riftId = CrudeLift.getMiningRiftId(crudeLiftId);
+    uint256 riftCollapsedAt = Rift.getCollapsedAt(riftId);
+    uint256 miningTimeUntilRiftCollapse = riftCollapsedAt - CrudeLift.getStartMiningTime(crudeLiftId);
+    if (miningTimeUntilRiftCollapse < miningDuration) {
+      miningDuration = miningTimeUntilRiftCollapse;
+    }
+
     bytes memory data = world().call(fuelSystemId, abi.encodeCall(FuelSystem.currentFuelAmountInWei, (crudeLiftId)));
     uint256 currentFuel = abi.decode(data, (uint256));
     // fuel ran out as some point in the past, need to figure out how many blocks we actually mined for
@@ -157,7 +164,7 @@ contract CrudeLiftSystem is EveSystem {
       uint256 fuelConsumptionInterval = Fuel.getFuelConsumptionIntervalInSeconds(crudeLiftId);
       uint256 startingFuel = Fuel.getFuelAmount(crudeLiftId) / ONE_UNIT_IN_WEI;
       uint256 secondsMining = (startingFuel / fuelConsumptionInterval);
-      miningDuration = secondsMining;
+      miningDuration = secondsMining < miningDuration ? secondsMining : miningDuration;
     }
 
     uint256 remainingLensDurability = Lens.getDurability(CrudeLift.getLensId(crudeLiftId));
@@ -169,9 +176,6 @@ contract CrudeLiftSystem is EveSystem {
     } else {
       Lens.setDurability(CrudeLift.getLensId(crudeLiftId), remainingLensDurability - miningDuration);
     }
-
-    uint256 riftId = CrudeLift.getMiningRiftId(crudeLiftId);
-    if (Rift.getCollapsedAt(riftId) != 0) revert RiftCollapsed();
 
     uint256 crudeMined = calculateCrudeMined(CrudeLift.getMiningRate(crudeLiftId), miningDuration);
 
