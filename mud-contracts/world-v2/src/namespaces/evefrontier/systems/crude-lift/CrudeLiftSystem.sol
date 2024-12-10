@@ -155,10 +155,10 @@ contract CrudeLiftSystem is EveSystem {
     // fuel ran out as some point in the past, need to figure out how many blocks we actually mined for
     if (currentFuel < ONE_UNIT_IN_WEI) {
       uint256 fuelConsumptionInterval = Fuel.getFuelConsumptionIntervalInSeconds(crudeLiftId);
-      uint256 secondsMining = (currentFuel / fuelConsumptionInterval);
+      uint256 startingFuel = Fuel.getFuelAmount(crudeLiftId) / ONE_UNIT_IN_WEI;
+      uint256 secondsMining = (startingFuel / fuelConsumptionInterval);
       miningDuration = secondsMining;
     }
-    world().call(fuelSystemId, abi.encodeCall(FuelSystem.updateFuel, (crudeLiftId)));
 
     uint256 remainingLensDurability = Lens.getDurability(CrudeLift.getLensId(crudeLiftId));
     // the lens was exhaused at some point during mining
@@ -173,25 +173,18 @@ contract CrudeLiftSystem is EveSystem {
     uint256 riftId = CrudeLift.getMiningRiftId(crudeLiftId);
     if (Rift.getCollapsedAt(riftId) != 0) revert RiftCollapsed();
 
-    console.log("miningDuration", miningDuration);
-    console.log("miningRate", CrudeLift.getMiningRate(crudeLiftId));
     uint256 crudeMined = calculateCrudeMined(CrudeLift.getMiningRate(crudeLiftId), miningDuration);
-    console.log("crudeMined", crudeMined);
 
     uint256 remainingCrudeAmount = getCrudeAmount(riftId);
-    console.log("remainingCrudeAmount", remainingCrudeAmount);
     if (crudeMined > remainingCrudeAmount) {
       crudeMined = remainingCrudeAmount;
     }
 
     uint256 remainingInventoryCapacity = Inventory.getCapacity(crudeLiftId) - Inventory.getUsedCapacity(crudeLiftId);
-    console.log("remainingInventoryCapacity", remainingInventoryCapacity);
     if (crudeMined > remainingInventoryCapacity) {
       // TODO how much capacity does Crude take up?
       crudeMined = remainingInventoryCapacity;
     }
-
-    console.log("crudeMined", crudeMined);
 
     removeCrude(riftId, crudeMined);
     addCrude(crudeLiftId, crudeMined);
@@ -201,6 +194,9 @@ contract CrudeLiftSystem is EveSystem {
     CrudeLift.setMiningRiftId(crudeLiftId, 0);
 
     Rift.setMiningCrudeLiftId(riftId, 0);
+
+    // Fuel updates at the end so the Lift can be brought offline after interacting with inventory
+    world().call(fuelSystemId, abi.encodeCall(FuelSystem.updateFuel, (crudeLiftId)));
   }
 
   function removeLens(uint256 smartObjectId, address receiver) public onlyServer {
@@ -219,12 +215,6 @@ contract CrudeLiftSystem is EveSystem {
 
   function calculateCrudeMined(uint256 miningRate, uint256 duration) internal pure returns (uint256) {
     return (duration * miningRate);
-  }
-
-  function calculateCollapseChance(uint256 miningRate, uint256 stability) internal pure returns (uint256) {
-    uint256 collapseChance = (stability * miningRate) / 100_000;
-
-    return collapseChance > 100_000 ? 100_000 : collapseChance;
   }
 
   function addCrude(uint256 smartObjectId, uint256 amount) public onlyServer {

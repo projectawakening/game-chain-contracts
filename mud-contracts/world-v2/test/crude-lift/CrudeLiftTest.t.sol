@@ -27,7 +27,8 @@ import { EphemeralInventorySystem } from "../../src/namespaces/evefrontier/syste
 import { InventoryUtils } from "../../src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
 import { RiftUtils } from "../../src/namespaces/evefrontier/systems/rift/RiftUtils.sol";
 import { RiftSystem } from "../../src/namespaces/evefrontier/systems/rift/RiftSystem.sol";
-import { Lens, Rift } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { Lens, Rift, Fuel } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { DECIMALS, ONE_UNIT_IN_WEI } from "../../src/namespaces/evefrontier/systems/constants.sol";
 
 contract CrudeLiftTest is MudTest {
   IBaseWorld world;
@@ -40,9 +41,12 @@ contract CrudeLiftTest is MudTest {
   address alice = vm.addr(alicePK);
   uint256 characterId = 1111;
   uint256 tribeId = 1122;
-  uint256 smartObjectId = 12345;
+  uint256 liftId = 12345;
   uint256 lensId = 5678;
   uint256 riftId = 9012;
+
+  uint256 totalCrudeInRift = 250;
+  uint256 liftInitialFuel = 100;
 
   EntityRecordData entityRecord;
   SmartObjectData smartObjectData;
@@ -85,7 +89,7 @@ contract CrudeLiftTest is MudTest {
 
   function testAnchorCrudeLift() public {
     uint256 fuelUnitVolume = 1;
-    uint256 fuelConsumptionIntervalInSeconds = 100;
+    uint256 fuelConsumptionIntervalInSeconds = 1;
     uint256 fuelMaxCapacity = 100_000;
     uint256 storageCapacity = 100_000;
     uint256 ephemeralStorageCapacity = 100_000;
@@ -95,7 +99,7 @@ contract CrudeLiftTest is MudTest {
       abi.encodeCall(
         CrudeLiftSystem.createAndAnchorCrudeLift,
         (
-          smartObjectId,
+          liftId,
           entityRecord,
           smartObjectData,
           worldPosition,
@@ -108,11 +112,11 @@ contract CrudeLiftTest is MudTest {
       )
     );
 
-    world.call(fuelSystemId, abi.encodeCall(FuelSystem.depositFuel, (smartObjectId, 100)));
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOnline, (smartObjectId)));
+    world.call(fuelSystemId, abi.encodeCall(FuelSystem.depositFuel, (liftId, liftInitialFuel)));
+    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOnline, (liftId)));
 
-    assertEq(SmartAssembly.getSmartAssemblyType(smartObjectId), CRUDE_LIFT);
-    assertEq(uint8(DeployableState.getCurrentState(smartObjectId)), uint8(State.ONLINE));
+    assertEq(SmartAssembly.getSmartAssemblyType(liftId), CRUDE_LIFT);
+    assertEq(uint8(DeployableState.getCurrentState(liftId)), uint8(State.ONLINE));
   }
 
   function testCraftLens() public {
@@ -122,7 +126,7 @@ contract CrudeLiftTest is MudTest {
   }
 
   function testCreateRift() public {
-    world.call(riftSystemId, abi.encodeCall(RiftSystem.createRift, (riftId, 100)));
+    world.call(riftSystemId, abi.encodeCall(RiftSystem.createRift, (riftId, totalCrudeInRift)));
 
     assertEq(Rift.getCreatedAt(riftId), block.timestamp);
   }
@@ -143,25 +147,22 @@ contract CrudeLiftTest is MudTest {
     });
 
     // Deposit lens into crude lift's inventory
-    world.call(
-      inventorySystemId,
-      abi.encodeCall(InventorySystem.createAndDepositItemsToInventory, (smartObjectId, items))
-    );
+    world.call(inventorySystemId, abi.encodeCall(InventorySystem.createAndDepositItemsToInventory, (liftId, items)));
 
     // Now insert the lens
-    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.insertLens, (smartObjectId)));
+    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.insertLens, (liftId)));
 
-    assertEq(CrudeLift.getLensId(smartObjectId), lensId);
+    assertEq(CrudeLift.getLensId(liftId), lensId);
   }
 
   function testStartMining() public {
     testInsertLens();
     testCreateRift();
 
-    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.startMining, (smartObjectId, riftId, 1)));
+    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.startMining, (liftId, riftId, 1)));
 
-    assertEq(CrudeLift.getMiningRiftId(smartObjectId), riftId);
-    assertTrue(CrudeLift.getStartMiningTime(smartObjectId) > 0);
+    assertEq(CrudeLift.getMiningRiftId(liftId), riftId);
+    assertTrue(CrudeLift.getStartMiningTime(liftId) > 0);
   }
 
   function testStopMining() public {
@@ -169,19 +170,45 @@ contract CrudeLiftTest is MudTest {
 
     vm.warp(block.timestamp + 100); // Advance time by 100 seconds
 
-    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.stopMining, (smartObjectId)));
+    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.stopMining, (liftId)));
 
-    assertEq(CrudeLift.getStartMiningTime(smartObjectId), 0);
+    assertEq(CrudeLift.getStartMiningTime(liftId), 0);
 
+    uint256 crudeMined = getCrudeAmount(liftId);
+    assertEq(crudeMined, 100);
+
+    uint256 riftCrudeRemaining = getCrudeAmount(riftId);
+    assertEq(riftCrudeRemaining, totalCrudeInRift - crudeMined);
+  }
+
+  function testRunOutOfFuelBeforeMiningStopped() public {
+    testStartMining();
+
+    uint256 originalFuelAmount = Fuel.getFuelAmount(liftId);
+
+    // leave 20 fuel in the Lift, should only be able to mine for 20 blocks
+    world.call(
+      fuelSystemId,
+      abi.encodeCall(FuelSystem.withdrawFuel, (liftId, originalFuelAmount / ONE_UNIT_IN_WEI - 20))
+    );
+    uint256 fuelRemaining = Fuel.getFuelAmount(liftId);
+    assertEq(fuelRemaining / ONE_UNIT_IN_WEI, 20, "Fuel remaining should be 20 after withdrawing");
+
+    vm.warp(block.timestamp + 100); // Advance time by 100 seconds
+    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.stopMining, (liftId)));
+
+    uint256 crudeMined = getCrudeAmount(liftId);
+    assertEq(crudeMined, 20, "mining did not stop after fuel ran out");
+
+    uint256 riftCrudeRemaining = getCrudeAmount(riftId);
+    assertEq(riftCrudeRemaining, totalCrudeInRift - crudeMined, "rift crude not reduced");
+  }
+
+  function getCrudeAmount(uint256 smartObjectId) public returns (uint256) {
     bytes memory result = world.call(
       crudeLiftSystemId,
       abi.encodeCall(CrudeLiftSystem.getCrudeAmount, (smartObjectId))
     );
-    uint256 crudeMined = abi.decode(result, (uint256));
-    assertEq(crudeMined, 100);
-
-    result = world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.getCrudeAmount, (riftId)));
-    uint256 riftCrudeMined = abi.decode(result, (uint256));
-    assertEq(riftCrudeMined, 0);
+    return abi.decode(result, (uint256));
   }
 }
