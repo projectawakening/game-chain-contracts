@@ -18,6 +18,10 @@ import { Owners } from "./tables/Owners.sol";
 import { TokenApproval } from "./tables/TokenApproval.sol";
 import { OperatorApproval } from "./tables/OperatorApproval.sol";
 import { ERC721Registry } from "./tables/ERC721Registry.sol";
+import { ERC20Metadata, ERC20MetadataData } from "./tables/ERC20Metadata.sol";
+import { Allowances } from "./tables/Allowances.sol";
+import { TotalSupply } from "./tables/TotalSupply.sol";
+import { ERC20Registry } from "./tables/ERC20Registry.sol";
 import { Location, LocationData } from "./tables/Location.sol";
 import { GlobalDeployableState, GlobalDeployableStateData } from "./tables/GlobalDeployableState.sol";
 import { DeployableState, DeployableStateData } from "./tables/DeployableState.sol";
@@ -32,3 +36,6 @@ import { ItemTransferOffchain, ItemTransferOffchainData } from "./tables/ItemTra
 import { SmartTurretConfig } from "./tables/SmartTurretConfig.sol";
 import { SmartGateConfig, SmartGateConfigData } from "./tables/SmartGateConfig.sol";
 import { SmartGateLink, SmartGateLinkData } from "./tables/SmartGateLink.sol";
+import { CrudeLift, CrudeLiftData } from "./tables/CrudeLift.sol";
+import { Lens, LensData } from "./tables/Lens.sol";
+import { Rift, RiftData } from "./tables/Rift.sol";

@@ -91,6 +91,8 @@ contract PostDeploy is Script {
     console.log("amount: ", amount * 1 ether);
   }
 
+  function _createCrudeToken(IBaseWorld world) internal {}
+
   function _createCharacterToken(IBaseWorld world) internal {
     string memory baseURI = vm.envString("BASE_URI");
 

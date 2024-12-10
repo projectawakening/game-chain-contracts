@@ -177,6 +177,54 @@ export default defineWorld({
             tableIdArgument: true,
           },
         },
+
+        /************************************************************************
+         *
+         *    ERC20 MODULE
+         *
+         ************************************************************************/
+        ERC20Metadata: {
+          schema: {
+            decimals: "uint8",
+            name: "string",
+            symbol: "string",
+          },
+          key: [],
+          codegen: {
+            tableIdArgument: true,
+          },
+        },
+        Allowances: {
+          schema: {
+            account: "address",
+            spender: "address",
+            value: "uint256",
+          },
+          key: ["account", "spender"],
+          codegen: {
+            tableIdArgument: true,
+          },
+        },
+        TotalSupply: {
+          schema: {
+            totalSupply: "uint256",
+          },
+          key: [],
+          codegen: {
+            tableIdArgument: true,
+          },
+        },
+        ERC20Registry: {
+          schema: {
+            namespaceId: "ResourceId",
+            tokenAddress: "address",
+          },
+          key: ["namespaceId"],
+          codegen: {
+            tableIdArgument: true,
+          },
+        },
+
         /*******************
          * LOCATION MODULE *
          *******************/
@@ -361,6 +409,40 @@ export default defineWorld({
             isLinked: "bool",
           },
           key: ["sourceGateId"],
+        },
+
+        /*************************
+         * SMART CRUDE LIFT MODULE *
+         *************************/
+
+        CrudeLift: {
+          schema: {
+            smartObjectId: "uint256",
+            lensId: "uint256",
+            startMiningTime: "uint256",
+            miningRiftId: "uint256",
+            miningRate: "uint256",
+          },
+          key: ["smartObjectId"],
+        },
+
+        Lens: {
+          schema: {
+            lensId: "uint256",
+            durability: "uint256",
+            exhausted: "bool",
+          },
+          key: ["lensId"],
+        },
+
+        Rift: {
+          schema: {
+            riftId: "uint256",
+            createdAt: "uint256",
+            collapsedAt: "uint256",
+            miningCrudeLiftId: "uint256",
+          },
+          key: ["riftId"],
         },
       },
     },
