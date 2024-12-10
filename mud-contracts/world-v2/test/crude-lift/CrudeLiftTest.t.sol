@@ -204,6 +204,23 @@ contract CrudeLiftTest is MudTest {
     assertEq(riftCrudeRemaining, totalCrudeInRift - crudeMined, "rift crude not reduced");
   }
 
+  function testRunOutOfCapacityBeforeMiningStopped() public {
+    testStartMining();
+
+    // lift can only fit 19 crude
+    // Lens takes up 1 space
+    world.call(inventorySystemId, abi.encodeCall(InventorySystem.setInventoryCapacity, (liftId, 20)));
+
+    vm.warp(block.timestamp + 100); // Advance time by 100 seconds
+    world.call(crudeLiftSystemId, abi.encodeCall(CrudeLiftSystem.stopMining, (liftId)));
+
+    uint256 crudeMined = getCrudeAmount(liftId);
+    assertEq(crudeMined, 19, "mining did not stop after capacity ran out");
+
+    uint256 riftCrudeRemaining = getCrudeAmount(riftId);
+    assertEq(riftCrudeRemaining, totalCrudeInRift - crudeMined, "rift crude not reduced");
+  }
+
   function getCrudeAmount(uint256 smartObjectId) public returns (uint256) {
     bytes memory result = world.call(
       crudeLiftSystemId,
