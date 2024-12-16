@@ -133,7 +133,6 @@ pnpm nx setForwarder @eveworld/world-core 1> '/dev/null'
 wait
 show_progress 3 7
 
-
 #4 Deploy smart object framework 
 #
 echo " - Installing smart object framework into world"
@@ -142,7 +141,29 @@ show_progress 4 7
 
 #5 Deploy world features
 echo " - Deploying world features"
-pnpm nx deploy @eveworld/world --worldAddress '${WORLD_ADDRESS}' 1> '/dev/null'
+deployment_output=$(pnpm nx deploy @eveworld/world --worldAddress '${WORLD_ADDRESS}' 2>&1)
+
+# Extract the ERC721 token address from the output
+smart_deployable_token_address=$(echo "$deployment_output" \
+  | grep "Deploying Smart Deployable token with address:" \
+  | grep -oE "0x[0-9a-fA-F]{40}")
+if [ -z "$smart_deployable_token_address" ]; then
+  echo "Error: Failed to extract Deployable token address from deployment output."
+  exit 1
+fi
+export SMART_DEPLOYABLE_TOKEN_ADDRESS="$smart_deployable_token_address"
+
+smart_character_token_address=$(echo "$deployment_output" \
+  | grep "Deploying Smart Character token with address:" \
+  | grep -oE "0x[0-9a-fA-F]{40}")
+
+if [ -z "$smart_character_token_address" ]; then
+  echo "Error: Failed to extract Smart Character token address from deployment output."
+  exit 1
+fi
+export SMART_CHARACTER_TOKEN_ADDRESS="$smart_character_token_address"
+
+wait
 show_progress 5 7
 
 #6 Delegate Namespace Access
@@ -158,11 +179,16 @@ mkdir -p abis/world
 #7 Copy ABIS to be used for External consumption
 cp standard-contracts/out/ERC2771ForwarderWithHashNonce.sol/ERC2771Forwarder.abi.json "abis/trusted-forwarder/ERC2771Forwarder-${IMAGE_TAG}.abi.json"
 cp mud-contracts/world/out/IWorld.sol/IWorld.abi.json "abis/world/IWorld-${IMAGE_TAG}.abi.json"
-# Custome ERC2771 Compatible IWorld contract
-    jq 'map((.name? |= gsub("^eveworld__"; "")) // .)' "abis/world/IWorld-${IMAGE_TAG}.abi.json" > "abis/world/ERC2771IWorld-${IMAGE_TAG}.abi.json"
+# Custom ERC2771 Compatible IWorld contract
+jq 'map((.name? |= gsub("^eveworld__"; "")) // .)' "abis/world/IWorld-${IMAGE_TAG}.abi.json" > "abis/world/ERC2771IWorld-${IMAGE_TAG}.abi.json"
 
-show_progress  7 7
-echo '{"WORLD_ADDRESS":"'$WORLD_ADDRESS'", "FORWARDER_ADDRESS":"'$FORWARDER_ADDRESS'"}' > run_env.json
+show_progress 7 7
+
+# Update run_env.json with the extracted addresses
+echo '{"WORLD_ADDRESS":"'$WORLD_ADDRESS'", "FORWARDER_ADDRESS":"'$FORWARDER_ADDRESS'", "SMART_DEPLOYABLE_TOKEN_ADDRESS":"'$SMART_DEPLOYABLE_TOKEN_ADDRESS'", "SMART_CHARACTER_TOKEN_ADDRESS": "'$SMART_CHARACTER_TOKEN_ADDRESS'"}' > run_env.json
 
 echo "World address: $WORLD_ADDRESS"
-echo "Trusted forwarder address: $FORWARDER_ADDRESS" 
+echo "Trusted forwarder address: $FORWARDER_ADDRESS"
+echo "Smart Deployable token address: $SMART_DEPLOYABLE_TOKEN_ADDRESS"
+echo "Smart Character token address: $SMART_CHARACTER_TOKEN_ADDRESS"
+

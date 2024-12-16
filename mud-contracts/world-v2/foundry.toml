@@ -5,7 +5,7 @@ ffi = false
 optimizer = true
 optimizer_runs = 300
 seed = '0x2'
-verbosity = 2
+verbosity = 3
 src = "src"
 test = "test"
 out = "out"
@@ -22,6 +22,9 @@ extra_output_files = [
   "evm.bytecode"
 ]
 fs_permissions = [{ access = "read", path = "./"}]
+[fuzz]
+max_test_rejects = 750536
+runs = 1000
 
 [profile.garnet]
 eth_rpc_url = "https://rpc.garnetchain.com"
@@ -29,6 +32,3 @@ eth_rpc_url = "https://rpc.garnetchain.com"
 [profile.redstone]
 eth_rpc_url = "https://rpc.redstonechain.com"
 
-[fuzz]
-fuzz_runs = 10000
-max_test_rejects = 65536
