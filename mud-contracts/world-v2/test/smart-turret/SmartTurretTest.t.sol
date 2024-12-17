@@ -10,25 +10,20 @@ import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 import { SmartAssembly } from "../../src/namespaces/evefrontier/codegen/tables/SmartAssembly.sol";
 import { SmartTurretConfig } from "../../src/namespaces/evefrontier/codegen/tables/SmartTurretConfig.sol";
 import { State, SmartObjectData } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
-import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
-import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
-import { FuelUtils } from "../../src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
-import { SmartTurretUtils } from "../../src/namespaces/evefrontier/systems/smart-turret/SmartTurretUtils.sol";
-import { SmartTurretCustomMock } from "./SmartTurretCustomMock.sol";
-import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
-import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
 import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
 import { WorldPosition, Coord } from "../../src/namespaces/evefrontier/systems/location/types.sol";
-import { SmartTurretSystem } from "../../src/namespaces/evefrontier/systems/smart-turret/SmartTurretSystem.sol";
-import { FuelSystem } from "../../src/namespaces/evefrontier/systems/fuel/FuelSystem.sol";
-
 import { SMART_TURRET } from "../../src/namespaces/evefrontier/systems/constants.sol";
 import { TargetPriority, Turret, SmartTurretTarget } from "../../src/namespaces/evefrontier/systems/smart-turret/types.sol";
+import { SmartTurretCustomMock } from "./SmartTurretCustomMock.sol";
 
-/**
- * @title SmartTurretTest
- * @dev Not including Fuzz test as it has issues
- */
+import { SmartTurretSystem } from "../../src/namespaces/evefrontier/systems/smart-turret/SmartTurretSystem.sol";
+import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
+
+import { SmartTurretSystemLib, smartTurretSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartTurretSystemLib.sol";
+import { DeployableSystemLib, deployableSystem } from "../../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
+import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
+import { FuelSystemLib, fuelSystem } from "../../src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
+
 contract SmartTurretTest is MudTest {
   IBaseWorld world;
 
@@ -50,11 +45,6 @@ contract SmartTurretTest is MudTest {
   SmartObjectData smartObjectData;
   EntityRecordData entityRecord;
   WorldPosition worldPosition;
-
-  ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
-  ResourceId characterSystemId = SmartCharacterUtils.smartCharacterSystemId();
-  ResourceId turretSystemId = SmartTurretUtils.smartTurretSystemId();
-  ResourceId fuelSystemId = FuelUtils.fuelSystemId();
 
   function setUp() public virtual override {
     super.setUp();
@@ -92,13 +82,14 @@ contract SmartTurretTest is MudTest {
     );
     vm.stopPrank();
 
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.globalResume, ()));
-    world.call(
-      characterSystemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (characterId, alice, tribeId, entityRecord, entityRecordMetadata)
-      )
+    DeployableSystemLib.globalResume(deployableSystem);
+    SmartCharacterSystemLib.createCharacter(
+      smartCharacterSystem,
+      characterId,
+      alice,
+      tribeId,
+      entityRecord,
+      entityRecordMetadata
     );
   }
 
@@ -107,34 +98,26 @@ contract SmartTurretTest is MudTest {
     uint256 fuelConsumptionIntervalInSeconds = 100;
     uint256 fuelMaxCapacity = 100;
 
-    world.call(
-      turretSystemId,
-      abi.encodeCall(
-        SmartTurretSystem.createAndAnchorSmartTurret,
-        (
-          smartObjectId,
-          entityRecord,
-          smartObjectData,
-          worldPosition,
-          fuelUnitVolume,
-          fuelConsumptionIntervalInSeconds,
-          fuelMaxCapacity
-        )
-      )
+    SmartTurretSystemLib.createAndAnchorSmartTurret(
+      smartTurretSystem,
+      smartObjectId,
+      entityRecord,
+      smartObjectData,
+      worldPosition,
+      fuelUnitVolume,
+      fuelConsumptionIntervalInSeconds,
+      fuelMaxCapacity
     );
 
-    world.call(fuelSystemId, abi.encodeCall(FuelSystem.depositFuel, (smartObjectId, 1)));
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOnline, (smartObjectId)));
+    FuelSystemLib.depositFuel(fuelSystem, smartObjectId, 1);
+    DeployableSystemLib.bringOnline(deployableSystem, smartObjectId);
 
     assertEq(SmartAssembly.getSmartAssemblyType(smartObjectId), SMART_TURRET);
   }
 
   function testConfigureSmartTurret() public {
     testAnchorSmartTurret();
-    world.call(
-      turretSystemId,
-      abi.encodeCall(SmartTurretSystem.configureSmartTurret, (smartObjectId, SMART_TURRET_CUSTOM_MOCK_SYSTEM_ID))
-    );
+    SmartTurretSystemLib.configureSmartTurret(smartTurretSystem, smartObjectId, SMART_TURRET_CUSTOM_MOCK_SYSTEM_ID);
 
     ResourceId systemId = SmartTurretConfig.get(smartObjectId);
     assertEq(ResourceId.unwrap(systemId), ResourceId.unwrap(SMART_TURRET_CUSTOM_MOCK_SYSTEM_ID));
@@ -155,12 +138,14 @@ contract SmartTurretTest is MudTest {
     });
     priorityQueue[0] = TargetPriority({ target: turretTarget, weight: 100 });
 
-    bytes memory returnData = world.call(
-      turretSystemId,
-      abi.encodeCall(SmartTurretSystem.inProximity, (smartObjectId, characterId, priorityQueue, turret, turretTarget))
+    TargetPriority[] memory returnTargetQueue = SmartTurretSystemLib.inProximity(
+      smartTurretSystem,
+      smartObjectId,
+      characterId,
+      priorityQueue,
+      turret,
+      turretTarget
     );
-
-    TargetPriority[] memory returnTargetQueue = abi.decode(returnData, (TargetPriority[]));
 
     assertEq(returnTargetQueue.length, 1);
     assertEq(returnTargetQueue[0].weight, 100);
@@ -181,12 +166,14 @@ contract SmartTurretTest is MudTest {
     });
     priorityQueue[0] = TargetPriority({ target: turretTarget, weight: 100 });
 
-    bytes memory returnData = world.call(
-      turretSystemId,
-      abi.encodeCall(SmartTurretSystem.inProximity, (smartObjectId, characterId, priorityQueue, turret, turretTarget))
+    TargetPriority[] memory returnTargetQueue = SmartTurretSystemLib.inProximity(
+      smartTurretSystem,
+      smartObjectId,
+      characterId,
+      priorityQueue,
+      turret,
+      turretTarget
     );
-
-    TargetPriority[] memory returnTargetQueue = abi.decode(returnData, (TargetPriority[]));
 
     assertEq(returnTargetQueue.length, 2);
   }
@@ -205,12 +192,14 @@ contract SmartTurretTest is MudTest {
     });
     priorityQueue[0] = TargetPriority({ target: turretTarget, weight: 100 });
 
-    bytes memory returnData = world.call(
-      turretSystemId,
-      abi.encodeCall(SmartTurretSystem.inProximity, (smartObjectId, characterId, priorityQueue, turret, turretTarget))
+    TargetPriority[] memory returnTargetQueue = SmartTurretSystemLib.inProximity(
+      smartTurretSystem,
+      smartObjectId,
+      characterId,
+      priorityQueue,
+      turret,
+      turretTarget
     );
-
-    TargetPriority[] memory returnTargetQueue = abi.decode(returnData, (TargetPriority[]));
 
     assertEq(returnTargetQueue.length, 0);
   }
@@ -246,15 +235,15 @@ contract SmartTurretTest is MudTest {
 
     priorityQueue[0] = TargetPriority({ target: turretTarget, weight: 100 });
 
-    bytes memory returnData = world.call(
-      turretSystemId,
-      abi.encodeCall(
-        SmartTurretSystem.aggression,
-        (smartObjectId, characterId, priorityQueue, turret, aggressor, victim)
-      )
+    TargetPriority[] memory returnTargetQueue = SmartTurretSystemLib.aggression(
+      smartTurretSystem,
+      smartObjectId,
+      characterId,
+      priorityQueue,
+      turret,
+      aggressor,
+      victim
     );
-
-    TargetPriority[] memory returnTargetQueue = abi.decode(returnData, (TargetPriority[]));
 
     assertEq(returnTargetQueue.length, 1);
     assertEq(returnTargetQueue[0].weight, 100);
@@ -291,21 +280,21 @@ contract SmartTurretTest is MudTest {
 
     priorityQueue[0] = TargetPriority({ target: turretTarget, weight: 100 });
 
-    bytes memory returnData = world.call(
-      turretSystemId,
-      abi.encodeCall(
-        SmartTurretSystem.aggression,
-        (smartObjectId, characterId, priorityQueue, turret, aggressor, victim)
-      )
+    TargetPriority[] memory returnTargetQueue = SmartTurretSystemLib.aggression(
+      smartTurretSystem,
+      smartObjectId,
+      characterId,
+      priorityQueue,
+      turret,
+      aggressor,
+      victim
     );
-
-    TargetPriority[] memory returnTargetQueue = abi.decode(returnData, (TargetPriority[]));
 
     assertEq(returnTargetQueue.length, 2);
     assertEq(returnTargetQueue[1].weight, 1);
   }
 
-  function revertInProximity() public {
+  function testRevertInProximity() public {
     TargetPriority[] memory priorityQueue = new TargetPriority[](1);
     Turret memory turret = Turret({ weaponTypeId: 1, ammoTypeId: 1, chargesLeft: 100 });
     SmartTurretTarget memory turretTarget = SmartTurretTarget({
@@ -320,13 +309,17 @@ contract SmartTurretTest is MudTest {
 
     vm.expectRevert(abi.encodeWithSelector(SmartTurretSystem.SmartTurret_NotConfigured.selector, smartObjectId));
 
-    world.call(
-      turretSystemId,
-      abi.encodeCall(SmartTurretSystem.inProximity, (smartObjectId, characterId, priorityQueue, turret, turretTarget))
+    SmartTurretSystemLib.inProximity(
+      smartTurretSystem,
+      smartObjectId,
+      characterId,
+      priorityQueue,
+      turret,
+      turretTarget
     );
   }
 
-  function revertInProximityIncorrectState() public {
+  function testRevertInProximityIncorrectState() public {
     TargetPriority[] memory priorityQueue = new TargetPriority[](1);
     Turret memory turret = Turret({ weaponTypeId: 1, ammoTypeId: 1, chargesLeft: 100 });
     SmartTurretTarget memory turretTarget = SmartTurretTarget({
@@ -343,9 +336,13 @@ contract SmartTurretTest is MudTest {
       abi.encodeWithSelector(DeployableSystem.Deployable_IncorrectState.selector, smartObjectId, State.UNANCHORED)
     );
 
-    world.call(
-      turretSystemId,
-      abi.encodeCall(SmartTurretSystem.inProximity, (smartObjectId, characterId, priorityQueue, turret, turretTarget))
+    SmartTurretSystemLib.inProximity(
+      smartTurretSystem,
+      smartObjectId,
+      characterId,
+      priorityQueue,
+      turret,
+      turretTarget
     );
   }
 }

@@ -4,13 +4,12 @@ pragma solidity >=0.8.24;
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 import { ResourceIds } from "@latticexyz/store/src/codegen/tables/ResourceIds.sol";
 
-import { DeployableState, DeployableStateData } from "../../codegen/index.sol";
+import { DeployableState } from "../../codegen/index.sol";
 import { SmartTurretConfig } from "../../codegen/index.sol";
-import { Characters, CharacterToken } from "../../codegen/index.sol";
+import { Characters } from "../../codegen/index.sol";
 import { State, SmartObjectData } from "../deployable/types.sol";
 import { DeployableSystem } from "../deployable/DeployableSystem.sol";
-import { DeployableUtils } from "../deployable/DeployableUtils.sol";
-import { FuelUtils } from "../fuel/FuelUtils.sol";
+import { DeployableSystemLib, deployableSystem } from "../../codegen/systems/DeployableSystemLib.sol";
 import { EntityRecordData } from "../entity-record/types.sol";
 import { WorldPosition } from "../location/types.sol";
 import { LocationData } from "../../codegen/tables/Location.sol";
@@ -21,7 +20,6 @@ import { EveSystem } from "../EveSystem.sol";
 contract SmartTurretSystem is EveSystem {
   error SmartTurret_NotConfigured(uint256 smartObjectId);
 
-  ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
   /**
       * @notice Create and anchor a Smart Turret
       * @param smartObjectId is smart object id of the Smart Turret
@@ -51,21 +49,17 @@ contract SmartTurretSystem is EveSystem {
       y: worldPosition.position.y,
       z: worldPosition.position.z
     });
-    world().call(
-      deployableSystemId,
-      abi.encodeCall(
-        DeployableSystem.createAndAnchorDeployable,
-        (
-          smartObjectId,
-          SMART_TURRET,
-          entityRecordData,
-          smartObjectData,
-          fuelUnitVolume,
-          fuelConsumptionIntervalInSeconds,
-          fuelMaxCapacity,
-          locationData
-        )
-      )
+
+    DeployableSystemLib.createAndAnchorDeployable(
+      deployableSystem,
+      smartObjectId,
+      SMART_TURRET,
+      entityRecordData,
+      smartObjectData,
+      fuelUnitVolume,
+      fuelConsumptionIntervalInSeconds,
+      fuelMaxCapacity,
+      locationData
     );
   }
 

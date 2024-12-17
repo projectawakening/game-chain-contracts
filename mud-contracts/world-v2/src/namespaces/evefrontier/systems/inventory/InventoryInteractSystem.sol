@@ -16,6 +16,9 @@ import { InventoryUtils } from "./InventoryUtils.sol";
 import { TransferItem, InventoryItem } from "./types.sol";
 import { EveSystem } from "../EveSystem.sol";
 
+import { InventorySystemLib, inventorySystem } from "../../codegen/systems/InventorySystemLib.sol";
+import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../codegen/systems/EphemeralInventorySystemLib.sol";
+
 /**
  * @title InventoryInteractSystem
  * @author CCP Games
@@ -31,8 +34,6 @@ contract InventoryInteractSystem is EveSystem {
     uint256 inventoryItemId,
     uint256 quantity
   );
-  ResourceId inventorySystemId = InventoryUtils.inventorySystemId();
-  ResourceId ephemeralInventorySystemId = InventoryUtils.ephemeralInventorySystemId();
 
   /**
    * @notice Transfer items from ephemeral to inventory
@@ -87,23 +88,19 @@ contract InventoryInteractSystem is EveSystem {
     }
 
     // withdraw the items from ephemeral and deposit to inventory table
-    world().call(
-      ephemeralInventorySystemId,
-      abi.encodeWithSelector(
-        EphemeralInventorySystem.withdrawFromEphemeralInventory.selector,
-        smartObjectId,
-        ephInvOwner,
-        ephInvOut
-      )
+    EphemeralInventorySystemLib.withdrawFromEphemeralInventory(
+      ephemeralInventorySystem,
+      smartObjectId,
+      ephInvOwner,
+      ephInvOut
     );
+
     for (uint i = 0; i < items.length; i++) {
       invIn[i] = ephInvOut[i];
       invIn[i].owner = objectInvOwner;
     }
-    world().call(
-      inventorySystemId,
-      abi.encodeWithSelector(InventorySystem.depositToInventory.selector, smartObjectId, invIn)
-    );
+
+    InventorySystemLib.depositToInventory(inventorySystem, smartObjectId, invIn);
   }
 
   /**
@@ -157,23 +154,19 @@ contract InventoryInteractSystem is EveSystem {
       );
     }
 
-    //withdraw the items from inventory and deposit to ephemeral inventory\
-    world().call(
-      inventorySystemId,
-      abi.encodeWithSelector(InventorySystem.withdrawFromInventory.selector, smartObjectId, invOut)
-    );
+    //withdraw the items from inventory and deposit to ephemeral inventory
+    InventorySystemLib.withdrawFromInventory(inventorySystem, smartObjectId, invOut);
+
     for (uint i = 0; i < items.length; i++) {
       ephInvIn[i] = invOut[i];
       ephInvIn[i].owner = ephemeralInventoryOwner;
     }
-    world().call(
-      ephemeralInventorySystemId,
-      abi.encodeWithSelector(
-        EphemeralInventorySystem.depositToEphemeralInventory.selector,
-        smartObjectId,
-        ephemeralInventoryOwner,
-        ephInvIn
-      )
+
+    EphemeralInventorySystemLib.depositToEphemeralInventory(
+      ephemeralInventorySystem,
+      smartObjectId,
+      ephemeralInventoryOwner,
+      ephInvIn
     );
   }
 }

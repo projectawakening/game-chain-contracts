@@ -26,6 +26,11 @@ import { EphemeralInv, EphemeralInvData } from "../../src/namespaces/evefrontier
 import { EphemeralInvCapacity } from "../../src/namespaces/evefrontier/codegen/tables/EphemeralInvCapacity.sol";
 import { EphemeralInvItem, EphemeralInvItemData } from "../../src/namespaces/evefrontier/codegen/tables/EphemeralInvItem.sol";
 import { LocationData, Location } from "../../src/namespaces/evefrontier/codegen/tables/Location.sol";
+import { SmartStorageUnitSystemLib, smartStorageUnitSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartStorageUnitSystemLib.sol";
+import { DeployableSystemLib, deployableSystem } from "../../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
+import { InventorySystemLib, inventorySystem } from "../../src/namespaces/evefrontier/codegen/systems/InventorySystemLib.sol";
+import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../src/namespaces/evefrontier/codegen/systems/EphemeralInventorySystemLib.sol";
+import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
 
 contract SmartStorageUnitTest is MudTest {
   IBaseWorld world;
@@ -45,17 +50,11 @@ contract SmartStorageUnitTest is MudTest {
   EntityRecordData entityRecord;
   uint256 fuelMaxCapacity = 1000000000;
 
-  ResourceId smartStorageUnitSystemId = SmartStorageUnitUtils.smartStorageUnitSystemId();
-  ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
-  ResourceId characterSystemId = SmartCharacterUtils.smartCharacterSystemId();
-  ResourceId inventorySystemId = InventoryUtils.inventorySystemId();
-  ResourceId ephemeralSystemId = InventoryUtils.ephemeralInventorySystemId();
-
   function setUp() public virtual override {
     super.setUp();
     world = IBaseWorld(worldAddress);
 
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.globalResume, ()));
+    DeployableSystemLib.globalResume(deployableSystem);
 
     entityRecord = EntityRecordData({ typeId: 123, itemId: 234, volume: 100 });
 
@@ -69,20 +68,22 @@ contract SmartStorageUnitTest is MudTest {
     Coord memory position = Coord({ x: 1, y: 1, z: 1 });
     worldPosition = WorldPosition({ solarSystemId: 1, position: position });
 
-    world.call(
-      characterSystemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (characterId, alice, tribeId, entityRecord, entityRecordMetadata)
-      )
+    SmartCharacterSystemLib.createCharacter(
+      smartCharacterSystem,
+      characterId,
+      alice,
+      tribeId,
+      entityRecord,
+      entityRecordMetadata
     );
 
-    world.call(
-      characterSystemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (diffCharacterId, bob, tribeId, entityRecord, entityRecordMetadata)
-      )
+    SmartCharacterSystemLib.createCharacter(
+      smartCharacterSystem,
+      diffCharacterId,
+      bob,
+      tribeId,
+      entityRecord,
+      entityRecordMetadata
     );
   }
 
@@ -98,22 +99,17 @@ contract SmartStorageUnitTest is MudTest {
     vm.assume(ephemeralStorageCapacity > 0);
     vm.assume(fuelConsumptionIntervalInSeconds > 1);
 
-    world.call(
-      smartStorageUnitSystemId,
-      abi.encodeCall(
-        SmartStorageUnitSystem.createAndAnchorSmartStorageUnit,
-        (
-          smartObjectId,
-          entityRecord,
-          smartObjectData,
-          worldPosition,
-          fuelUnitVolume,
-          fuelConsumptionIntervalInSeconds,
-          fuelMaxCapacity,
-          storageCapacity,
-          ephemeralStorageCapacity
-        )
-      )
+    SmartStorageUnitSystemLib.createAndAnchorSmartStorageUnit(
+      smartStorageUnitSystem,
+      smartObjectId,
+      entityRecord,
+      smartObjectData,
+      worldPosition,
+      fuelUnitVolume,
+      fuelConsumptionIntervalInSeconds,
+      fuelMaxCapacity,
+      storageCapacity,
+      ephemeralStorageCapacity
     );
   }
 
@@ -158,10 +154,7 @@ contract SmartStorageUnitTest is MudTest {
     InventoryItem[] memory items = new InventoryItem[](1);
     items[0] = InventoryItem({ inventoryItemId: 123, owner: alice, itemId: 12, typeId: 3, volume: 10, quantity: 5 });
 
-    world.call(
-      inventorySystemId,
-      abi.encodeCall(InventorySystem.createAndDepositItemsToInventory, (smartObjectId, items))
-    );
+    InventorySystemLib.createAndDepositItemsToInventory(inventorySystem, smartObjectId, items);
 
     InventoryData memory inventoryData = Inventory.get(smartObjectId);
     uint256 useCapacity = items[0].volume * items[0].quantity;
@@ -198,9 +191,11 @@ contract SmartStorageUnitTest is MudTest {
 
     items[0] = InventoryItem({ inventoryItemId: 456, owner: bob, itemId: 45, typeId: 6, volume: 10, quantity: 5 });
 
-    world.call(
-      ephemeralSystemId,
-      abi.encodeCall(EphemeralInventorySystem.createAndDepositItemsToEphemeralInventory, (smartObjectId, bob, items))
+    EphemeralInventorySystemLib.createAndDepositItemsToEphemeralInventory(
+      ephemeralInventorySystem,
+      smartObjectId,
+      bob,
+      items
     );
 
     EphemeralInvData memory ephemeralInvData = EphemeralInv.get(smartObjectId, bob);
@@ -247,16 +242,15 @@ contract SmartStorageUnitTest is MudTest {
       ephemeralStorageCapacity
     );
 
-    world.call(
-      ephemeralSystemId,
-      abi.encodeCall(
-        EphemeralInventorySystem.createAndDepositItemsToEphemeralInventory,
-        (smartObjectId, bob, ephemeralItems)
-      )
+    EphemeralInventorySystemLib.createAndDepositItemsToEphemeralInventory(
+      ephemeralInventorySystem,
+      smartObjectId,
+      bob,
+      ephemeralItems
     );
 
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOffline, (smartObjectId)));
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.unanchor, (smartObjectId)));
+    DeployableSystemLib.bringOffline(deployableSystem, smartObjectId);
+    DeployableSystemLib.unanchor(deployableSystem, smartObjectId);
 
     DeployableStateData memory deployableStateData = DeployableState.get(smartObjectId);
 
@@ -287,17 +281,13 @@ contract SmartStorageUnitTest is MudTest {
     );
 
     testSetDeployableStateToValid(smartObjectId);
-    world.call(
-      inventorySystemId,
-      abi.encodeCall(InventorySystem.createAndDepositItemsToInventory, (smartObjectId, items))
-    );
+    InventorySystemLib.createAndDepositItemsToInventory(inventorySystem, smartObjectId, items);
 
-    world.call(
-      ephemeralSystemId,
-      abi.encodeCall(
-        EphemeralInventorySystem.createAndDepositItemsToEphemeralInventory,
-        (smartObjectId, bob, ephemeralItems)
-      )
+    EphemeralInventorySystemLib.createAndDepositItemsToEphemeralInventory(
+      ephemeralInventorySystem,
+      smartObjectId,
+      bob,
+      ephemeralItems
     );
 
     deployableStateData = DeployableState.get(smartObjectId);
@@ -349,21 +339,17 @@ contract SmartStorageUnitTest is MudTest {
       ephemeralStorageCapacity
     );
     testSetDeployableStateToValid(smartObjectId);
-    world.call(
-      inventorySystemId,
-      abi.encodeCall(InventorySystem.createAndDepositItemsToInventory, (smartObjectId, items))
+    InventorySystemLib.createAndDepositItemsToInventory(inventorySystem, smartObjectId, items);
+
+    EphemeralInventorySystemLib.createAndDepositItemsToEphemeralInventory(
+      ephemeralInventorySystem,
+      smartObjectId,
+      bob,
+      ephemeralItems
     );
 
-    world.call(
-      ephemeralSystemId,
-      abi.encodeCall(
-        EphemeralInventorySystem.createAndDepositItemsToEphemeralInventory,
-        (smartObjectId, bob, ephemeralItems)
-      )
-    );
-
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOffline, (smartObjectId)));
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.unanchor, (smartObjectId)));
+    DeployableSystemLib.bringOffline(deployableSystem, smartObjectId);
+    DeployableSystemLib.unanchor(deployableSystem, smartObjectId);
 
     DeployableStateData memory deployableStateData = DeployableState.get(smartObjectId);
 
@@ -376,20 +362,16 @@ contract SmartStorageUnitTest is MudTest {
       abi.encodeWithSelector(DeployableSystem.Deployable_IncorrectState.selector, smartObjectId, State.UNANCHORED)
     );
 
-    world.call(
-      inventorySystemId,
-      abi.encodeCall(InventorySystem.createAndDepositItemsToInventory, (smartObjectId, items))
-    );
+    InventorySystemLib.createAndDepositItemsToInventory(inventorySystem, smartObjectId, items);
     vm.expectRevert(
       abi.encodeWithSelector(DeployableSystem.Deployable_IncorrectState.selector, smartObjectId, State.UNANCHORED)
     );
 
-    world.call(
-      ephemeralSystemId,
-      abi.encodeCall(
-        EphemeralInventorySystem.createAndDepositItemsToEphemeralInventory,
-        (smartObjectId, bob, ephemeralItems)
-      )
+    EphemeralInventorySystemLib.createAndDepositItemsToEphemeralInventory(
+      ephemeralInventorySystem,
+      smartObjectId,
+      bob,
+      ephemeralItems
     );
   }
 
@@ -425,26 +407,22 @@ contract SmartStorageUnitTest is MudTest {
       ephemeralStorageCapacity
     );
     testSetDeployableStateToValid(smartObjectId);
-    world.call(
-      inventorySystemId,
-      abi.encodeCall(InventorySystem.createAndDepositItemsToInventory, (smartObjectId, items))
+    InventorySystemLib.createAndDepositItemsToInventory(inventorySystem, smartObjectId, items);
+
+    EphemeralInventorySystemLib.createAndDepositItemsToEphemeralInventory(
+      ephemeralInventorySystem,
+      smartObjectId,
+      bob,
+      ephemeralItems
     );
 
-    world.call(
-      ephemeralSystemId,
-      abi.encodeCall(
-        EphemeralInventorySystem.createAndDepositItemsToEphemeralInventory,
-        (smartObjectId, bob, ephemeralItems)
-      )
-    );
-
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOffline, (smartObjectId)));
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.unanchor, (smartObjectId)));
+    DeployableSystemLib.bringOffline(deployableSystem, smartObjectId);
+    DeployableSystemLib.unanchor(deployableSystem, smartObjectId);
 
     vm.warp(block.timestamp + 10);
     LocationData memory location = LocationData({ solarSystemId: 1, x: 1, y: 1, z: 1 });
 
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.anchor, (smartObjectId, location)));
+    DeployableSystemLib.anchor(deployableSystem, smartObjectId, location);
     testSetDeployableStateToValid(smartObjectId);
 
     vm.expectRevert(
@@ -456,7 +434,7 @@ contract SmartStorageUnitTest is MudTest {
       )
     );
 
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.withdrawFromInventory, (smartObjectId, items)));
+    InventorySystemLib.withdrawFromInventory(inventorySystem, smartObjectId, items);
     vm.startPrank(bob);
     vm.expectRevert(
       abi.encodeWithSelector(
@@ -466,9 +444,11 @@ contract SmartStorageUnitTest is MudTest {
         ephemeralItems[0].quantity
       )
     );
-    world.call(
-      ephemeralSystemId,
-      abi.encodeCall(EphemeralInventorySystem.withdrawFromEphemeralInventory, (smartObjectId, bob, ephemeralItems))
+    EphemeralInventorySystemLib.withdrawFromEphemeralInventory(
+      ephemeralInventorySystem,
+      smartObjectId,
+      bob,
+      ephemeralItems
     );
 
     vm.stopPrank();
@@ -494,8 +474,8 @@ contract SmartStorageUnitTest is MudTest {
       ephemeralStorageCapacity
     );
 
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOffline, (smartObjectId)));
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.destroyDeployable, (smartObjectId)));
+    DeployableSystemLib.bringOffline(deployableSystem, smartObjectId);
+    DeployableSystemLib.destroyDeployable(deployableSystem, smartObjectId);
     DeployableStateData memory deployableStateData = DeployableState.get(smartObjectId);
 
     assertEq(uint8(deployableStateData.currentState), uint8(State.DESTROYED));
@@ -511,7 +491,7 @@ contract SmartStorageUnitTest is MudTest {
     );
     LocationData memory location = LocationData({ solarSystemId: 1, x: 1, y: 1, z: 1 });
 
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.anchor, (smartObjectId, location)));
+    DeployableSystemLib.anchor(deployableSystem, smartObjectId, location);
   }
 
   function testDestroyAndRevertWithdrawItems(
@@ -533,13 +513,13 @@ contract SmartStorageUnitTest is MudTest {
       ephemeralStorageCapacity
     );
 
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOffline, (smartObjectId)));
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.destroyDeployable, (smartObjectId)));
+    DeployableSystemLib.bringOffline(deployableSystem, smartObjectId);
+    DeployableSystemLib.destroyDeployable(deployableSystem, smartObjectId);
 
     vm.expectRevert(
       abi.encodeWithSelector(DeployableSystem.Deployable_IncorrectState.selector, smartObjectId, State.DESTROYED)
     );
 
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.withdrawFromInventory, (smartObjectId, items)));
+    InventorySystemLib.withdrawFromInventory(inventorySystem, smartObjectId, items);
   }
 }

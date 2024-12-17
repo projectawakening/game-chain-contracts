@@ -24,6 +24,10 @@ import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deplo
 import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
 import { InventoryItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
 
+import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../src/namespaces/evefrontier/codegen/systems/EphemeralInventorySystemLib.sol";
+import { DeployableSystemLib, deployableSystem } from "../../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
+import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
+
 contract EphemeralInventoryTest is MudTest {
   IBaseWorld world;
   EntityRecordData charEntityRecordData;
@@ -44,10 +48,6 @@ contract EphemeralInventoryTest is MudTest {
   uint256 diffCharacterId = 9999;
   uint256 tribeId = 1122;
 
-  ResourceId smartCharacterSystemId = SmartCharacterUtils.smartCharacterSystemId();
-  ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
-  ResourceId ephemeralInventorySystemId = InventoryUtils.ephemeralInventorySystemId();
-
   function setUp() public virtual override {
     vm.startPrank(deployer);
     super.setUp();
@@ -63,19 +63,21 @@ contract EphemeralInventoryTest is MudTest {
     tokenCID = "Qm1234abcdxxxx";
 
     //   create SSU Inventory Owner character
-    world.call(
-      smartCharacterSystemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (characterId, owner, tribeId, charEntityRecordData, characterMetadata)
-      )
+    SmartCharacterSystemLib.createCharacter(
+      smartCharacterSystem,
+      characterId,
+      owner,
+      tribeId,
+      charEntityRecordData,
+      characterMetadata
     );
-    world.call(
-      smartCharacterSystemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (diffCharacterId, differentOwner, tribeId, charEntityRecordData, characterMetadata)
-      )
+    SmartCharacterSystemLib.createCharacter(
+      smartCharacterSystem,
+      diffCharacterId,
+      differentOwner,
+      tribeId,
+      charEntityRecordData,
+      characterMetadata
     );
 
     //Mock Item creation
@@ -114,10 +116,7 @@ contract EphemeralInventoryTest is MudTest {
     DeployableState.setCurrentState(smartObjectId, State.ONLINE);
     vm.stopPrank();
 
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.setEphemeralInventoryCapacity, (smartObjectId, storageCapacity))
-    );
+    EphemeralInventorySystemLib.setEphemeralInventoryCapacity(ephemeralInventorySystem, smartObjectId, storageCapacity);
     assertEq(EphemeralInvCapacity.getCapacity(smartObjectId), storageCapacity);
   }
 
@@ -130,10 +129,7 @@ contract EphemeralInventoryTest is MudTest {
         "EphemeralInventorySystem: storage capacity cannot be 0"
       )
     );
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.setEphemeralInventoryCapacity, (smartObjectId, storageCapacity))
-    );
+    EphemeralInventorySystemLib.setEphemeralInventoryCapacity(ephemeralInventorySystem, smartObjectId, storageCapacity);
   }
 
   function testDepositToEphemeralInventory(uint256 smartObjectId, uint256 storageCapacity) public {
@@ -153,10 +149,7 @@ contract EphemeralInventoryTest is MudTest {
     uint256 capacityBeforeDeposit = inventoryData.usedCapacity;
     uint256 capacityAfterDeposit = 0;
 
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.depositToEphemeralInventory, (smartObjectId, owner, items))
-    );
+    EphemeralInventorySystemLib.depositToEphemeralInventory(ephemeralInventorySystem, smartObjectId, owner, items);
 
     inventoryData = EphemeralInv.get(smartObjectId, owner);
 
@@ -199,16 +192,10 @@ contract EphemeralInventoryTest is MudTest {
     items[2] = InventoryItem(4237, owner, 4237, 0, 150, 2);
 
     testSetEphemeralInventoryCapacity(smartObjectId, storageCapacity);
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.depositToEphemeralInventory, (smartObjectId, owner, items))
-    );
+    EphemeralInventorySystemLib.depositToEphemeralInventory(ephemeralInventorySystem, smartObjectId, owner, items);
 
     //check the increase in quantity
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.depositToEphemeralInventory, (smartObjectId, owner, items))
-    );
+    EphemeralInventorySystemLib.depositToEphemeralInventory(ephemeralInventorySystem, smartObjectId, owner, items);
     EphemeralInvItemData memory inventoryItem1 = EphemeralInvItem.get(
       smartObjectId,
       items[0].inventoryItemId,
@@ -251,10 +238,7 @@ contract EphemeralInventoryTest is MudTest {
         items[0].volume * items[0].quantity
       )
     );
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.depositToEphemeralInventory, (smartObjectId, owner, items))
-    );
+    EphemeralInventorySystemLib.depositToEphemeralInventory(ephemeralInventorySystem, smartObjectId, owner, items);
 
     owner = address(9); // set owner as non-character address
     vm.expectRevert(
@@ -264,10 +248,7 @@ contract EphemeralInventoryTest is MudTest {
         address(9)
       )
     );
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.depositToEphemeralInventory, (smartObjectId, owner, items))
-    );
+    EphemeralInventorySystemLib.depositToEphemeralInventory(ephemeralInventorySystem, smartObjectId, owner, items);
   }
 
   function testDepositToExistingEphemeralInventory(uint256 smartObjectId, uint256 storageCapacity) public {
@@ -277,10 +258,7 @@ contract EphemeralInventoryTest is MudTest {
     //Note: Issue applying fuzz testing for the below array of inputs : https://github.com/foundry-rs/foundry/issues/5343
     InventoryItem[] memory items = new InventoryItem[](1);
     items[0] = InventoryItem(8235, owner, 8235, 0, 1, 3);
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.depositToEphemeralInventory, (smartObjectId, owner, items))
-    );
+    EphemeralInventorySystemLib.depositToEphemeralInventory(ephemeralInventorySystem, smartObjectId, owner, items);
 
     uint256 itemsLength = EphemeralInv.getItems(smartObjectId, owner).length;
     // ALTHOUGH THIS LITLERALLY RETURNS THE VALUE 4 EVERY SINGLE TIME, this assertion fails for me, so I'm commenting out for now
@@ -296,9 +274,11 @@ contract EphemeralInventoryTest is MudTest {
     items = new InventoryItem[](1);
 
     items[0] = InventoryItem(8235, differentOwner, 8235, 0, 1, 3);
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.depositToEphemeralInventory, (smartObjectId, differentOwner, items))
+    EphemeralInventorySystemLib.depositToEphemeralInventory(
+      ephemeralInventorySystem,
+      smartObjectId,
+      differentOwner,
+      items
     );
 
     itemsLength = EphemeralInv.getItems(smartObjectId, differentOwner).length;
@@ -325,10 +305,7 @@ contract EphemeralInventoryTest is MudTest {
     uint256 capacityAfterWithdrawal = 0;
     assertEq(capacityBeforeWithdrawal, 1000);
 
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.withdrawFromEphemeralInventory, (smartObjectId, owner, items))
-    );
+    EphemeralInventorySystemLib.withdrawFromEphemeralInventory(ephemeralInventorySystem, smartObjectId, owner, items);
     for (uint256 i = 0; i < items.length; i++) {
       uint256 itemVolume = items[i].volume * items[i].quantity;
       capacityAfterWithdrawal += itemVolume;
@@ -384,10 +361,7 @@ contract EphemeralInventoryTest is MudTest {
     uint256 capacityAfterWithdrawal = 0;
     assertEq(capacityBeforeWithdrawal, 1000);
 
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.withdrawFromEphemeralInventory, (smartObjectId, owner, items))
-    );
+    EphemeralInventorySystemLib.withdrawFromEphemeralInventory(ephemeralInventorySystem, smartObjectId, owner, items);
     for (uint256 i = 0; i < items.length; i++) {
       uint256 itemVolume = items[i].volume * items[i].quantity;
       capacityAfterWithdrawal += itemVolume;
@@ -433,10 +407,7 @@ contract EphemeralInventoryTest is MudTest {
     items[0] = InventoryItem(4237, owner, 4237, 0, 200, 1);
 
     // Try withdraw again
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.withdrawFromEphemeralInventory, (smartObjectId, owner, items))
-    );
+    EphemeralInventorySystemLib.withdrawFromEphemeralInventory(ephemeralInventorySystem, smartObjectId, owner, items);
 
     uint256 itemId1 = uint256(4235);
     uint256 itemId3 = uint256(4237);
@@ -471,9 +442,6 @@ contract EphemeralInventoryTest is MudTest {
         items[0].quantity
       )
     );
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.withdrawFromEphemeralInventory, (smartObjectId, owner, items))
-    );
+    EphemeralInventorySystemLib.withdrawFromEphemeralInventory(ephemeralInventorySystem, smartObjectId, owner, items);
   }
 }

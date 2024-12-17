@@ -7,15 +7,12 @@ import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
 import { DeployableToken } from "../../src/namespaces/evefrontier/codegen/tables/DeployableToken.sol";
 import { TransferItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
-import { InventoryUtils } from "../../src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
-import { InventoryInteractSystem } from "../../src/namespaces/evefrontier/systems/inventory/InventoryInteractSystem.sol";
 import { IERC721 } from "../../src/namespaces/evefrontier/systems/eve-erc721-puppet/IERC721.sol";
-
 import { EveSystem } from "../../src/namespaces/evefrontier/systems/EveSystem.sol";
 
+import { InventoryInteractSystemLib, inventoryInteractSystem } from "../../src/namespaces/evefrontier/codegen/systems/InventoryInteractSystemLib.sol";
+
 contract VendingMachineMock is EveSystem {
-  ResourceId inventorySystemId = InventoryUtils.inventorySystemId();
-  ResourceId ephemeralInventorySystemId = InventoryUtils.ephemeralInventorySystemId();
   /**
    * @notice Handle the interaction flow for vending machine to exchange 2x:10y items between two players
    * @dev Ideally the ration can be configured in a seperate function and stored on-chain
@@ -42,20 +39,19 @@ contract VendingMachineMock is EveSystem {
     outItems[0] = TransferItem(outItemId, inventoryOwner, quantity * ratio);
 
     // Withdraw from ephemeralInventory and deposit to inventory
-    world().call(
-      ephemeralInventorySystemId,
-      abi.encodeWithSelector(InventoryInteractSystem.ephemeralToInventoryTransfer.selector, smartObjectId, inItems)
+    InventoryInteractSystemLib.ephemeralToInventoryTransfer(
+      inventoryInteractSystem,
+      smartObjectId,
+      ephInvOwner,
+      inItems
     );
 
     // Withdraw from inventory and deposit to ephemeral inventory
-    world().call(
-      inventorySystemId,
-      abi.encodeWithSelector(
-        InventoryInteractSystem.inventoryToEphemeralTransfer.selector,
-        smartObjectId,
-        ephInvOwner,
-        outItems
-      )
+    InventoryInteractSystemLib.inventoryToEphemeralTransfer(
+      inventoryInteractSystem,
+      smartObjectId,
+      ephInvOwner,
+      outItems
     );
   }
 }

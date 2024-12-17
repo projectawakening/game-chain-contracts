@@ -13,6 +13,7 @@ import { InventoryItemData, InventoryItem as InventoryItemTable } from "../../co
 import { EntityRecordUtils } from "../entity-record/EntityRecordUtils.sol";
 import { EntityRecordSystem } from "../entity-record/EntityRecordSystem.sol";
 import { EntityRecordData as EntityRecordStruct } from "../entity-record/types.sol";
+import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.sol";
 
 import { InventoryItem } from "./types.sol";
 import { State, SmartObjectData } from "../deployable/types.sol";
@@ -74,10 +75,8 @@ contract InventorySystem is EveSystem {
         itemId: items[i].itemId,
         volume: items[i].volume
       });
-      world().call(
-        entityRecordUtils,
-        abi.encodeCall(EntityRecordSystem.createEntityRecord, (items[i].inventoryItemId, entityRecord))
-      );
+
+      EntityRecordSystemLib.createEntityRecord(entityRecordSystem, items[i].inventoryItemId, entityRecord);
     }
 
     depositToInventory(smartObjectId, items);

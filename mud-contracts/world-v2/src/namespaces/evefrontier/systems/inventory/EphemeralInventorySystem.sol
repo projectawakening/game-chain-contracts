@@ -13,7 +13,7 @@ import { EphemeralInvCapacity } from "../../codegen/tables/EphemeralInvCapacity.
 import { CharactersByAddress } from "../../codegen/tables/CharactersByAddress.sol";
 import { EntityRecord, EntityRecordData } from "../../codegen/index.sol";
 import { EntityRecordData as EntityRecordStruct } from "../entity-record/types.sol";
-import { EntityRecordUtils } from "../entity-record/EntityRecordUtils.sol";
+import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.sol";
 import { EntityRecordSystem } from "../entity-record/EntityRecordSystem.sol";
 
 import { InventoryItem } from "./types.sol";
@@ -32,8 +32,6 @@ contract EphemeralInventorySystem is EveSystem {
   error Ephemeral_Inventory_InvalidCapacity(string message);
   error Ephemeral_Inventory_InvalidItem(string message, uint256 inventoryItemId);
   error Ephemeral_Inventory_InvalidItemQuantity(string message, uint256 quantity, uint256 maxQuantity);
-
-  ResourceId entityRecordSystemId = EntityRecordUtils.entityRecordSystemId();
 
   /**
    * modifier to enforce deployable state changes can happen only when the game server is running
@@ -78,10 +76,7 @@ contract EphemeralInventorySystem is EveSystem {
         itemId: items[i].itemId,
         volume: items[i].volume
       });
-      world().call(
-        entityRecordSystemId,
-        abi.encodeCall(EntityRecordSystem.createEntityRecord, (items[i].inventoryItemId, entityRecord))
-      );
+      EntityRecordSystemLib.createEntityRecord(entityRecordSystem, items[i].inventoryItemId, entityRecord);
     }
 
     depositToEphemeralInventory(smartObjectId, ephemeralInventoryOwner, items);

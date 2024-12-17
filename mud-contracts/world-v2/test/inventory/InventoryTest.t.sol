@@ -12,16 +12,15 @@ import { Inventory, InventoryData } from "../../src/namespaces/evefrontier/codeg
 import { InventoryItemData, InventoryItem as InventoryItemTable } from "../../src/namespaces/evefrontier/codegen/tables/InventoryItem.sol";
 
 import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
-import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
-import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
-import { FuelUtils } from "../../src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
 import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
 import { InventorySystem } from "../../src/namespaces/evefrontier/systems/inventory/InventorySystem.sol";
 import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
-import { InventoryUtils } from "../../src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
 import { InventoryItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
 import { EntityRecord } from "../../src/namespaces/evefrontier/codegen/index.sol";
 import { IWorld } from "../../src/codegen/world/IWorld.sol";
+import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
+import { DeployableSystemLib, deployableSystem } from "../../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
+import { InventorySystemLib, inventorySystem } from "../../src/namespaces/evefrontier/codegen/systems/InventorySystemLib.sol";
 
 contract InventoryTest is MudTest {
   IBaseWorld world;
@@ -58,10 +57,6 @@ contract InventoryTest is MudTest {
   address alice = vm.addr(alicePK); // Inventory Owner
   address bob = vm.addr(bobPK); // Ephemeral Inventory Owner
 
-  ResourceId smartCharacterSystemId = SmartCharacterUtils.smartCharacterSystemId();
-  ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
-  ResourceId inventorySystemId = InventoryUtils.inventorySystemId();
-
   function setUp() public virtual override {
     super.setUp();
     world = IBaseWorld(worldAddress);
@@ -80,12 +75,13 @@ contract InventoryTest is MudTest {
     tokenCID = "Qm1234abcdxxxx";
 
     //   create SSU Inventory Owner character
-    world.call(
-      smartCharacterSystemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (characterId, alice, tribeId, charEntityRecordData, characterMetadata)
-      )
+    SmartCharacterSystemLib.createCharacter(
+      smartCharacterSystem,
+      characterId,
+      alice,
+      tribeId,
+      charEntityRecordData,
+      characterMetadata
     );
 
     item1 = InventoryItem(4235, alice, 4235, 12, 100, 1);
@@ -117,7 +113,7 @@ contract InventoryTest is MudTest {
     EntityRecord.set(item12.inventoryItemId, item12.itemId, item12.typeId, item12.volume, true);
     EntityRecord.set(item13.inventoryItemId, item13.itemId, item13.typeId, item13.volume, true);
 
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.globalResume, ()));
+    DeployableSystemLib.globalResume(deployableSystem);
 
     vm.stopPrank();
   }
@@ -143,10 +139,7 @@ contract InventoryTest is MudTest {
   function testSetInventoryCapacity(uint256 smartObjectId, uint256 storageCapacity) public {
     vm.assume(smartObjectId != 0);
     vm.assume(storageCapacity != 0);
-    world.call(
-      inventorySystemId,
-      abi.encodeCall(InventorySystem.setInventoryCapacity, (smartObjectId, storageCapacity))
-    );
+    InventorySystemLib.setInventoryCapacity(inventorySystem, smartObjectId, storageCapacity);
 
     assertEq(Inventory.getCapacity(smartObjectId), storageCapacity);
   }
@@ -159,10 +152,7 @@ contract InventoryTest is MudTest {
         "InventorySystem: storage capacity cannot be 0"
       )
     );
-    world.call(
-      inventorySystemId,
-      abi.encodeCall(InventorySystem.setInventoryCapacity, (smartObjectId, storageCapacity))
-    );
+    InventorySystemLib.setInventoryCapacity(inventorySystem, smartObjectId, storageCapacity);
   }
 
   function testDepositToInventory(uint256 smartObjectId, uint256 storageCapacity) public {
@@ -184,7 +174,7 @@ contract InventoryTest is MudTest {
     uint256 capacityBeforeDeposit = inventoryData.usedCapacity;
     uint256 capacityAfterDeposit = 0;
 
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.depositToInventory, (smartObjectId, items)));
+    InventorySystemLib.depositToInventory(inventorySystem, smartObjectId, items);
     inventoryData = Inventory.get(smartObjectId);
 
     //Check whether the items are stored in the inventory table
@@ -226,7 +216,7 @@ contract InventoryTest is MudTest {
 
     testSetInventoryCapacity(smartObjectId, storageCapacity);
     testSetDeployableStateToValid(smartObjectId);
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.depositToInventory, (smartObjectId, items)));
+    InventorySystemLib.depositToInventory(inventorySystem, smartObjectId, items);
 
     InventoryItemData memory inventoryItem1 = InventoryItemTable.get(smartObjectId, items[0].inventoryItemId);
     InventoryItemData memory inventoryItem2 = InventoryItemTable.get(smartObjectId, items[1].inventoryItemId);
@@ -235,7 +225,7 @@ contract InventoryTest is MudTest {
     assertEq(inventoryItem2.quantity, items[1].quantity);
 
     //check the increase in quantity
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.depositToInventory, (smartObjectId, items)));
+    InventorySystemLib.depositToInventory(inventorySystem, smartObjectId, items);
     inventoryItem1 = InventoryItemTable.get(smartObjectId, items[0].inventoryItemId);
     inventoryItem2 = InventoryItemTable.get(smartObjectId, items[1].inventoryItemId);
 
@@ -255,12 +245,12 @@ contract InventoryTest is MudTest {
 
     InventoryItem[] memory items = new InventoryItem[](1);
     items[0] = item4;
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.depositToInventory, (smartObjectId, items)));
+    InventorySystemLib.depositToInventory(inventorySystem, smartObjectId, items);
 
     uint256 itemsLength = Inventory.getItems(smartObjectId).length;
     assertEq(itemsLength, 4);
 
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.depositToInventory, (smartObjectId, items)));
+    InventorySystemLib.depositToInventory(inventorySystem, smartObjectId, items);
     InventoryItemData memory inventoryItem1 = InventoryItemTable.get(smartObjectId, items[0].inventoryItemId);
     assertEq(inventoryItem1.index, 3);
   }
@@ -285,7 +275,7 @@ contract InventoryTest is MudTest {
         item1.inventoryItemId
       )
     );
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.depositToInventory, (smartObjectId, items)));
+    InventorySystemLib.depositToInventory(inventorySystem, smartObjectId, items);
 
     item2.quantity = 60;
     items[0] = item2;
@@ -298,7 +288,7 @@ contract InventoryTest is MudTest {
         items[0].volume * items[0].quantity
       )
     );
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.depositToInventory, (smartObjectId, items)));
+    InventorySystemLib.depositToInventory(inventorySystem, smartObjectId, items);
   }
 
   function testWithdrawFromInventory(uint256 smartObjectId, uint256 storageCapacity) public {
@@ -318,7 +308,7 @@ contract InventoryTest is MudTest {
 
     assertEq(capacityBeforeWithdrawal, 1000);
 
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.withdrawFromInventory, (smartObjectId, items)));
+    InventorySystemLib.withdrawFromInventory(inventorySystem, smartObjectId, items);
 
     for (uint256 i = 0; i < items.length; i++) {
       itemVolume += items[i].volume * items[i].quantity;
@@ -351,9 +341,9 @@ contract InventoryTest is MudTest {
 
     testSetInventoryCapacity(smartObjectId, storageCapacity);
     testSetDeployableStateToValid(smartObjectId);
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.depositToInventory, (smartObjectId, items)));
+    InventorySystemLib.depositToInventory(inventorySystem, smartObjectId, items);
 
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.withdrawFromInventory, (smartObjectId, items)));
+    InventorySystemLib.withdrawFromInventory(inventorySystem, smartObjectId, items);
 
     InventoryData memory inventoryData = Inventory.get(smartObjectId);
     assertEq(inventoryData.items.length, 0);
@@ -378,7 +368,7 @@ contract InventoryTest is MudTest {
 
     assertEq(capacityBeforeWithdrawal, 1000);
 
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.withdrawFromInventory, (smartObjectId, items)));
+    InventorySystemLib.withdrawFromInventory(inventorySystem, smartObjectId, items);
     for (uint256 i = 0; i < items.length; i++) {
       itemVolume += items[i].volume * items[i].quantity;
     }
@@ -419,7 +409,7 @@ contract InventoryTest is MudTest {
 
     assertEq(capacityBeforeWithdrawal, 1000);
 
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.withdrawFromInventory, (smartObjectId, items)));
+    InventorySystemLib.withdrawFromInventory(inventorySystem, smartObjectId, items);
     for (uint256 i = 0; i < items.length; i++) {
       itemVolume += items[i].volume * items[i].quantity;
     }
@@ -478,7 +468,7 @@ contract InventoryTest is MudTest {
     items[10] = item11;
     items[11] = item12;
 
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.depositToInventory, (smartObjectId, items)));
+    InventorySystemLib.depositToInventory(inventorySystem, smartObjectId, items);
 
     //Change the order
     items = new InventoryItem[](12);
@@ -494,7 +484,7 @@ contract InventoryTest is MudTest {
     items[9] = item1;
     items[10] = item9;
     items[11] = item4;
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.withdrawFromInventory, (smartObjectId, items)));
+    InventorySystemLib.withdrawFromInventory(inventorySystem, smartObjectId, items);
 
     InventoryData memory inventoryData = Inventory.get(smartObjectId);
     assertEq(inventoryData.items.length, 0);
@@ -523,7 +513,7 @@ contract InventoryTest is MudTest {
     items[0] = item3;
 
     // Try withdraw again
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.withdrawFromInventory, (smartObjectId, items)));
+    InventorySystemLib.withdrawFromInventory(inventorySystem, smartObjectId, items);
 
     uint256 itemId1 = uint256(4235);
     uint256 itemId3 = uint256(4237);
@@ -555,6 +545,6 @@ contract InventoryTest is MudTest {
         items[0].quantity
       )
     );
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.withdrawFromInventory, (smartObjectId, items)));
+    InventorySystemLib.withdrawFromInventory(inventorySystem, smartObjectId, items);
   }
 }

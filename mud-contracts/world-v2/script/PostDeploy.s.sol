@@ -22,14 +22,11 @@ import { IERC721Mintable } from "../src/namespaces/evefrontier/systems/eve-erc72
 import { StaticDataSystem } from "../src/namespaces/evefrontier/systems/static-data/StaticDataSystem.sol";
 import { DeployableSystem } from "../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
 
-import { SmartCharacterUtils } from "../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
-import { StaticDataUtils } from "../src/namespaces/evefrontier/systems/static-data/StaticDataUtils.sol";
-import { DeployableUtils } from "../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
+import { StaticDataSystemLib, staticDataSystem } from "../src/namespaces/evefrontier/codegen/systems/StaticDataSystemLib.sol";
+import { SmartCharacterSystemLib, smartCharacterSystem } from "../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
+import { DeployableSystemLib, deployableSystem } from "../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
 
 contract PostDeploy is Script {
-  using SmartCharacterUtils for bytes14;
-  using StaticDataUtils for bytes14;
-
   function run(address worldAddress) external {
     StoreSwitch.setStoreAddress(worldAddress);
     IBaseWorld world = IBaseWorld(worldAddress);
@@ -103,15 +100,8 @@ contract PostDeploy is Script {
 
     console.log("Deploying Smart Character token with address: ", address(erc721SmartCharacter));
 
-    ResourceId staticDataSystemId = StaticDataUtils.staticDataSystemId();
-    world.call(staticDataSystemId, abi.encodeCall(StaticDataSystem.setBaseURI, (baseURI)));
-
-    // regiseter token address for smart character
-    ResourceId smartCharacterSystemId = SmartCharacterUtils.smartCharacterSystemId();
-    world.call(
-      smartCharacterSystemId,
-      abi.encodeCall(SmartCharacterSystem.registerCharacterToken, (address(erc721SmartCharacter)))
-    );
+    StaticDataSystemLib.setBaseURI(staticDataSystem, baseURI);
+    SmartCharacterSystemLib.registerCharacterToken(smartCharacterSystem, address(erc721SmartCharacter));
   }
 
   function _createDeployableToken(IBaseWorld world) internal {
@@ -125,15 +115,9 @@ contract PostDeploy is Script {
     );
 
     console.log("Deploying Smart Deployable token with address: ", address(erc721SmartDeployableToken));
-    ResourceId staticDataSystemId = StaticDataUtils.staticDataSystemId();
-    world.call(staticDataSystemId, abi.encodeCall(StaticDataSystem.setBaseURI, (baseURI)));
 
-    // register token address for smart deployable
-    ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
-    world.call(
-      deployableSystemId,
-      abi.encodeCall(DeployableSystem.registerDeployableToken, (address(erc721SmartDeployableToken)))
-    );
+    StaticDataSystemLib.setBaseURI(staticDataSystem, baseURI);
+    DeployableSystemLib.registerDeployableToken(deployableSystem, address(erc721SmartDeployableToken));
   }
 
   function stringToBytes14(string memory str) public pure returns (bytes14) {

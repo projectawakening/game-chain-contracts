@@ -16,6 +16,7 @@ import { WorldPosition } from "../location/types.sol";
 import { LocationData, Location } from "../../codegen/tables/Location.sol";
 import { SMART_GATE } from "../constants.sol";
 import { EveSystem } from "../EveSystem.sol";
+import { DeployableSystemLib, deployableSystem } from "../../codegen/systems/DeployableSystemLib.sol";
 
 contract SmartGateSystem is EveSystem {
   error SmartGate_UndefinedClassId();
@@ -24,9 +25,6 @@ contract SmartGateSystem is EveSystem {
   error SmartGate_GateNotLinked(uint256 sourceGateId, uint256 destinationGateId);
   error SmartGate_NotWithtinRange(uint256 sourceGateId, uint256 destinationGateId);
   error SmartGate_SameSourceAndDestination(uint256 sourceGateId, uint256 destinationGateId);
-
-  ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
-  ResourceId fuelSystemId = FuelUtils.fuelSystemId();
 
   /**
     * @notice Create and anchor a Smart Gate
@@ -60,21 +58,16 @@ contract SmartGateSystem is EveSystem {
       y: worldPosition.position.y,
       z: worldPosition.position.z
     });
-    world().call(
-      deployableSystemId,
-      abi.encodeCall(
-        DeployableSystem.createAndAnchorDeployable,
-        (
-          smartObjectId,
-          SMART_GATE,
-          entityRecordData,
-          smartObjectData,
-          fuelUnitVolume,
-          fuelConsumptionIntervalInSeconds,
-          fuelMaxCapacity,
-          locationData
-        )
-      )
+    DeployableSystemLib.createAndAnchorDeployable(
+      deployableSystem,
+      smartObjectId,
+      SMART_GATE,
+      entityRecordData,
+      smartObjectData,
+      fuelUnitVolume,
+      fuelConsumptionIntervalInSeconds,
+      fuelMaxCapacity,
+      locationData
     );
 
     SmartGateConfig.setMaxDistance(smartObjectId, maxDistance);

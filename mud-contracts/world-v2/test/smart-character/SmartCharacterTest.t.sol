@@ -21,11 +21,10 @@ import { EntityRecord, EntityRecordData as RecordData } from "../../src/namespac
 import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
 import { Characters, CharacterToken } from "../../src/namespaces/evefrontier/codegen/index.sol";
 
-import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
+import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
 
 contract SmartCharacterTest is MudTest {
   IBaseWorld world;
-  ResourceId systemId = SmartCharacterUtils.smartCharacterSystemId();
 
   function setUp() public virtual override {
     super.setUp();
@@ -43,7 +42,7 @@ contract SmartCharacterTest is MudTest {
 
   function testRevertTokenAlreadyInitialized() public {
     vm.expectRevert(abi.encodeWithSelector(SmartCharacterSystem.SmartCharacter_ERC721AlreadyInitialized.selector));
-    world.call(systemId, abi.encodeCall(SmartCharacterSystem.registerCharacterToken, (address(0x123))));
+    SmartCharacterSystemLib.registerCharacterToken(smartCharacterSystem, address(0x123));
   }
 
   /// forge-config: default.fuzz.runs = 100
@@ -59,12 +58,13 @@ contract SmartCharacterTest is MudTest {
       description: "description"
     });
 
-    world.call(
-      systemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (characterId, characterAddress, tribeId, entityRecord, entityRecordMetadata)
-      )
+    SmartCharacterSystemLib.createCharacter(
+      smartCharacterSystem,
+      characterId,
+      characterAddress,
+      tribeId,
+      entityRecord,
+      entityRecordMetadata
     );
 
     CharactersData memory character = Characters.get(characterId);
