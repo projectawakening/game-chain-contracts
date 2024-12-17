@@ -13,13 +13,28 @@ export default defineWorld({
   },
   excludeSystems: ["SmartObjectFramework"],
   namespaces: {
+    sofaccess: {
+      systems: {
+        SOFAccessSystem: {
+          name: "SOFAccessSystem",
+          openAccess: true,
+        },
+      },
+    },
     evefrontier: {
       systems: {
+        AccessConfigSystem: {
+          name: "AccessConfigSyst",
+          openAccess: true,
+        },
+        RoleManagementSystem: {
+          name: "RoleManagementSy",
+          openAccess: true,
+        },
         EntitySystem: {
           name: "EntitySystem",
           openAccess: true,
         },
-
         TagSystem: {
           name: "TagSystem",
           openAccess: true,
@@ -27,12 +42,44 @@ export default defineWorld({
       },
       tables: {
         /*******************
+         * ACCESS CONFIG, ROLE, AND ROLE MEMBERSHIP DATA *
+         *******************/
+        AccessConfig: {
+          schema: {
+            target: "bytes32",
+            configured: "bool",
+            targetSystemId: "ResourceId",
+            targetFunctionId: "bytes4",
+            accessSystemId: "ResourceId",
+            accessFunctionId: "bytes4",
+            enforcement: "bool",
+          },
+          key: ["target"],
+        },
+        Role: {
+          schema: {
+            role: "bytes32",
+            exists: "bool",
+            admin: "bytes32",
+          },
+          key: ["role"],
+        },
+        HasRole: {
+          schema: {
+            role: "bytes32",
+            account: "address",
+            hasRole: "bool",
+          },
+          key: ["role", "account"],
+        },
+        /*******************
          * ENTITES and ENTITY MAPPED DATA *
          *******************/
         Classes: {
           schema: {
             classId: "Id",
             exists: "bool",
+            accessRole: "bytes32",
             systemTags: "bytes32[]",
             objects: "bytes32[]",
           },
@@ -62,8 +109,20 @@ export default defineWorld({
             objectId: "Id",
             exists: "bool",
             class: "Id",
+            accessRole: "bytes32",
+            systemTags: "bytes32[]",
           },
           key: ["objectId"],
+        },
+        ObjectSystemTagMap: {
+          schema: {
+            objectId: "Id",
+            tagId: "Id",
+            hasTag: "bool",
+            objectIndex: "uint256",
+            tagIndex: "uint256",
+          },
+          key: ["objectId", "tagId"],
         },
         /*******************
          * TAGS *
@@ -73,6 +132,7 @@ export default defineWorld({
             tagId: "Id",
             exists: "bool",
             classes: "bytes32[]",
+            objects: "bytes32[]",
           },
           key: ["tagId"],
         },

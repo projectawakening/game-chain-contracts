@@ -11,11 +11,11 @@ import { Id } from "../../libs/Id.sol";
  * @dev This interface is automatically generated from the corresponding system contract. Do not edit manually.
  */
 interface ITagSystem {
-  function evefrontier__setSystemTag(Id classId, Id systemTagId) external;
+  function evefrontier__setSystemTag(Id entityId, Id systemTagId) external;
 
-  function evefrontier__setSystemTags(Id classId, Id[] memory systemTagIds) external;
+  function evefrontier__setSystemTags(Id entityId, Id[] memory systemTagIds) external;
 
-  function evefrontier__removeSystemTag(Id classId, Id systemTagId) external;
+  function evefrontier__removeSystemTag(Id entityId, Id systemTagId) external;
 
-  function evefrontier__removeSystemTags(Id classId, Id[] memory systemTagIds) external;
+  function evefrontier__removeSystemTags(Id entityId, Id[] memory systemTagIds) external;
 }

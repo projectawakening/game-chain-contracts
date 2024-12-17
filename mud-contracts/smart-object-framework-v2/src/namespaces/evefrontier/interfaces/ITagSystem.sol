@@ -9,17 +9,17 @@ import { Id } from "../../../libs/Id.sol";
  * @dev An interface for the Tags System functionality
  */
 interface ITagSystem {
-  function setSystemTag(Id classId, Id systemTagId) external;
-  function setSystemTags(Id classId, Id[] memory systemTagIds) external;
-  function removeSystemTag(Id classId, Id tagId) external;
-  function removeSystemTags(Id classId, Id[] memory tagIds) external;
+  function setSystemTag(Id entityId, Id systemTagId) external;
+  function setSystemTags(Id entityId, Id[] memory systemTagIds) external;
+  function removeSystemTag(Id entityId, Id tagId) external;
+  function removeSystemTags(Id entityId, Id[] memory tagIds) external;
 
-  error InvalidTagId(Id tagId);
-  error InvalidTagType(bytes2 givenType);
-  error TagAlreadyExists(Id tagId);
-  error TagDoesNotExist(Id tagId);
-  error TagNotFound(Id entityId, Id tagId);
-  error WrongTagType(bytes2 givenType, bytes2[] expectedTypes);
-  error SystemNotRegistered(ResourceId systemId);
-  error EntityAlreadyHasTag(Id entityId, Id tagId);
+  error Tag_InvalidTagId(Id tagId);
+  error Tag_InvalidTagType(bytes2 givenType);
+  error Tag_TagAlreadyExists(Id tagId);
+  error Tag_TagDoesNotExist(Id tagId);
+  error Tag_TagNotFound(Id entityId, Id tagId);
+  error Tag_WrongTagType(bytes2 givenType, bytes2[] expectedTypes);
+  error Tag_SystemNotRegistered(ResourceId systemId);
+  error Tag_EntityAlreadyHasTag(Id entityId, Id tagId);
 }
