@@ -13,7 +13,7 @@ interface IFuelSystem {
   error Fuel_ExceedsMaxCapacity(uint256 smartObjectId, uint256 maxCapacity, uint256 fuelAmount);
   error Fuel_InvalidFuelConsumptionInterval(uint256 smartObjectId);
 
-  function evefrontier__configureFuelParameters(
+  function configureFuelParameters(
     uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
@@ -21,22 +21,22 @@ interface IFuelSystem {
     uint256 fuelAmount
   ) external;
 
-  function evefrontier__setFuelUnitVolume(uint256 smartObjectId, uint256 fuelUnitVolume) external;
+  function setFuelUnitVolume(uint256 smartObjectId, uint256 fuelUnitVolume) external;
 
-  function evefrontier__setFuelConsumptionIntervalInSeconds(
+  function setFuelConsumptionIntervalInSeconds(
     uint256 smartObjectId,
     uint256 fuelConsumptionIntervalInSeconds
   ) external;
 
-  function evefrontier__setFuelMaxCapacity(uint256 smartObjectId, uint256 fuelMaxCapacity) external;
+  function setFuelMaxCapacity(uint256 smartObjectId, uint256 fuelMaxCapacity) external;
 
-  function evefrontier__setFuelAmount(uint256 smartObjectId, uint256 fuelAmountInWei) external;
+  function setFuelAmount(uint256 smartObjectId, uint256 fuelAmountInWei) external;
 
-  function evefrontier__depositFuel(uint256 smartObjectId, uint256 fuelAmount) external;
+  function depositFuel(uint256 smartObjectId, uint256 fuelAmount) external;
 
-  function evefrontier__withdrawFuel(uint256 smartObjectId, uint256 fuelAmount) external;
+  function withdrawFuel(uint256 smartObjectId, uint256 fuelAmount) external;
 
-  function evefrontier__updateFuel(uint256 smartObjectId) external;
+  function updateFuel(uint256 smartObjectId) external;
 
-  function evefrontier__currentFuelAmountInWei(uint256 smartObjectId) external view returns (uint256 amount);
+  function currentFuelAmountInWei(uint256 smartObjectId) external view returns (uint256 amount);
 }
