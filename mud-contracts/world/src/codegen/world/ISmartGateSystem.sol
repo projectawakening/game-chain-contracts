@@ -45,5 +45,7 @@ interface ISmartGateSystem {
 
   function eveworld__isGateLinked(uint256 sourceGateId, uint256 destinationGateId) external view returns (bool);
 
+  function eveworld__isAnyGateLinked(uint256 sourceGateId, uint256 destinationGateId) external view returns (bool);
+
   function eveworld__isWithinRange(uint256 sourceGateId, uint256 destinationGateId) external view returns (bool);
 }

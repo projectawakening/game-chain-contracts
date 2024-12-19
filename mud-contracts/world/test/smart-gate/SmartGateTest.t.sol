@@ -29,6 +29,7 @@ import { SmartGateConfigTable } from "../../src/codegen/tables/SmartGateConfigTa
 import { EntityRecordOffchainTableData } from "../../src/codegen/tables/EntityRecordOffchainTable.sol";
 import { SmartAssemblyTable } from "../../src/codegen/tables/SmartAssemblyTable.sol";
 import { DeployableState } from "../../src/codegen/tables/DeployableState.sol";
+import { SmartGateLinkTable, SmartGateLinkTableData } from "../../src/codegen/tables/SmartGateLinkTable.sol";
 
 import { IERC721 } from "../../src/modules/eve-erc721-puppet/IERC721.sol";
 import { ERC721Registry } from "../../src/codegen/tables/ERC721Registry.sol";
@@ -192,6 +193,76 @@ contract SmartGateTest is MudTest {
     smartGate.unlinkSmartGates(sourceGateId, destinationGateId);
 
     assert(!smartGate.isGateLinked(sourceGateId, destinationGateId));
+  }
+
+  function testLinkUnLinkMultipleSmartGates() public {
+    uint256 smartGateA = 123;
+    uint256 smartGateB = 124;
+    uint256 smartGateC = 125;
+    uint256 smartGateD = 126;
+
+    testAnchorSmartGate(smartGateA);
+    testAnchorSmartGate(smartGateB);
+    testAnchorSmartGate(smartGateC);
+    testAnchorSmartGate(smartGateD);
+
+    //link AB
+    smartGate.linkSmartGates(smartGateA, smartGateB);
+    SmartGateLinkTableData memory linkDataAB = SmartGateLinkTable.get(smartGateA);
+    assertEq(linkDataAB.destinationGateId, smartGateB);
+    assertTrue(linkDataAB.isLinked);
+
+    SmartGateLinkTableData memory linkDataBA = SmartGateLinkTable.get(smartGateB);
+    assertEq(linkDataBA.destinationGateId, smartGateA);
+    assertTrue(linkDataBA.isLinked);
+
+    //revert when linking BA because B and A its already linked
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartGateSystem.SmartGate_GateAlreadyLinked.selector, smartGateB, smartGateA)
+    );
+    smartGate.linkSmartGates(smartGateB, smartGateA);
+
+    //revert when link BC because B its already linked
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartGateSystem.SmartGate_GateAlreadyLinked.selector, smartGateB, smartGateC)
+    );
+    smartGate.linkSmartGates(smartGateB, smartGateC);
+
+    //link CD
+    smartGate.linkSmartGates(smartGateC, smartGateD);
+    SmartGateLinkTableData memory linkDataCD = SmartGateLinkTable.get(smartGateC);
+    assertEq(linkDataCD.destinationGateId, smartGateD);
+    assertTrue(linkDataCD.isLinked);
+
+    //revert when link AD because A and D its already linked
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartGateSystem.SmartGate_GateAlreadyLinked.selector, smartGateA, smartGateD)
+    );
+    smartGate.linkSmartGates(smartGateA, smartGateD);
+
+    //revert when unlink AD because A its not linked to D
+    vm.expectRevert(abi.encodeWithSelector(SmartGateSystem.SmartGate_GateNotLinked.selector, smartGateA, smartGateD));
+    smartGate.unlinkSmartGates(smartGateA, smartGateD);
+
+    //revert when link DA because D and A its already linked
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartGateSystem.SmartGate_GateAlreadyLinked.selector, smartGateD, smartGateA)
+    );
+    smartGate.linkSmartGates(smartGateD, smartGateA);
+
+    //unlink CD
+    smartGate.unlinkSmartGates(smartGateC, smartGateD);
+    SmartGateLinkTableData memory linkDataCDUnlinked = SmartGateLinkTable.get(smartGateC);
+    assertFalse(linkDataCDUnlinked.isLinked);
+
+    SmartGateLinkTableData memory linkDataDCUnlinked = SmartGateLinkTable.get(smartGateD);
+    assertFalse(linkDataDCUnlinked.isLinked);
+
+    //link DC
+    smartGate.linkSmartGates(smartGateD, smartGateC);
+    SmartGateLinkTableData memory linkDataDC = SmartGateLinkTable.get(smartGateD);
+    assertEq(linkDataDC.destinationGateId, smartGateC);
+    assertTrue(linkDataDC.isLinked);
   }
 
   function testRevertExistingLink() public {
