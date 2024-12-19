@@ -121,7 +121,7 @@ contract SmartGateSystem is EveSystem, AccessModified {
    * @param destinationGateId is the smartObjectId of the destination gate
    */
   function linkSmartGates(uint256 sourceGateId, uint256 destinationGateId) public onlyAdminOrObjectOwner(sourceGateId) {
-    if (isGateLinked(sourceGateId, destinationGateId)) {
+    if (isAnyGateLinked(sourceGateId, destinationGateId)) {
       revert SmartGate_GateAlreadyLinked(sourceGateId, destinationGateId);
     }
 
@@ -204,6 +204,12 @@ contract SmartGateSystem is EveSystem, AccessModified {
     return true;
   }
 
+  /**
+   * @notice view function to check if the source gate is linked to the destination gate
+   * @param sourceGateId is the smartObjectId of the source gate
+   * @param destinationGateId is the smartObjectId of the destination gate
+   * @return true if the source gate is linked to the destination gate
+   */
   function isGateLinked(uint256 sourceGateId, uint256 destinationGateId) public view returns (bool) {
     SmartGateLinkTableData memory smartGateLinkTableData = SmartGateLinkTable.get(sourceGateId);
     bool isLinked = smartGateLinkTableData.isLinked && smartGateLinkTableData.destinationGateId == destinationGateId;
@@ -211,6 +217,28 @@ contract SmartGateSystem is EveSystem, AccessModified {
     return isLinked;
   }
 
+  /**
+   * @notice view function to check if any gate is linked previously
+   * @param sourceGateId is the smartObjectId of the source gate
+   * @param destinationGateId is the smartObjectId of the destination gate
+   * @return true if any gate is linked previously
+   */
+  function isAnyGateLinked(uint256 sourceGateId, uint256 destinationGateId) public view returns (bool) {
+    SmartGateLinkTableData memory smartGateLinkTableData = SmartGateLinkTable.get(sourceGateId);
+    bool isSourceAlreadyLinked = smartGateLinkTableData.isLinked;
+
+    smartGateLinkTableData = SmartGateLinkTable.get(destinationGateId);
+    bool isDestinationAlreadyLinked = smartGateLinkTableData.isLinked;
+
+    return (isSourceAlreadyLinked || isDestinationAlreadyLinked);
+  }
+
+  /**
+   * @notice view function to check if the source gate and destination gate are within range
+   * @param sourceGateId is the smartObjectId of the source gate
+   * @param destinationGateId is the smartObjectId of the destination gate
+   * @return true if the source gate and destination gate are within range
+   */
   function isWithinRange(uint256 sourceGateId, uint256 destinationGateId) public view returns (bool) {
     //Get the location of the source gate and destination gate
     LocationTableData memory sourceGateLocation = LocationTable.get(sourceGateId);
