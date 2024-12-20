@@ -37,7 +37,7 @@ importers:
         version: link:../mud-contracts/smart-object-framework
       '@eveworld/world':
         specifier: 0.0.17
-        version: link:../mud-contracts/world
+        version: 0.0.17(typescript@5.7.2)(zod@3.23.8)
       '@eveworld/world-core':
         specifier: link:../mud-contracts/core
         version: link:../mud-contracts/core
@@ -174,7 +174,7 @@ importers:
         version: link:../smart-object-framework
       '@eveworld/world':
         specifier: 0.0.17
-        version: link:../world
+        version: 0.0.17(typescript@5.7.2)(zod@3.23.8)
       '@latticexyz/cli':
         specifier: 2.2.8
         version: 2.2.8
@@ -446,7 +446,7 @@ importers:
         version: link:../mud-contracts/common/constants
       '@eveworld/world':
         specifier: 0.0.17
-        version: link:../mud-contracts/world
+        version: 0.0.17(typescript@5.7.2)(zod@3.23.8)
       '@eveworld/world-core':
         specifier: link:../mud-contracts/core
         version: link:../mud-contracts/core
@@ -1705,6 +1705,67 @@ packages:
       '@ethersproject/logger': 5.7.0
       '@ethersproject/properties': 5.7.0
       '@ethersproject/strings': 5.7.0
+    dev: false
+
+  /@eveworld/common-constants@0.0.13(typescript@5.7.2)(zod@3.23.8):
+    resolution: {integrity: sha512-SI3RZhejBq7hNyLst32OCuhmpyKwrWg98EVnAQm8q/9yiLRSWIMe9xS3fflcfKrm+C7yE1lpESNgxI0gOi09ww==}
+    dependencies:
+      '@latticexyz/cli': 2.2.8
+      '@latticexyz/schema-type': 2.2.8(typescript@5.7.2)(zod@3.23.8)
+      '@latticexyz/store': 2.2.8(typescript@5.7.2)(zod@3.23.8)
+      '@latticexyz/world': 2.2.8(typescript@5.7.2)(zod@3.23.8)
+      '@latticexyz/world-modules': 2.2.8(typescript@5.7.2)
+    transitivePeerDependencies:
+      - '@aws-sdk/client-kms'
+      - asn1.js
+      - aws-crt
+      - bufferutil
+      - supports-color
+      - typescript
+      - utf-8-validate
+      - zod
+    dev: false
+
+  /@eveworld/smart-object-framework@0.0.8(typescript@5.7.2)(zod@3.23.8):
+    resolution: {integrity: sha512-M+tj5F7ZSZKdQ6cbE9KW17AHQJi0duLSdiUKPJSk+tyBxocM3a8S9PUcm+tTTRRXtLUH6NQLLZdPOSV1DZFa5w==}
+    dependencies:
+      '@eveworld/common-constants': 0.0.13(typescript@5.7.2)(zod@3.23.8)
+      '@latticexyz/cli': 2.2.8
+      '@latticexyz/schema-type': 2.2.8(typescript@5.7.2)(zod@3.23.8)
+      '@latticexyz/store': 2.2.8(typescript@5.7.2)(zod@3.23.8)
+      '@latticexyz/world': 2.2.8(typescript@5.7.2)(zod@3.23.8)
+      '@latticexyz/world-modules': 2.2.8(typescript@5.7.2)
+    transitivePeerDependencies:
+      - '@aws-sdk/client-kms'
+      - asn1.js
+      - aws-crt
+      - bufferutil
+      - supports-color
+      - typescript
+      - utf-8-validate
+      - zod
+    dev: false
+
+  /@eveworld/world@0.0.17(typescript@5.7.2)(zod@3.23.8):
+    resolution: {integrity: sha512-/CcLDZ0wSu/otvfb4b4psooLcIq09ulvmPqxzx+E379LBBSkPMb546PAibY7PlUiQmzwOhYytF2YR3RyQgNksQ==}
+    dependencies:
+      '@eveworld/common-constants': 0.0.13(typescript@5.7.2)(zod@3.23.8)
+      '@eveworld/smart-object-framework': 0.0.8(typescript@5.7.2)(zod@3.23.8)
+      '@latticexyz/cli': 2.2.8
+      '@latticexyz/gas-report': 2.2.8
+      '@latticexyz/schema-type': 2.2.8(typescript@5.7.2)(zod@3.23.8)
+      '@latticexyz/store': 2.2.8(typescript@5.7.2)(zod@3.23.8)
+      '@latticexyz/world': 2.2.8(typescript@5.7.2)(zod@3.23.8)
+      '@latticexyz/world-modules': 2.2.8(typescript@5.7.2)
+    transitivePeerDependencies:
+      - '@aws-sdk/client-kms'
+      - asn1.js
+      - aws-crt
+      - bufferutil
+      - supports-color
+      - typescript
+      - utf-8-validate
+      - zod
     dev: false
 
   /@isaacs/cliui@8.0.2:
