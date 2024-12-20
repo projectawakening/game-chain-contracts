@@ -1,8 +1,4 @@
 # @eveworld/world
-## 0.0.19
-- Added additional condition to check if anyGateIsLinked previously
-
-# @eveworld/world
 ## 0.0.17
 - Enforce one-to-one mapping for smart character address to id - includes a new error - `SmartCharacter_AlreadyCreated(address characterAddress, uint256 characterId);`
 - Added a reverse lookup table called `CharctersByAddressTable` - key characterAddress, returns characterId - used to enforce that any Ephemeral Inventory Owner that get sent items is in-fact a created character (so items don't get sent to blackhole addresses)
