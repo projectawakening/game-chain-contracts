@@ -22,6 +22,8 @@ import { Id } from "../../../../libs/Id.sol";
 struct ObjectsData {
   bool exists;
   Id class;
+  bytes32 accessRole;
+  bytes32[] systemTags;
 }
 
 library Objects {
@@ -29,12 +31,12 @@ library Objects {
   ResourceId constant _tableId = ResourceId.wrap(0x746265766566726f6e746965720000004f626a65637473000000000000000000);
 
   FieldLayout constant _fieldLayout =
-    FieldLayout.wrap(0x0021020001200000000000000000000000000000000000000000000000000000);
+    FieldLayout.wrap(0x0041030101202000000000000000000000000000000000000000000000000000);
 
   // Hex-encoded key schema of (bytes32)
   Schema constant _keySchema = Schema.wrap(0x002001005f000000000000000000000000000000000000000000000000000000);
-  // Hex-encoded value schema of (bool, bytes32)
-  Schema constant _valueSchema = Schema.wrap(0x00210200605f0000000000000000000000000000000000000000000000000000);
+  // Hex-encoded value schema of (bool, bytes32, bytes32, bytes32[])
+  Schema constant _valueSchema = Schema.wrap(0x00410301605f5fc1000000000000000000000000000000000000000000000000);
 
   /**
    * @notice Get the table's key field names.
@@ -50,9 +52,11 @@ library Objects {
    * @return fieldNames An array of strings with the names of value fields.
    */
   function getFieldNames() internal pure returns (string[] memory fieldNames) {
-    fieldNames = new string[](2);
+    fieldNames = new string[](4);
     fieldNames[0] = "exists";
     fieldNames[1] = "class";
+    fieldNames[2] = "accessRole";
+    fieldNames[3] = "systemTags";
   }
 
   /**
@@ -154,6 +158,210 @@ library Objects {
   }
 
   /**
+   * @notice Get accessRole.
+   */
+  function getAccessRole(Id objectId) internal view returns (bytes32 accessRole) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    bytes32 _blob = StoreSwitch.getStaticField(_tableId, _keyTuple, 2, _fieldLayout);
+    return (bytes32(_blob));
+  }
+
+  /**
+   * @notice Get accessRole.
+   */
+  function _getAccessRole(Id objectId) internal view returns (bytes32 accessRole) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    bytes32 _blob = StoreCore.getStaticField(_tableId, _keyTuple, 2, _fieldLayout);
+    return (bytes32(_blob));
+  }
+
+  /**
+   * @notice Set accessRole.
+   */
+  function setAccessRole(Id objectId, bytes32 accessRole) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    StoreSwitch.setStaticField(_tableId, _keyTuple, 2, abi.encodePacked((accessRole)), _fieldLayout);
+  }
+
+  /**
+   * @notice Set accessRole.
+   */
+  function _setAccessRole(Id objectId, bytes32 accessRole) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    StoreCore.setStaticField(_tableId, _keyTuple, 2, abi.encodePacked((accessRole)), _fieldLayout);
+  }
+
+  /**
+   * @notice Get systemTags.
+   */
+  function getSystemTags(Id objectId) internal view returns (bytes32[] memory systemTags) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    bytes memory _blob = StoreSwitch.getDynamicField(_tableId, _keyTuple, 0);
+    return (SliceLib.getSubslice(_blob, 0, _blob.length).decodeArray_bytes32());
+  }
+
+  /**
+   * @notice Get systemTags.
+   */
+  function _getSystemTags(Id objectId) internal view returns (bytes32[] memory systemTags) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    bytes memory _blob = StoreCore.getDynamicField(_tableId, _keyTuple, 0);
+    return (SliceLib.getSubslice(_blob, 0, _blob.length).decodeArray_bytes32());
+  }
+
+  /**
+   * @notice Set systemTags.
+   */
+  function setSystemTags(Id objectId, bytes32[] memory systemTags) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    StoreSwitch.setDynamicField(_tableId, _keyTuple, 0, EncodeArray.encode((systemTags)));
+  }
+
+  /**
+   * @notice Set systemTags.
+   */
+  function _setSystemTags(Id objectId, bytes32[] memory systemTags) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    StoreCore.setDynamicField(_tableId, _keyTuple, 0, EncodeArray.encode((systemTags)));
+  }
+
+  /**
+   * @notice Get the length of systemTags.
+   */
+  function lengthSystemTags(Id objectId) internal view returns (uint256) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    uint256 _byteLength = StoreSwitch.getDynamicFieldLength(_tableId, _keyTuple, 0);
+    unchecked {
+      return _byteLength / 32;
+    }
+  }
+
+  /**
+   * @notice Get the length of systemTags.
+   */
+  function _lengthSystemTags(Id objectId) internal view returns (uint256) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    uint256 _byteLength = StoreCore.getDynamicFieldLength(_tableId, _keyTuple, 0);
+    unchecked {
+      return _byteLength / 32;
+    }
+  }
+
+  /**
+   * @notice Get an item of systemTags.
+   * @dev Reverts with Store_IndexOutOfBounds if `_index` is out of bounds for the array.
+   */
+  function getItemSystemTags(Id objectId, uint256 _index) internal view returns (bytes32) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    unchecked {
+      bytes memory _blob = StoreSwitch.getDynamicFieldSlice(_tableId, _keyTuple, 0, _index * 32, (_index + 1) * 32);
+      return (bytes32(_blob));
+    }
+  }
+
+  /**
+   * @notice Get an item of systemTags.
+   * @dev Reverts with Store_IndexOutOfBounds if `_index` is out of bounds for the array.
+   */
+  function _getItemSystemTags(Id objectId, uint256 _index) internal view returns (bytes32) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    unchecked {
+      bytes memory _blob = StoreCore.getDynamicFieldSlice(_tableId, _keyTuple, 0, _index * 32, (_index + 1) * 32);
+      return (bytes32(_blob));
+    }
+  }
+
+  /**
+   * @notice Push an element to systemTags.
+   */
+  function pushSystemTags(Id objectId, bytes32 _element) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    StoreSwitch.pushToDynamicField(_tableId, _keyTuple, 0, abi.encodePacked((_element)));
+  }
+
+  /**
+   * @notice Push an element to systemTags.
+   */
+  function _pushSystemTags(Id objectId, bytes32 _element) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    StoreCore.pushToDynamicField(_tableId, _keyTuple, 0, abi.encodePacked((_element)));
+  }
+
+  /**
+   * @notice Pop an element from systemTags.
+   */
+  function popSystemTags(Id objectId) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    StoreSwitch.popFromDynamicField(_tableId, _keyTuple, 0, 32);
+  }
+
+  /**
+   * @notice Pop an element from systemTags.
+   */
+  function _popSystemTags(Id objectId) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    StoreCore.popFromDynamicField(_tableId, _keyTuple, 0, 32);
+  }
+
+  /**
+   * @notice Update an element of systemTags at `_index`.
+   */
+  function updateSystemTags(Id objectId, uint256 _index, bytes32 _element) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    unchecked {
+      bytes memory _encoded = abi.encodePacked((_element));
+      StoreSwitch.spliceDynamicData(_tableId, _keyTuple, 0, uint40(_index * 32), uint40(_encoded.length), _encoded);
+    }
+  }
+
+  /**
+   * @notice Update an element of systemTags at `_index`.
+   */
+  function _updateSystemTags(Id objectId, uint256 _index, bytes32 _element) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = Id.unwrap(objectId);
+
+    unchecked {
+      bytes memory _encoded = abi.encodePacked((_element));
+      StoreCore.spliceDynamicData(_tableId, _keyTuple, 0, uint40(_index * 32), uint40(_encoded.length), _encoded);
+    }
+  }
+
+  /**
    * @notice Get the full data.
    */
   function get(Id objectId) internal view returns (ObjectsData memory _table) {
@@ -186,11 +394,11 @@ library Objects {
   /**
    * @notice Set the full data using individual values.
    */
-  function set(Id objectId, bool exists, Id class) internal {
-    bytes memory _staticData = encodeStatic(exists, class);
+  function set(Id objectId, bool exists, Id class, bytes32 accessRole, bytes32[] memory systemTags) internal {
+    bytes memory _staticData = encodeStatic(exists, class, accessRole);
 
-    EncodedLengths _encodedLengths;
-    bytes memory _dynamicData;
+    EncodedLengths _encodedLengths = encodeLengths(systemTags);
+    bytes memory _dynamicData = encodeDynamic(systemTags);
 
     bytes32[] memory _keyTuple = new bytes32[](1);
     _keyTuple[0] = Id.unwrap(objectId);
@@ -201,11 +409,11 @@ library Objects {
   /**
    * @notice Set the full data using individual values.
    */
-  function _set(Id objectId, bool exists, Id class) internal {
-    bytes memory _staticData = encodeStatic(exists, class);
+  function _set(Id objectId, bool exists, Id class, bytes32 accessRole, bytes32[] memory systemTags) internal {
+    bytes memory _staticData = encodeStatic(exists, class, accessRole);
 
-    EncodedLengths _encodedLengths;
-    bytes memory _dynamicData;
+    EncodedLengths _encodedLengths = encodeLengths(systemTags);
+    bytes memory _dynamicData = encodeDynamic(systemTags);
 
     bytes32[] memory _keyTuple = new bytes32[](1);
     _keyTuple[0] = Id.unwrap(objectId);
@@ -217,10 +425,10 @@ library Objects {
    * @notice Set the full data using the data struct.
    */
   function set(Id objectId, ObjectsData memory _table) internal {
-    bytes memory _staticData = encodeStatic(_table.exists, _table.class);
+    bytes memory _staticData = encodeStatic(_table.exists, _table.class, _table.accessRole);
 
-    EncodedLengths _encodedLengths;
-    bytes memory _dynamicData;
+    EncodedLengths _encodedLengths = encodeLengths(_table.systemTags);
+    bytes memory _dynamicData = encodeDynamic(_table.systemTags);
 
     bytes32[] memory _keyTuple = new bytes32[](1);
     _keyTuple[0] = Id.unwrap(objectId);
@@ -232,10 +440,10 @@ library Objects {
    * @notice Set the full data using the data struct.
    */
   function _set(Id objectId, ObjectsData memory _table) internal {
-    bytes memory _staticData = encodeStatic(_table.exists, _table.class);
+    bytes memory _staticData = encodeStatic(_table.exists, _table.class, _table.accessRole);
 
-    EncodedLengths _encodedLengths;
-    bytes memory _dynamicData;
+    EncodedLengths _encodedLengths = encodeLengths(_table.systemTags);
+    bytes memory _dynamicData = encodeDynamic(_table.systemTags);
 
     bytes32[] memory _keyTuple = new bytes32[](1);
     _keyTuple[0] = Id.unwrap(objectId);
@@ -246,24 +454,43 @@ library Objects {
   /**
    * @notice Decode the tightly packed blob of static data using this table's field layout.
    */
-  function decodeStatic(bytes memory _blob) internal pure returns (bool exists, Id class) {
+  function decodeStatic(bytes memory _blob) internal pure returns (bool exists, Id class, bytes32 accessRole) {
     exists = (_toBool(uint8(Bytes.getBytes1(_blob, 0))));
 
     class = Id.wrap(Bytes.getBytes32(_blob, 1));
+
+    accessRole = (Bytes.getBytes32(_blob, 33));
+  }
+
+  /**
+   * @notice Decode the tightly packed blob of dynamic data using the encoded lengths.
+   */
+  function decodeDynamic(
+    EncodedLengths _encodedLengths,
+    bytes memory _blob
+  ) internal pure returns (bytes32[] memory systemTags) {
+    uint256 _start;
+    uint256 _end;
+    unchecked {
+      _end = _encodedLengths.atIndex(0);
+    }
+    systemTags = (SliceLib.getSubslice(_blob, _start, _end).decodeArray_bytes32());
   }
 
   /**
    * @notice Decode the tightly packed blobs using this table's field layout.
    * @param _staticData Tightly packed static fields.
-   *
-   *
+   * @param _encodedLengths Encoded lengths of dynamic fields.
+   * @param _dynamicData Tightly packed dynamic fields.
    */
   function decode(
     bytes memory _staticData,
-    EncodedLengths,
-    bytes memory
+    EncodedLengths _encodedLengths,
+    bytes memory _dynamicData
   ) internal pure returns (ObjectsData memory _table) {
-    (_table.exists, _table.class) = decodeStatic(_staticData);
+    (_table.exists, _table.class, _table.accessRole) = decodeStatic(_staticData);
+
+    (_table.systemTags) = decodeDynamic(_encodedLengths, _dynamicData);
   }
 
   /**
@@ -290,8 +517,27 @@ library Objects {
    * @notice Tightly pack static (fixed length) data using this table's schema.
    * @return The static data, encoded into a sequence of bytes.
    */
-  function encodeStatic(bool exists, Id class) internal pure returns (bytes memory) {
-    return abi.encodePacked(exists, class);
+  function encodeStatic(bool exists, Id class, bytes32 accessRole) internal pure returns (bytes memory) {
+    return abi.encodePacked(exists, class, accessRole);
+  }
+
+  /**
+   * @notice Tightly pack dynamic data lengths using this table's schema.
+   * @return _encodedLengths The lengths of the dynamic fields (packed into a single bytes32 value).
+   */
+  function encodeLengths(bytes32[] memory systemTags) internal pure returns (EncodedLengths _encodedLengths) {
+    // Lengths are effectively checked during copy by 2**40 bytes exceeding gas limits
+    unchecked {
+      _encodedLengths = EncodedLengthsLib.pack(systemTags.length * 32);
+    }
+  }
+
+  /**
+   * @notice Tightly pack dynamic (variable length) data using this table's schema.
+   * @return The dynamic data, encoded into a sequence of bytes.
+   */
+  function encodeDynamic(bytes32[] memory systemTags) internal pure returns (bytes memory) {
+    return abi.encodePacked(EncodeArray.encode((systemTags)));
   }
 
   /**
@@ -300,11 +546,16 @@ library Objects {
    * @return The lengths of the dynamic fields (packed into a single bytes32 value).
    * @return The dynamic (variable length) data, encoded into a sequence of bytes.
    */
-  function encode(bool exists, Id class) internal pure returns (bytes memory, EncodedLengths, bytes memory) {
-    bytes memory _staticData = encodeStatic(exists, class);
+  function encode(
+    bool exists,
+    Id class,
+    bytes32 accessRole,
+    bytes32[] memory systemTags
+  ) internal pure returns (bytes memory, EncodedLengths, bytes memory) {
+    bytes memory _staticData = encodeStatic(exists, class, accessRole);
 
-    EncodedLengths _encodedLengths;
-    bytes memory _dynamicData;
+    EncodedLengths _encodedLengths = encodeLengths(systemTags);
+    bytes memory _dynamicData = encodeDynamic(systemTags);
 
     return (_staticData, _encodedLengths, _dynamicData);
   }

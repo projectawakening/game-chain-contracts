@@ -7,21 +7,24 @@
     "build": "mud build",
     "clean": "forge clean && rm -rf src/codegen && rm -rf out && rm -rf cache",
     "deploy:garnet": "mud deploy --profile=garnet",
-    "deploy:local": "mud deploy --rpc $RPC_URL --alwaysRunPostDeploy",
+    "deploy:local": "PRIVATE_KEY=$PRIVATE_KEY mud deploy --rpc $RPC_URL --alwaysRunPostDeploy",
     "deploy:redstone": "mud deploy --profile=redstone",
     "dev": "mud dev-contracts",
     "lint": "pnpm run prettier && pnpm run solhint",
     "prettier": "prettier 'src/**/*.sol' 'test/**/*.sol' './*.ts' --plugin=prettier-plugin-solidity --check",
     "fixFormat": "prettier 'src/**/*.sol' 'test/**/*' './*.ts' --plugin=prettier-plugin-solidity --write",
     "solhint": "solhint --config ./.solhint.json 'src/**/*.sol' --fix",
-    "test": "tsc --noEmit && mud test "
+    "test": "tsc --noEmit && mud test --forgeOptions=-vvv"
   },
   "dependencies": {
-    "@latticexyz/cli": "2.0.12",
-    "@latticexyz/schema-type": "2.0.12",
-    "@latticexyz/store": "2.0.12",
-    "@latticexyz/world": "2.0.12",
-    "@latticexyz/world-modules": "2.0.12"
+    "@latticexyz/cli": "2.2.11",
+    "@latticexyz/schema-type": "2.2.11",
+    "@latticexyz/store": "2.2.11",
+    "@latticexyz/world": "2.2.11",
+    "@latticexyz/world-modules": "2.2.11",
+    "@latticexyz/gas-report": "2.2.11",
+    "@eveworld/smart-object-framework": "link:../smart-object-framework",
+    "@eveworld/common-constants": "0.0.13"
   },
   "devDependencies": {
     "@latticexyz/gas-report": "2.0.12",
@@ -33,14 +36,5 @@
     "solhint": "^3.3.7",
     "solhint-config-mud": "2.0.12",
     "solhint-plugin-mud": "2.0.12"
-  },
-  "pnpm": {
-    "overrides": {
-      "follow-redirects@<1.15.6": ">=1.15.6",
-      "ejs@<3.1.10": ">=3.1.10",
-      "ws@<8.17.1": ">=8.17.1",
-      "braces@<3.0.3": ">=3.0.3",
-      "fast-xml-parser@4.4.1": ">=4.4.1"
-    }
   }
 }

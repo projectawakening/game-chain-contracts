@@ -13,11 +13,11 @@ import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 import { IWorldWithContext } from "../../src/IWorldWithContext.sol";
 import { Id, IdLib } from "../../src/libs/Id.sol";
 import { ENTITY_CLASS } from "../../src/types/entityTypes.sol";
-import { Classes } from "../../src/namespaces/evefrontier/codegen/tables/Classes.sol";
 
 import { TransientContext } from "./types.sol";
 
 contract SystemMock is SmartObjectFramework {
+  // scope testing functions
   function classLevelScope(Id classId) public view scope(classId) returns (bool) {
     return true;
   }
@@ -26,22 +26,55 @@ contract SystemMock is SmartObjectFramework {
     return true;
   }
 
+  function entryScoped(Id classId, bool taggedCall) public scope(classId) returns (bytes memory) {
+    ResourceId TAGGED_SYSTEM_ID = ResourceId.wrap(
+      (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("TaggedSystemMock"))))
+    );
+    ResourceId UNTAGGED_SYSTEM_ID = ResourceId.wrap(
+      (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("UnTaggedSystemMo"))))
+    );
+    if (taggedCall == true) {
+      // make a secondary tagged system call (proving that the internal scope enforcement allows fully scoped call chains to pass)
+      // tagged system call
+      bytes memory callData = abi.encodeCall(this.internalScoped, (classId));
+      return IWorldKernel(_world()).call(TAGGED_SYSTEM_ID, callData);
+    } else {
+      // make an unscoped untagged system call which subsequently calls a scoped tagged system call (proving that call chains which leave scope and try to re-enter are blocked by internal scope enforcement)
+      bytes memory callData = abi.encodeCall(this.entryNonScoped, (classId));
+      return IWorldKernel(_world()).call(UNTAGGED_SYSTEM_ID, callData);
+    }
+  }
+
+  function entryNonScoped(Id classId) public returns (bytes memory) {
+    ResourceId TAGGED_SYSTEM_ID = ResourceId.wrap(
+      (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("TaggedSystemMock"))))
+    );
+    // make a tagged system call
+    bytes memory callData = abi.encodeCall(this.internalScoped, (classId));
+    return IWorldKernel(_world()).call(TAGGED_SYSTEM_ID, callData);
+  }
+
+  function internalScoped(Id classId) public view scope(classId) returns (bool) {
+    return true;
+  }
+
+  // context testing functions
   function primaryCall() public payable context returns (bytes memory) {
-    ResourceId systemId = _contextGuard();
     if (msg.sender != _world()) {
       // cannot receive payments from non-world sources (i.e. activity not delegated through the World contract)
       revert("Cannot receive payments from non-world sources");
     }
 
     bytes memory callData = abi.encodeCall(this.secondaryCall, ());
-    return IWorldKernel(_world()).call(systemId, callData);
+    return IWorldKernel(_world()).call(SystemRegistry.get(address(this)), callData);
   }
 
   function secondaryCall() public context returns (TransientContext memory, TransientContext memory) {
-    _contextGuard();
-    // Class setting included to prevent this from being a view call, so that it can be included in the transient storage context tracking
-    Id classId = IdLib.encode(ENTITY_CLASS, bytes30("TEST_CLASS"));
-    Classes.set(classId, true, new bytes32[](0), new bytes32[](0));
+    // transient storage setting to ensure this is not a static call
+    uint256 maxSlot = type(uint256).max;
+    assembly {
+      tstore(maxSlot, 0)
+    }
 
     (ResourceId systemId1, bytes4 functionId1, address msgSender1, uint256 msgValue1) = IWorldWithContext(_world())
       .getWorldCallContext(1);
@@ -88,5 +121,31 @@ contract SystemMock is SmartObjectFramework {
     );
     if (!success) revertWithBytes(returnData);
     return returnData;
+  }
+
+  // enforceCallCount testing functions
+  function callToEnforceCallCount1() public {
+    IWorldKernel(_world()).call(
+      SystemRegistry.get(address(this)),
+      abi.encodePacked(this.callEnforceCallCount1.selector)
+    );
+  }
+
+  function callEnforceCallCount1() public enforceCallCount(1) returns (bool) {
+    // transient storage setting to ensure this is not a static call
+    uint256 maxSlot = type(uint256).max;
+    assembly {
+      tstore(maxSlot, 0)
+    }
+
+    return true;
+  }
+
+  function accessControlled(
+    Id classId,
+    ResourceId systemId,
+    bytes4 functionId
+  ) public enforceCallCount(1) access(classId) returns (ResourceId, bytes4) {
+    return (systemId, functionId);
   }
 }

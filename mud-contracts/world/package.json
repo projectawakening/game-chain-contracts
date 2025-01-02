@@ -1,6 +1,6 @@
 {
   "name": "@eveworld/world",
-  "version": "0.0.17",
+  "version": "0.0.19",
   "license": "MIT",
   "scripts": {
     "build": "pnpm run build:mud && pnpm run build:abi && pnpm run build:abi-ts",
@@ -25,7 +25,7 @@
     "access-config:erc-721-puppet:devnet": "source ./.env.devnet && PRIVATE_KEY=$PRIVATE_KEY && RPC_URL=$RPC_URL && CHAIN_ID=$CHAIN_ID && WORLD_ADDRESS=$WORLD_ADDRESS && forge script script/ERC721PuppetAccessConfig.s.sol:ERC721PuppetAccessConfig --private-key $PRIVATE_KEY --chain-id $CHAIN_ID --broadcast --rpc-url $RPC_URL --sig \"run(address)\" $WORLD_ADDRESS -vvv",
     "access-config:erc-721-puppet:testnet": "source ./.env.testnet && PRIVATE_KEY=$PRIVATE_KEY && RPC_URL=$RPC_URL && CHAIN_ID=$CHAIN_ID && WORLD_ADDRESS=$WORLD_ADDRESS && forge script script/ERC721PuppetAccessConfig.s.sol:ERC721PuppetAccessConfig --private-key $PRIVATE_KEY --chain-id $CHAIN_ID --broadcast --rpc-url $RPC_URL --sig \"run(address)\" $WORLD_ADDRESS -vvv",
     "access-config:inventory:local": "source ./.env && PRIVATE_KEY=$PRIVATE_KEY && RPC_URL=$RPC_URL && CHAIN_ID=$CHAIN_ID && WORLD_ADDRESS=$WORLD_ADDRESS && forge script script/InventoryAccessConfig.s.sol:InventoryAccessConfig --private-key $PRIVATE_KEY --chain-id $CHAIN_ID --broadcast --rpc-url $RPC_URL --sig \"run(address)\" $WORLD_ADDRESS -vvv",
-    "access-config:inventory:devent": "source ./.env.devnet && PRIVATE_KEY=$PRIVATE_KEY && RPC_URL=$RPC_URL && CHAIN_ID=$CHAIN_ID && WORLD_ADDRESS=$WORLD_ADDRESS && forge script script/InventoryAccessConfig.s.sol:InventoryAccessConfig --private-key $PRIVATE_KEY --chain-id $CHAIN_ID --broadcast --rpc-url $RPC_URL --sig \"run(address)\" $WORLD_ADDRESS -vvv",
+    "access-config:inventory:devnet": "source ./.env.devnet && PRIVATE_KEY=$PRIVATE_KEY && RPC_URL=$RPC_URL && CHAIN_ID=$CHAIN_ID && WORLD_ADDRESS=$WORLD_ADDRESS && forge script script/InventoryAccessConfig.s.sol:InventoryAccessConfig --private-key $PRIVATE_KEY --chain-id $CHAIN_ID --broadcast --rpc-url $RPC_URL --sig \"run(address)\" $WORLD_ADDRESS -vvv",
     "access-config:inventory:testnet": "source ./.env.testnet && PRIVATE_KEY=$PRIVATE_KEY && RPC_URL=$RPC_URL && CHAIN_ID=$CHAIN_ID && WORLD_ADDRESS=$WORLD_ADDRESS && forge script script/InventoryAccessConfig.s.sol:InventoryAccessConfig --private-key $PRIVATE_KEY --chain-id $CHAIN_ID --broadcast --rpc-url $RPC_URL --sig \"run(address)\" $WORLD_ADDRESS -vvv",
     "access-config:kill-mail:local": "source ./.env && PRIVATE_KEY=$PRIVATE_KEY && RPC_URL=$RPC_URL && CHAIN_ID=$CHAIN_ID && WORLD_ADDRESS=$WORLD_ADDRESS && forge script script/KillMailAccessConfig.s.sol:KillMailAccessConfig --private-key $PRIVATE_KEY --chain-id $CHAIN_ID --broadcast --rpc-url $RPC_URL --sig \"run(address)\" $WORLD_ADDRESS -vvv",
     "access-config:kill-mail:devnet": "source ./.env.devnet && PRIVATE_KEY=$PRIVATE_KEY && RPC_URL=$RPC_URL && CHAIN_ID=$CHAIN_ID && WORLD_ADDRESS=$WORLD_ADDRESS && forge script script/KillMailAccessConfig.s.sol:KillMailAccessConfig --private-key $PRIVATE_KEY --chain-id $CHAIN_ID --broadcast --rpc-url $RPC_URL --sig \"run(address)\" $WORLD_ADDRESS -vvv",

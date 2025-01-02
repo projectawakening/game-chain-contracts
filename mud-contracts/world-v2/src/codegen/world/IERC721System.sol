@@ -9,35 +9,35 @@ pragma solidity >=0.8.24;
  * @dev This interface is automatically generated from the corresponding system contract. Do not edit manually.
  */
 interface IERC721System {
-  function eveworld__balanceOf(address owner) external view returns (uint256);
+  function balanceOf(address owner) external view returns (uint256);
 
-  function eveworld__ownerOf(uint256 tokenId) external view returns (address);
+  function ownerOf(uint256 tokenId) external view returns (address);
 
-  function eveworld__name() external view returns (string memory);
+  function name() external view returns (string memory);
 
-  function eveworld__symbol() external view returns (string memory);
+  function symbol() external view returns (string memory);
 
-  function eveworld__tokenURI(uint256 tokenId) external view returns (string memory);
+  function tokenURI(uint256 tokenId) external view returns (string memory);
 
-  function eveworld__approve(address to, uint256 tokenId) external;
+  function approve(address to, uint256 tokenId) external;
 
-  function eveworld__getApproved(uint256 tokenId) external view returns (address);
+  function getApproved(uint256 tokenId) external view returns (address);
 
-  function eveworld__setApprovalForAll(address operator, bool approved) external;
+  function setApprovalForAll(address operator, bool approved) external;
 
-  function eveworld__isApprovedForAll(address owner, address operator) external view returns (bool);
+  function isApprovedForAll(address owner, address operator) external view returns (bool);
 
-  function eveworld__transferFrom(address from, address to, uint256 tokenId) external;
+  function transferFrom(address from, address to, uint256 tokenId) external;
 
-  function eveworld__safeTransferFrom(address from, address to, uint256 tokenId) external;
+  function safeTransferFrom(address from, address to, uint256 tokenId) external;
 
-  function eveworld__safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) external;
+  function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) external;
 
-  function eveworld__mint(address to, uint256 tokenId) external;
+  function mint(address to, uint256 tokenId) external;
 
-  function eveworld__safeMint(address to, uint256 tokenId) external;
+  function safeMint(address to, uint256 tokenId) external;
 
-  function eveworld__safeMint(address to, uint256 tokenId, bytes memory data) external;
+  function safeMint(address to, uint256 tokenId, bytes memory data) external;
 
-  function eveworld__burn(uint256 tokenId) external;
+  function burn(uint256 tokenId) external;
 }

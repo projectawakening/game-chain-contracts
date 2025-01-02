@@ -7,10 +7,11 @@ The Smart Object Framework (SOF) is a comprehensive abstraction layer built on t
 
 ### Design Goals
 
-- Call context variable tracking across the entire execution call stack for the lifetime of a transaction
+- Expose call context variable tracking across the entire execution call stack for the lifetime of a transaction
 - Structured on-chain entity management through Classes and Objects
 - Enabling complex extensible and composable entity interactions through a flexible system association model
-- Defining clear object functionality boundaries and expected behavior through system association enforcement
+- Defining clear object functionality boundaries and expected behavior through system association scoping and enforcement
+- Define granular, flexible, and clear access boundaries through role management and access control configurations
 
 ### Core Components
 
@@ -28,8 +29,14 @@ The Smart Object Framework (SOF) is a comprehensive abstraction layer built on t
 - System Tags create explicit access relationships between systems, Classes and Objects
 
 #### Entity System Scoping
+
 - Enforces System-to-Entity relationships
 - Validates Entity centric execution boundaries
+
+#### Entity Based Access Control
+
+- Configure and enforce Class or Object level access control
+- Provide robust and flexible environment for full access case coverage
 
 ## Execution Context
 
@@ -54,7 +61,7 @@ Within the World's transient storage a call stack of ordered world calls is buil
 
 To access the call stack depth, there is an exposed function on the World contract for fetching the current call stack depth count:
 
-```
+```solidity
 function getWorldCallCount() public view returns (uint256)
 ```
 
@@ -67,13 +74,13 @@ For each World call in the call stack the following context values are tracked:
 
 These values can be retrieved for the **current** call by calling the following getter on the World contract:
 
-```
+```solidity
 function getWorldCallContext() public view returns (ResourceId, bytes4, address, uint256)
 ``` 
 
 Or can be fetched for **previous** calls in the call stack by using:
 
-```
+```solidity
 function getWorldCallContext(uint256 callCount) public view returns (ResourceId, bytes4, address, uint256)
 ```
 
@@ -91,7 +98,7 @@ The `context` modifier ensures the following:
 
 ##### Example `SmartObjectFramework` system integration with the `context` modifier and Execution Context getter usage -
 
-```
+```solidity
 contract MySystem is SmartObjectFramework {
 
 	IWorldWithContext world = IWorldWithContext.(_world());
@@ -136,7 +143,7 @@ In conjunction to system-to-class tagging, the `scope` modifier implements a pow
 This scoping model provides a robust and efficient way to manage system permissions (with regards to entities) and enables functional composability across Classes and Objects while maintaining clear relationships and inheritance patterns.
 
 
-![image info](class_object_system.jpg)
+![Class Object Diagram](class_object_system.jpg)
 
 ### Entity Types
 
@@ -195,7 +202,7 @@ This scoping model provides a robust and efficient way to manage system permissi
 		- Provides efficient system permission management at the Class level
 		- Class owners control the system scope for all Objects of that Class
 
-![image info](entity_scope_enforcement.jpg)
+![Scope Enforcement Diagram](entity_scope_enforcement.jpg)
 
 ### Usage
 
@@ -203,7 +210,7 @@ The following are example code snippets to use the various Entity, Tag, and Scop
 
 ##### Creating a Class
 
-```
+```solidity
 // Set the basic World call interface
 IWorldKernel world = IWorldKernel(worldAddress);
 StoreSwitch.setStoreAddress(worldAddress); // required for IdLib usage
@@ -227,7 +234,7 @@ world.call(
 
 ##### Ad hoc Class Tag Management
 
-```
+```solidity
 // Set the basic World call interface
 IWorldKernel world = IWorldKernel(worldAddress);
 StoreSwitch.setStoreAddress(worldAddress); // required for IdLib usage
@@ -264,7 +271,7 @@ world.call(
 
 ##### Instantiating an Object from a Class
 
-```
+```solidity
 // Set the basic World call interface
 IWorldKernel world = IWorldKernel(worldAddress);
 StoreSwitch.setStoreAddress(worldAddress); // required for IdLib usage
@@ -285,7 +292,7 @@ world.call(
 
 ##### Integrate `scope` modifier
 
-```
+```solidity
 contract MySystem is SmartObjectFramework {
     // Enforces that the current system must be tagged to entity
     function operateOnEntity(Id entityId) public context scope(entityId) {
@@ -300,3 +307,219 @@ contract MySystem is SmartObjectFramework {
 - [EntitySystem.sol](src/namespaces/evefrontier/systems/entity-system/EntitySystem.sol) - Exposes Class and Object management functionality
 - [TagSystem.sol](src/namespaces/evefrontier/systems/tag-system/TagSystem.sol) - Exposes functionality for adding/removing system-to-class associations via System Tags
 - [SmartObjectFramework.sol](src/inherit/SmartObjectFramework.sol) - Base inheritable contract which extends the MUD `System.sol` contract with the `scope` modifier for  associated system calling enforcement
+
+## Role Management
+
+The Role Management system provides hierarchical role-based access control through the [RoleManagementSystem.sol](src/namespaces/evefrontier/systems/role-management-system/RoleManagementSystem.sol) contract. It enables granular permission management for Classes and Objects through role membership and administration.
+
+**NOTE:** the `RoleAccessManagement` functionality is a standalone MUD System which can be used for other on-chain role/membership patterns (for example, it could be used for EVE Frontier Tribe membership tracking, DAO role management, and many other use cases). However, we are using it in conjunction with the `access` modifier and the `AccessConfigSystem` logic, to manage access control roles.
+
+### Key Features
+
+#### Role Creation and Administration
+
+- Roles can be created with designated admin roles
+- Self-administered roles (where role = admin) are supported
+- Role creators automatically become members of self-administered roles
+- Only admin role members can manage other roles
+
+#### Role Membership Management
+
+- Grant role membership to accounts
+- Revoke role membership from accounts 
+- Users can renounce their own role membership
+
+
+### How Role Management Works
+
+1. Role Creation
+   - Roles are created with an assigned admin role
+   - Admin roles must exist before being assigned (unless self-administered)
+   - When self-administered roles are created the calling account is automatically granted membership to the role
+   
+2. Role Administration
+   - Only admin role members can:
+     - Grant role memberships to the administered role
+     - Revoke role membership from the administered role
+     - Transfer role administration to another admin role
+   - However, at any time a role member can renounce their own role
+
+![Role Management Diagram 1](role_management_diagram_1.jpg)
+
+![Role Management Diagram 2](role_management_diagram_2.jpg)
+
+### Usage
+
+##### Creating a Role
+
+```solidity
+// Create a self-administered role (role is its own admin)
+world.call( // caller is auto-added as a member of the role
+    roleManagementSystemId,
+    abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole))
+);
+
+// Create a role administered by another role
+world.call( // caller MUST be a member of adminRole
+    roleManagementSystemId,
+    abi.encodeCall(IRoleManagementSystem.createRole, (newRole, adminRole))
+);
+```
+
+##### Managing Role Membership
+
+```solidity
+// Grant role to account
+world.call( // caller must be a member of admin
+    roleManagementSystemId,
+    abi.encodeCall(IRoleManagementSystem.grantRole, (role, account))
+);
+
+// Revoke role from account
+world.call( // caller must be a member of admin
+    roleManagementSystemId,
+    abi.encodeCall(IRoleManagementSystem.revokeRole, (role, account))
+);
+
+// Account renouncing their own role
+world.call( // caller address must match callerConfirmation
+    roleManagementSystemId,
+    abi.encodeCall(IRoleManagementSystem.renounceRole, (role, callerConfirmation))
+);
+```
+
+##### Managing Admin Transfer
+
+```solidity
+// Transfer admin to new admin role
+world.call( // caller must be a member of the current admin role
+    roleManagementSystemId,
+    abi.encodeCall(IRoleManagementSystem.transferRoleAdmin, (role, newAdminRole))
+);
+```
+
+## Access Rule Enactment & Configuration
+
+The Access Configuration system provides granular access control configuration through [AccessConfigSystem.sol](src/namespaces/evefrontier/systems/access-config-system/AccessConfigSystem.sol). It enables MUD System namespace owners to define and enforce access control logic for any World registered MUD System and function. 
+
+Access configuration is only triggered and enforced if the **target** (the System/function being accessed) implements the `access` modifier.
+
+If the `access` modifier is included in a function's implementation, then the `SmartObjctFramework` will check to see if there is any access logic configured for that target and if the access enforcement toggle is switched on. 
+
+Only when the above three conditions are satified will the access logic for a function call be triggered.
+
+### Key Features
+
+#### Dynamic Access Control
+
+- **Namespace-owner controlled configuration** - System namespace-owners are the only ones allowed to configure access rules for each System
+- **Configure access logic per system function** - provides fine grained access control for each call path in a World
+- **Enable/disable access enforcement at runtime** - live access enforcement toggling (turn access on/off at any time)
+- **Flexible System-level access management** - the abitlity to map **any** access system function to **any** target system function
+
+#### Access Logic Flexibility
+- Support for complex access rule patterns with the following available data:
+   - **Entity level access rule execution** - by passing the `entityId` (Class or Object) to the `access` modifier, builders can implement access rules for a specific Class of objects, or individual Objects themselves without having to deploy new sets of contracts
+	- **Execution Context values** - a builder can use the execution context call stack values to decide exactly which callers and which call paths are allowed for a target. The following is available for any call depth:
+		-  `systemId`,
+		-  `functionId`,
+		-  `msg.sender`
+		-  `msg.value`
+	- **Function Parameters** - the target function parameter `calldata` is avaiable, allowing for custom usage in access rule building (after `abi.decoding`the parameter values)
+
+With the above available data, complex and bespoke access rules can be built for nearly any consideration. 
+
+**NOTE:** as logic patterns emerge in the development space, builders can easily point to other pre-existing access logic deployments for thier own configurations, minimizing the costs of access logic managment when possible.
+
+### How Access Configuration Works
+
+1. Implementing the `access` modifier on the target function:
+  - the `access` modifier accepts an `entityId` (can be a `classId`, `objectId`, or `Id.wrap(bytes32(0))`
+  - `classId` to be used for Class level access rules. e.g., when a Class "owner" (or similalry approved account) should be checked for access, or when a specific set of System addresses are allowed for Class level access (beyond the normal `scope` rules)
+  - `objectId` to be used for Object level access rules (or rules that are set for the parent Class of the Object). e.g., when an Object "owner" (or similalry approved account) should be checked for access, or Object specific System access (beyond the normal `scope` rules) Or in cases where access needs to be checked against th Object's parent Class.
+  - `Id.wrap(bytes32(0))` to be used when Class/Object considerations are not relevant. This kind of configuration treats the `access` modifier as a "normal" access rule. e.g. when there is no `objectId`/`classId` in the target function call, or when you want access rules to trigger uniformly regardless of the Object/Class involved.
+
+2. Access Rule Building
+
+  - Access rules are built and deployed in seprate MUD Systems.
+  - Access rule functions can ONLY be implemented as `view`/`pure` (staticcall) functions.
+  - Access rule functions must be `public` and accept the following parameters:
+  - `Id entityId` - the `entityId` passed into the `access` modifier from the target function call
+  - `bytes memory targetCallData` - the `calldata` containing the parameter values of the target function call
+  - Access rule functions MUST NOT return any values and SHOULD revert when an access rule fails.
+
+3. Access Configuration/Enforcement
+ - Target system (the System to enforce access upon) must be registered in the MUD World
+ - Access system (the System housing the access logic itself) must be registered in the MUD World
+ - Only target namespace owners can configure access.enforcement for thier Systems/functions
+ - Access configuration simply maps the target function to an access function that is to be called when access enforcement is enabled
+ - Access Enforcement toggles the access enforcement flag on/off to set the access rule in an active state (or not)
+
+### Usage
+
+##### Adding the `access` modifier to a function
+
+```solidity
+contract MySystem {
+  function myFunction(Id objectId, uint256 param2) access(objectId) public {
+    // do object access restricted stuff here
+    MyObjectTable.setParam2(objectId, param2);
+  }
+}
+```
+
+##### A simple access rule implementation
+
+```solidity
+contract MyAccessSystem {
+	function myAccessFunction(Id objectId, bytes memory myFunctionParamData) public view {
+		if(objectId != ERC721.owner(objectId) {
+			revert MyAccess_NotTokenOwner();
+		}
+		(,uint256 param2) = abi.decode(myFunctionParamData, (Id, uint256));
+		if(param2 != 2) {
+			revert MyAccess_Param2RequirementNotMet();
+		}
+	}
+}
+```
+
+##### Configuring Access Control
+
+```solidity
+// Configure access for a system function (configuring always re-sets the enforcement flag to false)
+world.call( // caller must be the namespace-owner of MySystem's namespace
+    accessConfigSystemId,
+    abi.encodeCall(
+        IAccessConfigSystem.configureAccess,
+        (
+            mySystemId,
+            IMySystem.myFunction.selector,
+            myAccessSystemId,
+            IMyAccessSystem.myAccessFunction.selector
+        )
+    )
+);
+```
+
+##### Managing Access Enforcement
+
+```solidity
+// Enable access enforcement
+world.call( // caller must be the namespace-owner of MySystem's namespace
+    accessConfigSystemId,
+    abi.encodeCall(
+        IAccessConfigSystem.setAccessEnforcement,
+        (mySystemId, IMySystem.myFunction.selector, true)
+    )
+);
+
+// Disable access enforcement
+world.call( // caller must be the namespace-owner of MySystem's namespace
+    accessConfigSystemId,
+    abi.encodeCall(
+        IAccessConfigSystem.setAccessEnforcement,
+        (mySystemId, IMySystem.myFunction.selector, false)
+    )
+);
+```

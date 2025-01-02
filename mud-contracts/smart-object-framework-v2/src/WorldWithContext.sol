@@ -28,6 +28,8 @@ import { IWorldEvents } from "@latticexyz/world/src/IWorldEvents.sol";
 import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/FunctionSelectors.sol";
 import { Balances } from "@latticexyz/world/src/codegen/tables/Balances.sol";
 
+import { StaticSystemCall } from "./StaticSystemCall.sol";
+
 /**
  * @title World Contract
  * @author MUD (https://mud.dev) by Lattice (https://lattice.xyz)
@@ -429,6 +431,13 @@ contract WorldWithContext is StoreKernel, IWorldKernel {
     revert World_DelegationNotFound(delegator, msg.sender);
   }
 
+  function callStatic(
+    ResourceId systemId,
+    bytes memory callData
+  ) external view virtual prohibitDirectCallback returns (bytes memory) {
+    return StaticSystemCall.staticCallOrRevert(msg.sender, systemId, callData);
+  }
+
   /**
    * @notice Used in conjunction with the try/catch pattern to test if the current call is staticcall
    * @dev Attempts to write to max uint256 slot in transient storage to verify if the current call is staticcall
@@ -436,7 +445,7 @@ contract WorldWithContext is StoreKernel, IWorldKernel {
   function staticCallCheck() external {
     uint256 maxSlot = type(uint256).max;
     assembly {
-      tstore(maxSlot, 1)
+      tstore(maxSlot, 0)
     }
   }
 
