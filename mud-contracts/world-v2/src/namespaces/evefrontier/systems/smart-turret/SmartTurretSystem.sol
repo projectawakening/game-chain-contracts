@@ -19,8 +19,6 @@ import { EveSystem } from "../EveSystem.sol";
 import { CreateAndAnchorDeployableParams } from "../deployable/types.sol";
 import { AggressionParams } from "./types.sol";
 
-import "forge-std/console.sol";
-
 contract SmartTurretSystem is EveSystem {
   error SmartTurret_NotConfigured(uint256 smartObjectId);
 
