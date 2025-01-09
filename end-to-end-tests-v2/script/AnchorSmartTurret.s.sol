@@ -19,6 +19,7 @@ import { smartTurretSystem } from "@eveworld/world-v2/src/namespaces/evefrontier
 import { CreateAndAnchorDeployableParams } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/types.sol";
 import { SMART_TURRET } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/constants.sol";
 import { LocationData } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/Location.sol";
+
 contract AnchorSmartTurret is Script {
   function run(address worldAddress) public {
     StoreSwitch.setStoreAddress(worldAddress);

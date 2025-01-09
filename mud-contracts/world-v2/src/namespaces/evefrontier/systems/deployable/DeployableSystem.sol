@@ -56,11 +56,7 @@ contract DeployableSystem is EveSystem {
    * @param params struct containing all parameters for creating and anchoring a deployable
    */
   function createAndAnchorDeployable(CreateAndAnchorDeployableParams memory params) public {
-    smartAssemblySystem.createSmartAssembly(
-      params.smartObjectId,
-      params.smartAssemblyType,
-      params.entityRecordData
-    );
+    smartAssemblySystem.createSmartAssembly(params.smartObjectId, params.smartAssemblyType, params.entityRecordData);
 
     registerDeployable(
       params.smartObjectId,

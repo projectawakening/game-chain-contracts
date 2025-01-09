@@ -30,6 +30,7 @@ import { smartGateSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/c
 import { deployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
 import { SMART_GATE } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/constants.sol";
 import { LocationData } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/Location.sol";
+
 contract ConfigureSmartGate is Script {
   using WorldResourceIdInstance for ResourceId;
 

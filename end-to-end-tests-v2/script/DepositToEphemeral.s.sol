@@ -17,6 +17,7 @@ import { SmartCharacterUtils } from "@eveworld/world-v2/src/namespaces/evefronti
 import { fuelSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
 import { smartCharacterSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
 import { ephemeralInventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/EphemeralInventorySystemLib.sol";
+
 contract DepositToEphemeral is Script {
   function run(address worldAddress) public {
     StoreSwitch.setStoreAddress(worldAddress);

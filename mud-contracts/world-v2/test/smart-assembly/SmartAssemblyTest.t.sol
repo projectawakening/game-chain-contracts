@@ -40,11 +40,7 @@ contract SmartAssemblyTest is MudTest {
 
     EntityRecordData memory entityRecordInput = EntityRecordData({ typeId: typeId, itemId: itemId, volume: volume });
 
-    smartAssemblySystem.createSmartAssembly(
-      smartObjectId,
-      smartAssemblyType,
-      entityRecordInput
-    );
+    smartAssemblySystem.createSmartAssembly(smartObjectId, smartAssemblyType, entityRecordInput);
 
     EntityRecordTableData memory entityRecord = EntityRecord.get(smartObjectId);
 
@@ -67,11 +63,7 @@ contract SmartAssemblyTest is MudTest {
 
     EntityRecordData memory entityRecordInput = EntityRecordData({ typeId: typeId, itemId: itemId, volume: volume });
 
-    smartAssemblySystem.createSmartAssembly(
-      smartObjectId,
-      smartAssemblyType,
-      entityRecordInput
-    );
+    smartAssemblySystem.createSmartAssembly(smartObjectId, smartAssemblyType, entityRecordInput);
 
     smartAssemblyType = "SSU";
 
@@ -96,11 +88,7 @@ contract SmartAssemblyTest is MudTest {
       abi.encodeWithSelector(SmartAssemblySystemLib.SmartAssemblyTypeCannotBeEmpty.selector, smartObjectId)
     );
 
-    smartAssemblySystem.createSmartAssembly(
-      smartObjectId,
-      smartAssemblyType,
-      entityRecordInput
-    );
+    smartAssemblySystem.createSmartAssembly(smartObjectId, smartAssemblyType, entityRecordInput);
   }
 
   function testRevertAssemblyDoesNotExist(

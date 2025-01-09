@@ -31,10 +31,7 @@ contract StaticDataTest is MudTest {
   function testSaveLocation(uint256 smartObjectId, uint256 solarSystemId, uint256 x, uint256 y, uint256 z) public {
     vm.assume(smartObjectId != 0);
 
-    locationSystem.saveLocation(
-      smartObjectId,
-      LocationData({ solarSystemId: solarSystemId, x: x, y: y, z: z })
-    );
+    locationSystem.saveLocation(smartObjectId, LocationData({ solarSystemId: solarSystemId, x: x, y: y, z: z }));
 
     LocationData memory location = Location.get(smartObjectId);
 
@@ -47,10 +44,7 @@ contract StaticDataTest is MudTest {
   function testGetLocation(uint256 smartObjectId, uint256 solarSystemId, uint256 x, uint256 y, uint256 z) public {
     vm.assume(smartObjectId != 0);
 
-    locationSystem.saveLocation(
-      smartObjectId,
-      LocationData({ solarSystemId: solarSystemId, x: x, y: y, z: z })
-    );
+    locationSystem.saveLocation(smartObjectId, LocationData({ solarSystemId: solarSystemId, x: x, y: y, z: z }));
 
     LocationData memory location = Location.get(smartObjectId);
 
