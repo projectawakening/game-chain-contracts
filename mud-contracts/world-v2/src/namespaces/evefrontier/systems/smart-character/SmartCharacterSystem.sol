@@ -14,6 +14,7 @@ import { IERC721Mintable } from "../eve-erc721-puppet/IERC721Mintable.sol";
 import { EveSystem } from "../EveSystem.sol";
 
 import { EntityRecordUtils } from "../entity-record/EntityRecordUtils.sol";
+import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.sol";
 
 contract SmartCharacterSystem is EveSystem {
   using EntityRecordUtils for bytes14;
@@ -58,15 +59,8 @@ contract SmartCharacterSystem is EveSystem {
     CharactersByAddress.set(characterAddress, characterId);
 
     //Save the entity record in EntityRecord Module
-    ResourceId entityRecordSystemId = EntityRecordUtils.entityRecordSystemId();
-    world().call(
-      entityRecordSystemId,
-      abi.encodeCall(EntityRecordSystem.createEntityRecord, (characterId, entityRecord))
-    );
-    world().call(
-      entityRecordSystemId,
-      abi.encodeCall(EntityRecordSystem.createEntityRecordMetadata, (characterId, entityRecordMetadata))
-    );
+    entityRecordSystem.createEntityRecord(characterId, entityRecord);
+    entityRecordSystem.createEntityRecordMetadata(characterId, entityRecordMetadata);
 
     //Mint a new character token
     IERC721Mintable(CharacterToken.get()).mint(characterAddress, characterId);

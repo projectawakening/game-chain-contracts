@@ -10,6 +10,8 @@ import { EntityRecordData, EntityMetadata } from "@eveworld/world-v2/src/namespa
 import { SmartCharacterSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
 import { SmartCharacterUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
 
+import { smartCharacterSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
+
 contract CreateSmartCharacter is Script {
   function run(address worldAddress) public {
     StoreSwitch.setStoreAddress(worldAddress);
@@ -30,14 +32,7 @@ contract CreateSmartCharacter is Script {
       description: "description"
     });
 
-    ResourceId systemId = SmartCharacterUtils.smartCharacterSystemId();
-    world.call(
-      systemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (characterId, characterAddress, tribeId, entityRecord, entityRecordMetadata)
-      )
-    );
+    smartCharacterSystem.createCharacter(characterId, characterAddress, tribeId, entityRecord, entityRecordMetadata);
 
     vm.stopBroadcast();
   }

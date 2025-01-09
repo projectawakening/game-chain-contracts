@@ -9,6 +9,8 @@ import { InventoryItem } from "@eveworld/world-v2/src/namespaces/evefrontier/sys
 import { InventoryUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
 import { InventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/InventorySystem.sol";
 
+import { inventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/InventorySystemLib.sol";
+
 contract DepositToInventory is Script {
   function run(address worldAddress) public {
     StoreSwitch.setStoreAddress(worldAddress);
@@ -41,10 +43,7 @@ contract DepositToInventory is Script {
       quantity: 300
     });
 
-    world.call(
-      inventorySystemId,
-      abi.encodeCall(InventorySystem.createAndDepositItemsToInventory, (smartObjectId, items))
-    );
+    inventorySystem.createAndDepositItemsToInventory(smartObjectId, items);
 
     vm.stopBroadcast();
   }

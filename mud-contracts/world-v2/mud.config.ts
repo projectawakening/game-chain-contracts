@@ -8,6 +8,9 @@ export default defineWorld({
     State: ["NULL", "UNANCHORED", "ANCHORED", "ONLINE", "DESTROYED"],
     KillMailLossType: ["SHIP", "POD"],
   },
+  codegen: {
+    generateSystemLibraries: true,
+  },
   namespaces: {
     evefrontier: {
       tables: {

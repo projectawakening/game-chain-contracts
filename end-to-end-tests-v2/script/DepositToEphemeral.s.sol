@@ -14,6 +14,10 @@ import { EntityRecordData, EntityMetadata } from "@eveworld/world-v2/src/namespa
 import { SmartCharacterSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
 import { SmartCharacterUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
 
+import { fuelSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
+import { smartCharacterSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
+import { ephemeralInventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/EphemeralInventorySystemLib.sol";
+
 contract DepositToEphemeral is Script {
   function run(address worldAddress) public {
     StoreSwitch.setStoreAddress(worldAddress);
@@ -29,8 +33,6 @@ contract DepositToEphemeral is Script {
     // Start broadcasting transactions from the deployer account
     vm.startBroadcast(deployerPrivateKey);
     IBaseWorld world = IBaseWorld(worldAddress);
-    ResourceId ephemeralSystemId = InventoryUtils.ephemeralInventorySystemId();
-    ResourceId characterSystemId = SmartCharacterUtils.smartCharacterSystemId();
 
     uint256 tribeId = 100;
     EntityRecordData memory entityRecord = EntityRecordData({ typeId: 123, itemId: 234, volume: 100 });
@@ -41,21 +43,8 @@ contract DepositToEphemeral is Script {
       description: "description"
     });
 
-    world.call(
-      characterSystemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (567, ephemeralInvOwner1, tribeId, entityRecord, entityRecordMetadata)
-      )
-    );
-
-    world.call(
-      characterSystemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (897, ephemeralInvOwner2, tribeId, entityRecord, entityRecordMetadata)
-      )
-    );
+    smartCharacterSystem.createCharacter(567, ephemeralInvOwner1, tribeId, entityRecord, entityRecordMetadata);
+    smartCharacterSystem.createCharacter(897, ephemeralInvOwner2, tribeId, entityRecord, entityRecordMetadata);
 
     uint256 smartObjectId = uint256(keccak256(abi.encode("item:<tenant_id>-<db_id>-00001")));
     InventoryItem[] memory items = new InventoryItem[](2);
@@ -77,13 +66,7 @@ contract DepositToEphemeral is Script {
       quantity: 10
     });
 
-    world.call(
-      ephemeralSystemId,
-      abi.encodeCall(
-        EphemeralInventorySystem.createAndDepositItemsToEphemeralInventory,
-        (smartObjectId, ephemeralInvOwner1, items)
-      )
-    );
+    ephemeralInventorySystem.createAndDepositItemsToEphemeralInventory(smartObjectId, ephemeralInvOwner1, items);
 
     items = new InventoryItem[](1);
     items[0] = InventoryItem({
@@ -95,13 +78,7 @@ contract DepositToEphemeral is Script {
       quantity: 300
     });
 
-    world.call(
-      ephemeralSystemId,
-      abi.encodeCall(
-        EphemeralInventorySystem.createAndDepositItemsToEphemeralInventory,
-        (smartObjectId, ephemeralInvOwner2, items)
-      )
-    );
+    ephemeralInventorySystem.createAndDepositItemsToEphemeralInventory(smartObjectId, ephemeralInvOwner2, items);
 
     vm.stopBroadcast();
   }
