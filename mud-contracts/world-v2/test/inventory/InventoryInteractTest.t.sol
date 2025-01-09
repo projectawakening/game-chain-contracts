@@ -26,6 +26,11 @@ import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deplo
 import { InventoryInteractSystem } from "../../src/namespaces/evefrontier/systems/inventory/InventoryInteractSystem.sol";
 import { TransferItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
 import { VendingMachineMock } from "./VendingMachineMock.sol";
+import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
+import { DeployableSystemLib, deployableSystem } from "../../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
+import { InventorySystemLib, inventorySystem } from "../../src/namespaces/evefrontier/codegen/systems/InventorySystemLib.sol";
+import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../src/namespaces/evefrontier/codegen/systems/EphemeralInventorySystemLib.sol";
+import { InventoryInteractSystemLib, inventoryInteractSystem } from "../../src/namespaces/evefrontier/codegen/systems/InventoryInteractSystemLib.sol";
 
 contract InventoryInteractTest is MudTest {
   IBaseWorld world;
@@ -62,12 +67,6 @@ contract InventoryInteractTest is MudTest {
   address alice = vm.addr(alicePK); // SSU owner
   address bob = vm.addr(bobPK); // EphInv owner
 
-  ResourceId smartCharacterSystemId = SmartCharacterUtils.smartCharacterSystemId();
-  ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
-  ResourceId inventorySystemId = InventoryUtils.inventorySystemId();
-  ResourceId ephemeralInventorySystemId = InventoryUtils.ephemeralInventorySystemId();
-  ResourceId invetoryInteractSystemId = InventoryUtils.inventoryInteractSystemId();
-
   function setUp() public override {
     vm.startPrank(deployer);
 
@@ -97,24 +96,12 @@ contract InventoryInteractTest is MudTest {
     });
     tokenCID = "Qm1234abcdxxxx";
 
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.globalResume, ()));
+    deployableSystem.globalResume();
 
     // create SSU Inventory Owner character
-    world.call(
-      smartCharacterSystemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (characterId, alice, tribeId, charEntityRecordData, characterMetadata)
-      )
-    );
+    smartCharacterSystem.createCharacter(characterId, alice, tribeId, charEntityRecordData, characterMetadata);
     // create ephemeral Inventory Owner character
-    world.call(
-      smartCharacterSystemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (ephCharacterId, bob, tribeId, charEntityRecordData, characterMetadata)
-      )
-    );
+    smartCharacterSystem.createCharacter(ephCharacterId, bob, tribeId, charEntityRecordData, characterMetadata);
 
     // Inventory variables
     EntityRecord.set(itemObjectId1, itemObjectId1, 1, 50, true);
@@ -130,12 +117,12 @@ contract InventoryInteractTest is MudTest {
     uint256 fuelConsumptionIntervalInSeconds = 1;
     uint256 fuelMaxCapacity = 10000;
 
-    world.call(
-      deployableSystemId,
-      abi.encodeCall(
-        DeployableSystem.registerDeployable,
-        (smartObjectId, smartObjectData, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity)
-      )
+    deployableSystem.registerDeployable(
+      smartObjectId,
+      smartObjectData,
+      fuelUnitVolume,
+      fuelConsumptionIntervalInSeconds,
+      fuelMaxCapacity
     );
     DeployableState.set(
       smartObjectId,
@@ -149,24 +136,12 @@ contract InventoryInteractTest is MudTest {
         updatedBlockTime: block.timestamp
       })
     );
-    world.call(
-      inventorySystemId,
-      abi.encodeCall(InventorySystem.setInventoryCapacity, (smartObjectId, storageCapacity))
-    );
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.setEphemeralInventoryCapacity, (smartObjectId, ephemeralStorageCapacity))
-    );
+    inventorySystem.setInventoryCapacity(smartObjectId, storageCapacity);
+    ephemeralInventorySystem.setEphemeralInventoryCapacity(smartObjectId, ephemeralStorageCapacity);
 
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.depositToInventory, (smartObjectId, invItems)));
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.depositToEphemeralInventory, (smartObjectId, bob, ephInvItems))
-    );
-    world.call(
-      ephemeralInventorySystemId,
-      abi.encodeCall(EphemeralInventorySystem.depositToEphemeralInventory, (smartObjectId, alice, ephInvItems))
-    );
+    inventorySystem.depositToInventory(smartObjectId, invItems);
+    ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, bob, ephInvItems);
+    ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, alice, ephInvItems);
 
     vm.stopPrank();
   }
@@ -185,11 +160,7 @@ contract InventoryInteractTest is MudTest {
     transferItems[0] = TransferItem(itemObjectId2, bob, quantity);
 
     vm.startPrank(bob);
-    world.call(
-      invetoryInteractSystemId,
-      abi.encodeCall(InventoryInteractSystem.ephemeralToInventoryTransfer, (smartObjectId, bob, transferItems))
-    );
-
+    inventoryInteractSystem.ephemeralToInventoryTransfer(smartObjectId, bob, transferItems);
     vm.stopPrank();
 
     storedInventoryItems = InventoryItemTable.get(smartObjectId, itemObjectId1);
@@ -206,7 +177,6 @@ contract InventoryInteractTest is MudTest {
     TransferItem[] memory transferItems = new TransferItem[](1);
     transferItems[0] = TransferItem(itemObjectId2, bob, quantity);
 
-    // account does not have ephInventory for this Smart Object (this contract address)
     vm.expectRevert(
       abi.encodeWithSelector(
         InventoryInteractSystem.Inventory_InvalidTransferItemQuantity.selector,
@@ -219,12 +189,8 @@ contract InventoryInteractTest is MudTest {
       )
     );
 
-    world.call(
-      invetoryInteractSystemId,
-      abi.encodeCall(InventoryInteractSystem.ephemeralToInventoryTransfer, (smartObjectId, bob, transferItems))
-    );
+    inventoryInteractSystem.ephemeralToInventoryTransfer(smartObjectId, bob, transferItems);
 
-    // acccount has ephInventory for this Smart Object (bob), but does not have enough items to transfer
     vm.expectRevert(
       abi.encodeWithSelector(
         InventoryInteractSystem.Inventory_InvalidTransferItemQuantity.selector,
@@ -236,10 +202,7 @@ contract InventoryInteractTest is MudTest {
         quantity
       )
     );
-    world.call(
-      invetoryInteractSystemId,
-      abi.encodeCall(InventoryInteractSystem.ephemeralToInventoryTransfer, (smartObjectId, bob, transferItems))
-    );
+    inventoryInteractSystem.ephemeralToInventoryTransfer(smartObjectId, bob, transferItems);
   }
 
   function testInventoryToEphemeralTransfer() public {
@@ -256,10 +219,7 @@ contract InventoryInteractTest is MudTest {
     transferItems[0] = TransferItem(itemObjectId1, alice, quantity);
     vm.startPrank(alice);
 
-    world.call(
-      invetoryInteractSystemId,
-      abi.encodeCall(InventoryInteractSystem.inventoryToEphemeralTransfer, (smartObjectId, bob, transferItems))
-    );
+    inventoryInteractSystem.inventoryToEphemeralTransfer(smartObjectId, bob, transferItems);
     vm.stopPrank();
 
     storedInventoryItems = InventoryItemTable.get(smartObjectId, itemObjectId1);

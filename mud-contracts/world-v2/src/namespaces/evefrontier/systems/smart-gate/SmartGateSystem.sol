@@ -16,6 +16,8 @@ import { WorldPosition } from "../location/types.sol";
 import { LocationData, Location } from "../../codegen/tables/Location.sol";
 import { SMART_GATE } from "../constants.sol";
 import { EveSystem } from "../EveSystem.sol";
+import { DeployableSystemLib, deployableSystem } from "../../codegen/systems/DeployableSystemLib.sol";
+import { CreateAndAnchorDeployableParams } from "../deployable/types.sol";
 
 contract SmartGateSystem is EveSystem {
   error SmartGate_UndefinedClassId();
@@ -25,59 +27,16 @@ contract SmartGateSystem is EveSystem {
   error SmartGate_NotWithtinRange(uint256 sourceGateId, uint256 destinationGateId);
   error SmartGate_SameSourceAndDestination(uint256 sourceGateId, uint256 destinationGateId);
 
-  ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
-  ResourceId fuelSystemId = FuelUtils.fuelSystemId();
-
   /**
-    * @notice Create and anchor a Smart Gate
-    * @param smartObjectId is smart object id of the Smart Gate
-    * @param entityRecordData is the entity record data of the Smart Gate
-    * @param smartObjectData is the metadata of the Smart Gate
-    * @param worldPosition is the x,y,z position of the Smart Gate in space
-    * @param fuelUnitVolume is the volume of fuel unit
-    * @param fuelConsumptionIntervalInSeconds is one unit of fuel consumption interval is consumed in how many seconds
-    // For example:
-    // OneFuelUnitConsumptionIntervalInSec = 1; // Consuming 1 unit of fuel every second.
-    // OneFuelUnitConsumptionIntervalInSec = 60; // Consuming 1 unit of fuel every minute.
-    // OneFuelUnitConsumptionIntervalInSec = 3600; // Consuming 1 unit of fuel every hour.
-    * @param fuelMaxCapacity is the maximum capacity of fuel
-    * @param maxDistance is the maximum distance between two gates
-    * TODO: make it accessible only by admin
+   * @notice Create and anchor a Smart Gate
+   * @param params CreateAndAnchorDeployableParams
+   * @param maxDistance is the maximum distance between two gates
+   * TODO: make it accessible only by admin
    */
-  function createAndAnchorSmartGate(
-    uint256 smartObjectId,
-    EntityRecordData memory entityRecordData,
-    SmartObjectData memory smartObjectData,
-    WorldPosition memory worldPosition,
-    uint256 fuelUnitVolume,
-    uint256 fuelConsumptionIntervalInSeconds,
-    uint256 fuelMaxCapacity,
-    uint256 maxDistance
-  ) public {
-    LocationData memory locationData = LocationData({
-      solarSystemId: worldPosition.solarSystemId,
-      x: worldPosition.position.x,
-      y: worldPosition.position.y,
-      z: worldPosition.position.z
-    });
-    world().call(
-      deployableSystemId,
-      abi.encodeCall(
-        DeployableSystem.createAndAnchorDeployable,
-        (
-          smartObjectId,
-          SMART_GATE,
-          entityRecordData,
-          smartObjectData,
-          fuelUnitVolume,
-          fuelConsumptionIntervalInSeconds,
-          fuelMaxCapacity,
-          locationData
-        )
-      )
-    );
-
-    SmartGateConfig.setMaxDistance(smartObjectId, maxDistance);
+  function createAndAnchorSmartGate(CreateAndAnchorDeployableParams memory params, uint256 maxDistance) public {
+    params.smartAssemblyType = SMART_GATE;
+    deployableSystem.createAndAnchorDeployable(params);
+    SmartGateConfig.setMaxDistance(params.smartObjectId, maxDistance);
   }
 
   /**

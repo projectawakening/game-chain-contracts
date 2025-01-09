@@ -2,21 +2,17 @@
 pragma solidity >=0.8.24;
 
 import "forge-std/Test.sol";
-import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 import { MudTest } from "@latticexyz/world/test/MudTest.t.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 import { World } from "@latticexyz/world/src/World.sol";
 
 import { EntityRecord, EntityRecordData as EntityRecordTableData } from "../../src/namespaces/evefrontier/codegen/tables/EntityRecord.sol";
-import { SmartAssembly } from "../../src/namespaces/evefrontier/codegen/index.sol";
+import { SmartAssembly } from "../../src/namespaces/evefrontier/codegen/tables/SmartAssembly.sol";
 import { EntityRecordData } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
-import { SmartAssemblyUtils } from "../../src/namespaces/evefrontier/systems/smart-assembly/SmartAssemblyUtils.sol";
-import { SmartAssemblySystem } from "../../src/namespaces/evefrontier/systems/smart-assembly/SmartAssemblySystem.sol";
+import { SmartAssemblySystemLib, smartAssemblySystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartAssemblySystemLib.sol";
 
 contract SmartAssemblyTest is MudTest {
   IBaseWorld world;
-
-  ResourceId systemId = SmartAssemblyUtils.smartAssemblySystemId();
 
   function setUp() public virtual override {
     super.setUp();
@@ -44,9 +40,10 @@ contract SmartAssemblyTest is MudTest {
 
     EntityRecordData memory entityRecordInput = EntityRecordData({ typeId: typeId, itemId: itemId, volume: volume });
 
-    world.call(
-      systemId,
-      abi.encodeCall(SmartAssemblySystem.createSmartAssembly, (smartObjectId, smartAssemblyType, entityRecordInput))
+    smartAssemblySystem.createSmartAssembly(
+      smartObjectId,
+      smartAssemblyType,
+      entityRecordInput
     );
 
     EntityRecordTableData memory entityRecord = EntityRecord.get(smartObjectId);
@@ -70,17 +67,15 @@ contract SmartAssemblyTest is MudTest {
 
     EntityRecordData memory entityRecordInput = EntityRecordData({ typeId: typeId, itemId: itemId, volume: volume });
 
-    world.call(
-      systemId,
-      abi.encodeCall(SmartAssemblySystem.createSmartAssembly, (smartObjectId, smartAssemblyType, entityRecordInput))
+    smartAssemblySystem.createSmartAssembly(
+      smartObjectId,
+      smartAssemblyType,
+      entityRecordInput
     );
 
     smartAssemblyType = "SSU";
 
-    world.call(
-      systemId,
-      abi.encodeCall(SmartAssemblySystem.updateSmartAssemblyType, (smartObjectId, smartAssemblyType))
-    );
+    smartAssemblySystem.updateSmartAssemblyType(smartObjectId, smartAssemblyType);
 
     assertEq("SSU", SmartAssembly.getSmartAssemblyType(smartObjectId));
   }
@@ -97,11 +92,14 @@ contract SmartAssemblyTest is MudTest {
 
     EntityRecordData memory entityRecordInput = EntityRecordData({ typeId: typeId, itemId: itemId, volume: volume });
 
-    vm.expectRevert(abi.encodeWithSelector(SmartAssemblySystem.SmartAssemblyTypeCannotBeEmpty.selector, smartObjectId));
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartAssemblySystemLib.SmartAssemblyTypeCannotBeEmpty.selector, smartObjectId)
+    );
 
-    world.call(
-      systemId,
-      abi.encodeCall(SmartAssemblySystem.createSmartAssembly, (smartObjectId, smartAssemblyType, entityRecordInput))
+    smartAssemblySystem.createSmartAssembly(
+      smartObjectId,
+      smartAssemblyType,
+      entityRecordInput
     );
   }
 
@@ -115,13 +113,8 @@ contract SmartAssemblyTest is MudTest {
     vm.assume(smartObjectId != 0);
     vm.assume((keccak256(abi.encodePacked(smartAssemblyType)) != keccak256(abi.encodePacked(""))));
 
-    EntityRecordData memory entityRecordInput = EntityRecordData({ typeId: typeId, itemId: itemId, volume: volume });
+    vm.expectRevert(abi.encodeWithSelector(SmartAssemblySystemLib.SmartAssemblyDoesNotExist.selector, smartObjectId));
 
-    vm.expectRevert(abi.encodeWithSelector(SmartAssemblySystem.SmartAssemblyDoesNotExist.selector, smartObjectId));
-
-    world.call(
-      systemId,
-      abi.encodeCall(SmartAssemblySystem.updateSmartAssemblyType, (smartObjectId, smartAssemblyType))
-    );
+    smartAssemblySystem.updateSmartAssemblyType(smartObjectId, smartAssemblyType);
   }
 }

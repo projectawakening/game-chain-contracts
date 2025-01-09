@@ -14,6 +14,11 @@ import { SmartTurretSystem } from "@eveworld/world-v2/src/namespaces/evefrontier
 import { SmartTurretUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-turret/SmartTurretUtils.sol";
 import { EntityRecordData, EntityMetadata } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/entity-record/types.sol";
 
+import { deployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
+import { smartTurretSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartTurretSystemLib.sol";
+import { CreateAndAnchorDeployableParams } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/types.sol";
+import { SMART_TURRET } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/constants.sol";
+import { LocationData } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/Location.sol";
 contract AnchorSmartTurret is Script {
   function run(address worldAddress) public {
     StoreSwitch.setStoreAddress(worldAddress);
@@ -30,22 +35,26 @@ contract AnchorSmartTurret is Script {
 
     // check global state and resume if needed
     if (GlobalDeployableState.getIsPaused() == false) {
-      world.call(deployableSystemId, abi.encodeCall(DeployableSystem.globalResume, ()));
+      deployableSystem.globalResume();
     }
 
     uint256 smartObjectId = uint256(keccak256(abi.encode("item:<tenant_id>-<db_id>-00002")));
     EntityRecordData memory entityRecord = EntityRecordData({ typeId: 123, itemId: 234, volume: 100 });
     SmartObjectData memory smartObjectData = SmartObjectData({ owner: player, tokenURI: "test" });
-    Coord memory position = Coord({ x: 1, y: 1, z: 1 });
-    WorldPosition memory worldPosition = WorldPosition({ solarSystemId: 1, position: position });
+    LocationData memory locationData = LocationData({ solarSystemId: 1, x: 1, y: 1, z: 1 });
 
-    world.call(
-      smartTurretSystemId,
-      abi.encodeCall(
-        SmartTurretSystem.createAndAnchorSmartTurret,
-        (smartObjectId, entityRecord, smartObjectData, worldPosition, 10, 3600, 1000000000)
-      )
-    );
+    CreateAndAnchorDeployableParams memory params = CreateAndAnchorDeployableParams({
+      smartObjectId: smartObjectId,
+      smartAssemblyType: SMART_TURRET,
+      entityRecordData: entityRecord,
+      smartObjectData: smartObjectData,
+      fuelUnitVolume: 10,
+      fuelConsumptionIntervalInSeconds: 3600,
+      fuelMaxCapacity: 1000000000,
+      locationData: locationData
+    });
+
+    smartTurretSystem.createAndAnchorSmartTurret(params);
 
     vm.stopBroadcast();
   }

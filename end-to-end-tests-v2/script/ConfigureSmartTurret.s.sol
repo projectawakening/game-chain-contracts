@@ -18,6 +18,10 @@ import { FuelSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/system
 import { FuelUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
 import { TargetPriority, Turret, SmartTurretTarget } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-turret/types.sol";
 
+import { deployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
+import { fuelSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
+import { smartTurretSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartTurretSystemLib.sol";
+
 contract ConfigureSmartTurret is Script {
   using WorldResourceIdInstance for ResourceId;
 
@@ -27,23 +31,19 @@ contract ConfigureSmartTurret is Script {
     uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
     address player = vm.addr(deployerPrivateKey);
 
-    ResourceId smartTurretSystemId = SmartTurretUtils.smartTurretSystemId();
-    ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
-    ResourceId fuelSystemId = FuelUtils.fuelSystemId();
-
     // Start broadcasting transactions from the deployer account
     vm.startBroadcast(deployerPrivateKey);
     IBaseWorld world = IBaseWorld(worldAddress);
 
     // check global state and resume if needed
     if (GlobalDeployableState.getIsPaused() == false) {
-      world.call(deployableSystemId, abi.encodeCall(DeployableSystem.globalResume, ()));
+      deployableSystem.globalResume();
     }
 
     uint256 smartObjectId = uint256(keccak256(abi.encode("item:<tenant_id>-<db_id>-00002")));
 
-    world.call(fuelSystemId, abi.encodeCall(FuelSystem.depositFuel, (smartObjectId, 100000)));
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOnline, (smartObjectId)));
+    fuelSystem.depositFuel(smartObjectId, 100000);
+    deployableSystem.bringOnline(smartObjectId);
 
     SmartTurretTestSystem smartTurretTestSystem = new SmartTurretTestSystem();
     ResourceId smartTurretTestSystemId = WorldResourceIdLib.encode({
@@ -61,10 +61,7 @@ contract ConfigureSmartTurret is Script {
       "inProximity(uint256,uint256,((uint256,uint256,uint256,uint256,uint256,uint256),uint256)[],(uint256,uint256,uint256),(uint256,uint256,uint256,uint256,uint256,uint256))"
     );
 
-    world.call(
-      smartTurretSystemId,
-      abi.encodeCall(SmartTurretSystem.configureSmartTurret, (smartObjectId, smartTurretTestSystemId))
-    );
+    smartTurretSystem.configureSmartTurret(smartObjectId, smartTurretTestSystemId);
 
     //Execute inProximity view function and see what is returns
     TargetPriority[] memory priorityQueue = new TargetPriority[](1);
@@ -81,14 +78,13 @@ contract ConfigureSmartTurret is Script {
     });
     priorityQueue[0] = TargetPriority({ target: turretTarget, weight: 100 });
 
-    bytes memory returnData = world.call(
-      smartTurretSystemId,
-      abi.encodeCall(
-        SmartTurretTestSystem.inProximity,
-        (smartObjectId, characterId, priorityQueue, turret, turretTarget)
-      )
+    TargetPriority[] memory returnTargetQueue = smartTurretTestSystem.inProximity(
+      smartObjectId,
+      characterId,
+      priorityQueue,
+      turret,
+      turretTarget
     );
-    TargetPriority[] memory returnTargetQueue = abi.decode(returnData, (TargetPriority[]));
 
     console.log(returnTargetQueue.length);
 

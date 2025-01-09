@@ -16,15 +16,14 @@ import { Location, LocationData } from "../../codegen/index.sol";
 import { IERC721Mintable } from "../eve-erc721-puppet/IERC721Mintable.sol";
 import { StaticDataSystem } from "../static-data/StaticDataSystem.sol";
 import { SmartAssemblySystem } from "../smart-assembly/SmartAssemblySystem.sol";
-import { LocationUtils } from "../location/LocationUtils.sol";
-import { StaticDataUtils } from "../static-data/StaticDataUtils.sol";
-import { SmartAssemblyUtils } from "../smart-assembly/SmartAssemblyUtils.sol";
+import { LocationSystemLib, locationSystem } from "../../codegen/systems/LocationSystemLib.sol";
+import { StaticDataSystemLib, staticDataSystem } from "../../codegen/systems/StaticDataSystemLib.sol";
+import { SmartAssemblySystemLib, smartAssemblySystem } from "../../codegen/systems/SmartAssemblySystemLib.sol";
+import { FuelSystemLib, fuelSystem } from "../../codegen/systems/FuelSystemLib.sol";
 import { EntityRecordData } from "../entity-record/types.sol";
-import { FuelUtils } from "../fuel/FuelUtils.sol";
-import { LocationSystem } from "../location/LocationSystem.sol";
 import { EveSystem } from "../EveSystem.sol";
 
-import { State, SmartObjectData } from "./types.sol";
+import { State, SmartObjectData, CreateAndAnchorDeployableParams } from "./types.sol";
 import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
 
 /**
@@ -32,6 +31,7 @@ import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
  * @author CCP Games
  * DeployableSystem stores the deployable state of a smart object on-chain
  */
+
 contract DeployableSystem is EveSystem {
   error Deployable_IncorrectState(uint256 smartObjectId, State currentState);
   error Deployable_NoFuel(uint256 smartObjectId);
@@ -40,14 +40,6 @@ contract DeployableSystem is EveSystem {
   error DeployableERC721AlreadyInitialized();
   error Deployable_InvalidFuelConsumptionInterval(uint256 smartObjectId);
   error Deployable_InvalidObjectOwner(string message, address smartObjectOwner, uint256 smartObjectId);
-
-  using LocationUtils for bytes14;
-  using StaticDataUtils for bytes14;
-
-  ResourceId staticDataSystemId = StaticDataUtils.staticDataSystemId();
-  ResourceId locationSystemId = LocationUtils.locationSystemId();
-  ResourceId fuelSystemId = FuelUtils.fuelSystemId();
-  ResourceId smartAssemblySystemId = SmartAssemblyUtils.smartAssemblySystemId();
 
   /**
    * modifier to enforce deployable state changes can happen only when the game server is running
@@ -61,38 +53,23 @@ contract DeployableSystem is EveSystem {
 
   /**
    * @dev creates and anchors a deployable
-   * @param smartObjectId on-chain id of the in-game deployable
-   * @param smartAssemblyType the type of the smart assembly
-   * @param entityRecordData the entity record data
-   * @param smartObjectData the data of the smart object
-   * @param fuelUnitVolume the fuel unit volume in wei
-   * @param fuelConsumptionIntervalInSeconds the fuel consumption per minute in wei
-   * @param fuelMaxCapacity the fuel max capacity in wei
-   * @param locationData the location data of the object
+   * @param params struct containing all parameters for creating and anchoring a deployable
    */
-  function createAndAnchorDeployable(
-    uint256 smartObjectId,
-    string memory smartAssemblyType,
-    EntityRecordData memory entityRecordData,
-    SmartObjectData memory smartObjectData,
-    uint256 fuelUnitVolume,
-    uint256 fuelConsumptionIntervalInSeconds,
-    uint256 fuelMaxCapacity,
-    LocationData memory locationData
-  ) public {
-    world().call(
-      smartAssemblySystemId,
-      abi.encodeCall(SmartAssemblySystem.createSmartAssembly, (smartObjectId, smartAssemblyType, entityRecordData))
+  function createAndAnchorDeployable(CreateAndAnchorDeployableParams memory params) public {
+    smartAssemblySystem.createSmartAssembly(
+      params.smartObjectId,
+      params.smartAssemblyType,
+      params.entityRecordData
     );
 
     registerDeployable(
-      smartObjectId,
-      smartObjectData,
-      fuelUnitVolume,
-      fuelConsumptionIntervalInSeconds,
-      fuelMaxCapacity
+      params.smartObjectId,
+      params.smartObjectData,
+      params.fuelUnitVolume,
+      params.fuelConsumptionIntervalInSeconds,
+      params.fuelMaxCapacity
     );
-    anchor(smartObjectId, locationData);
+    anchor(params.smartObjectId, params.locationData);
   }
 
   /**
@@ -144,13 +121,9 @@ contract DeployableSystem is EveSystem {
       address erc721Address = DeployableToken.getErc721Address();
       IERC721Mintable(erc721Address).mint(smartObjectData.owner, smartObjectId);
 
-      world().call(
-        staticDataSystemId,
-        abi.encodeCall(StaticDataSystem.setCid, (smartObjectId, smartObjectData.tokenURI))
-      );
+      staticDataSystem.setCid(smartObjectId, smartObjectData.tokenURI);
     }
 
-    // this works
     DeployableState.set(
       smartObjectId,
       block.timestamp,
@@ -162,12 +135,12 @@ contract DeployableSystem is EveSystem {
       block.timestamp
     );
 
-    world().call(
-      fuelSystemId,
-      abi.encodeCall(
-        FuelSystem.configureFuelParameters,
-        (smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, 0)
-      )
+    fuelSystem.configureFuelParameters(
+      smartObjectId,
+      fuelUnitVolume,
+      fuelConsumptionIntervalInSeconds,
+      fuelMaxCapacity,
+      0
     );
   }
 
@@ -194,15 +167,12 @@ contract DeployableSystem is EveSystem {
       revert Deployable_IncorrectState(smartObjectId, previousState);
     }
 
-    world().call(fuelSystemId, abi.encodeCall(FuelSystem.updateFuel, (smartObjectId)));
+    fuelSystem.updateFuel(smartObjectId);
 
     uint256 currentFuel = Fuel.getFuelAmount(smartObjectId);
     if (currentFuel < ONE_UNIT_IN_WEI) revert Deployable_NoFuel(smartObjectId);
 
-    world().call(
-      fuelSystemId,
-      abi.encodeCall(FuelSystem.setFuelAmount, (smartObjectId, currentFuel - ONE_UNIT_IN_WEI)) //Forces it to tick
-    );
+    fuelSystem.setFuelAmount(smartObjectId, currentFuel - ONE_UNIT_IN_WEI);
 
     _setDeployableState(smartObjectId, previousState, State.ONLINE);
   }
@@ -217,7 +187,7 @@ contract DeployableSystem is EveSystem {
       revert Deployable_IncorrectState(smartObjectId, previousState);
     }
 
-    world().call(fuelSystemId, abi.encodeCall(FuelSystem.updateFuel, (smartObjectId)));
+    fuelSystem.updateFuel(smartObjectId);
     _bringOffline(smartObjectId, previousState);
   }
 
@@ -233,7 +203,7 @@ contract DeployableSystem is EveSystem {
     }
     _setDeployableState(smartObjectId, previousState, State.ANCHORED);
 
-    world().call(locationSystemId, abi.encodeCall(LocationSystem.saveLocation, (smartObjectId, locationData)));
+    locationSystem.saveLocation(smartObjectId, locationData);
 
     DeployableState.setIsValid(smartObjectId, true);
     DeployableState.setAnchoredAt(smartObjectId, block.timestamp);
@@ -251,10 +221,7 @@ contract DeployableSystem is EveSystem {
 
     _setDeployableState(smartObjectId, previousState, State.UNANCHORED);
 
-    world().call(
-      locationSystemId,
-      abi.encodeCall(LocationSystem.saveLocation, (smartObjectId, LocationData({ solarSystemId: 0, x: 0, y: 0, z: 0 })))
-    );
+    locationSystem.saveLocation(smartObjectId, LocationData({ solarSystemId: 0, x: 0, y: 0, z: 0 }));
 
     DeployableState.setIsValid(smartObjectId, false);
   }

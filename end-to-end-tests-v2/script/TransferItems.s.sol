@@ -15,6 +15,8 @@ import { TransferItem } from "@eveworld/world-v2/src/namespaces/evefrontier/syst
 import { InventoryItemData, InventoryItem as InventoryItemTable } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/InventoryItem.sol";
 import { InventoryInteractSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/InventoryInteractSystem.sol";
 
+import { inventoryInteractSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/InventoryInteractSystemLib.sol";
+
 contract TransferItems is Script {
   function run(address worldAddress) public {
     StoreSwitch.setStoreAddress(worldAddress);
@@ -45,21 +47,8 @@ contract TransferItems is Script {
     ephInvTransferItems[0] = TransferItem(ephItemId, ephemeralInvOwner1, 1);
 
     // TRANSFER
-    world.call(
-      invInteractSystemId,
-      abi.encodeCall(
-        InventoryInteractSystem.inventoryToEphemeralTransfer,
-        (smartObjectId, ephemeralInvOwner1, invTransferItems)
-      )
-    );
-
-    world.call(
-      invInteractSystemId,
-      abi.encodeCall(
-        InventoryInteractSystem.ephemeralToInventoryTransfer,
-        (smartObjectId, ephemeralInvOwner1, ephInvTransferItems)
-      )
-    );
+    inventoryInteractSystem.inventoryToEphemeralTransfer(smartObjectId, ephemeralInvOwner1, invTransferItems);
+    inventoryInteractSystem.ephemeralToInventoryTransfer(smartObjectId, ephemeralInvOwner1, ephInvTransferItems);
 
     // After transfer 1 invItem should go into ephemeral and 1 ephInvItem should go into inventory
     // SSU owner should have 1 ephInvItem after transfer
