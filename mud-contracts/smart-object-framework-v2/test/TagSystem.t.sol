@@ -28,9 +28,9 @@ import "../src/namespaces/evefrontier/codegen/index.sol";
 import { IEntitySystem } from "../src/namespaces/evefrontier/interfaces/IEntitySystem.sol";
 import { ITagSystem } from "../src/namespaces/evefrontier/interfaces/ITagSystem.sol";
 
-import { Id, IdLib } from "../src/libs/Id.sol";
-import { ENTITY_CLASS, ENTITY_OBJECT } from "../src/types/entityTypes.sol";
-import { TAG_SYSTEM } from "../src/types/tagTypes.sol";
+import { TagId, TagIdLib } from "../src/libs/TagId.sol";
+
+import { TAG_TYPE_PROPERTY, TAG_TYPE_ENTITY_RELATION, TAG_TYPE_RESOURCE_RELATION, TAG_IDENTIFIER_CLASS, TAG_IDENTIFIER_OBJECT, TAG_IDENTIFIER_ENTITY_COUNT, TagParams, EntityRelationValue, ResourceRelationValue } from "../src/namespaces/evefrontier/systems/tag-system/types.sol";
 
 contract TagSystemTest is MudTest {
   IBaseWorld world;
@@ -47,29 +47,40 @@ contract TagSystemTest is MudTest {
   ResourceId ENTITIES_SYSTEM_ID = EntitySystemUtils.entitySystemId();
   ResourceId TAGS_SYSTEM_ID = TagSystemUtils.tagSystemId();
   ResourceId constant TAGGED_SYSTEM_ID =
-    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystemMock")))));
+    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystem")))));
   ResourceId constant TAGGED_SYSTEM_ID_2 =
-    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystemMoc2")))));
+    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystem2")))));
   ResourceId constant TAGGED_SYSTEM_ID_3 =
-    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystemMoc3")))));
+    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystem3")))));
   ResourceId constant UNTAGGED_SYSTEM_ID =
-    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("UnTaggedSystemMo")))));
+    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("UnTaggedSystem")))));
   ResourceId constant UNREGISTERED_SYSTEM_ID =
-    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("UnregisteredSyst")))));
+    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("UnregisteredSy")))));
 
-  Id invalidEntityId = IdLib.encode(bytes2("xx"), bytes30("INVALID_ENTITY"));
-  Id classId = IdLib.encode(ENTITY_CLASS, bytes30("TEST_CLASS"));
+  uint256 invalidEntityId = uint256(bytes32("INVALID_ENTITY"));
+  uint256 classId = uint256(bytes32("TEST_CLASS"));
   bytes32 classAccessRole = bytes32("TEST_CLASS_ACCESS_ROLE");
-  Id classId2 = IdLib.encode(ENTITY_CLASS, bytes30("TEST_CLASS_2"));
-  Id objectId = IdLib.encode(ENTITY_OBJECT, bytes30("TEST_OBJECT"));
-  Id objectId2 = IdLib.encode(ENTITY_OBJECT, bytes30("TEST_OBJECT_2"));
-  Id unregisteredClassId = IdLib.encode(ENTITY_CLASS, bytes30("FAIL_REGISTER_CLASS"));
-  Id taggedSystemTagId = IdLib.encode(TAG_SYSTEM, TAGGED_SYSTEM_ID.getResourceName());
-  Id taggedSystemTagId2 = IdLib.encode(TAG_SYSTEM, TAGGED_SYSTEM_ID_2.getResourceName());
-  Id taggedSystemTagId3 = IdLib.encode(TAG_SYSTEM, TAGGED_SYSTEM_ID_3.getResourceName());
-  Id untaggedSystemTagId = IdLib.encode(TAG_SYSTEM, UNTAGGED_SYSTEM_ID.getResourceName());
-  Id nonSystemTagId = IdLib.encode(bytes2("no"), TAGGED_SYSTEM_ID.getResourceName());
-  Id unregisteredSystemTagId = IdLib.encode(TAG_SYSTEM, UNREGISTERED_SYSTEM_ID.getResourceName());
+  uint256 classId2 = uint256(bytes32("TEST_CLASS_2"));
+  uint256 objectId = uint256(bytes32("TEST_OBJECT"));
+  uint256 objectId2 = uint256(bytes32("TEST_OBJECT_2"));
+  uint256 unregisteredClassId = uint256(bytes32("FAIL_REGISTER_CLASS"));
+  TagId taggedSystemTagId = TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(TAGGED_SYSTEM_ID)));
+  TagId taggedSystemTagId2 =
+    TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(TAGGED_SYSTEM_ID_2)));
+  TagId taggedSystemTagId3 =
+    TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(TAGGED_SYSTEM_ID_3)));
+  TagId untaggedSystemTagId =
+    TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(UNTAGGED_SYSTEM_ID)));
+  TagId unregisteredSystemTagId =
+    TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(UNREGISTERED_SYSTEM_ID)));
+
+  TagId OBJECT_RELATION_TAG = TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId)));
+
+  TagId CLASS_PROPERTY_TAG = TagIdLib.encode(TAG_TYPE_PROPERTY, TAG_IDENTIFIER_CLASS);
+  TagId OBJECT_PROPERTY_TAG = TagIdLib.encode(TAG_TYPE_PROPERTY, TAG_IDENTIFIER_OBJECT);
+  TagId ENTITY_COUNT_PROPERTY_TAG = TagIdLib.encode(TAG_TYPE_PROPERTY, TAG_IDENTIFIER_ENTITY_COUNT);
+
+  TagId COLOR_TAG = TagIdLib.encode(TAG_TYPE_PROPERTY, bytes30("COLOR"));
 
   string constant mnemonic = "test test test test test test test test test test test junk";
   uint256 deployerPK = vm.deriveKey(mnemonic, 0);
@@ -101,8 +112,17 @@ contract TagSystemTest is MudTest {
       abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
     );
 
-    // register Class without any tags
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (classId, classAccessRole, new Id[](0))));
+    // register Class without any additional tags
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(EntitySystem.registerClass, (classId, classAccessRole, new ResourceId[](0)))
+    );
+
+    // register Class2 without any additional tags
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(EntitySystem.registerClass, (classId2, classAccessRole, new ResourceId[](0)))
+    );
     vm.stopPrank();
   }
 
@@ -113,522 +133,503 @@ contract TagSystemTest is MudTest {
     assertEq(ResourceIds.getExists(TAGGED_SYSTEM_ID_3), true);
     assertEq(ResourceIds.getExists(UNTAGGED_SYSTEM_ID), true);
 
-    // check Class is registered
-    assertEq(Classes.getExists(classId), true);
+    // check Classes are registered
+    assertEq(Entity.getExists(classId), true);
+    assertEq(Entity.getExists(classId2), true);
   }
 
-  function test_setSystemTag() public {
+  function test_setTag() public {
     vm.startPrank(deployer);
 
     // revert for bytes32(0) tagId
-    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidTagId.selector, Id.wrap(bytes32(0))));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (classId, Id.wrap(bytes32(0)))));
-
-    // revert if tag type is not TAG_SYSTEM
-    bytes2[] memory expected = new bytes2[](1);
-    expected[0] = TAG_SYSTEM;
-    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_WrongTagType.selector, nonSystemTagId.getType(), expected));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (classId, nonSystemTagId)));
-
-    // reverts if correlated systemId has not been registered on the World
-    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_SystemNotRegistered.selector, UNREGISTERED_SYSTEM_ID));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (classId, unregisteredSystemTagId)));
-
-    // reverts if the given entityId is invalid
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_InvalidEntityType.selector, bytes2("xx")));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (invalidEntityId, taggedSystemTagId)));
-
-    // ENTITY_CLASS case
-    // reverts if classId has NOT been registered
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ClassDoesNotExist.selector, unregisteredClassId));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (unregisteredClassId, taggedSystemTagId)));
-
-    // check that the data tables have been correctly updated
-
-    // before
-    bytes32[] memory classSystemTagsBefore = Classes.getSystemTags(classId);
-    assertEq(classSystemTagsBefore.length, 0);
-
-    bool systemTagExistsBefore = SystemTags.getExists(taggedSystemTagId);
-    assertEq(systemTagExistsBefore, false);
-
-    bytes32[] memory systemTagClassessBefore = SystemTags.getClasses(taggedSystemTagId);
-    assertEq(systemTagClassessBefore.length, 0);
-
-    ClassSystemTagMapData memory class1Tag1MapDataBefore = ClassSystemTagMap.get(classId, taggedSystemTagId);
-    assertEq(class1Tag1MapDataBefore.hasTag, false);
-    // successfull call
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (classId, taggedSystemTagId)));
-    // after
-    bytes32[] memory class1SystemTagsAfter = Classes.getSystemTags(classId);
-    assertEq(class1SystemTagsAfter.length, 1);
-    assertEq(class1SystemTagsAfter[0], Id.unwrap(taggedSystemTagId));
-
-    bool systemTagExistsAfter = SystemTags.getExists(taggedSystemTagId);
-    assertEq(systemTagExistsAfter, true);
-
-    bytes32[] memory tagClassesAfter = SystemTags.getClasses(taggedSystemTagId);
-    assertEq(tagClassesAfter.length, 1);
-    assertEq(tagClassesAfter[0], Id.unwrap(classId));
-
-    ClassSystemTagMapData memory classTagMapDataAfter = ClassSystemTagMap.get(classId, taggedSystemTagId);
-    assertEq(classTagMapDataAfter.hasTag, true);
-
-    // revert if Class already has this SystemTag
-    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_EntityAlreadyHasTag.selector, classId, taggedSystemTagId));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (classId, taggedSystemTagId)));
-
-    // check multi-class tagging data
-    // register TEST_CLASS_2 without any tags
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidTagId.selector, TagId.wrap(bytes32(0))));
     world.call(
-      ENTITIES_SYSTEM_ID,
-      abi.encodeCall(EntitySystem.registerClass, (classId2, classAccessRole, new Id[](0)))
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(TagSystem.setTag, (classId, TagParams(TagId.wrap(bytes32(0)), bytes(""))))
     );
-    // add our tag to classId2
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (classId2, taggedSystemTagId)));
-    bytes32[] memory systemTagClassesAfter = SystemTags.getClasses(taggedSystemTagId);
-    assertEq(systemTagClassesAfter.length, 2);
-    assertEq(systemTagClassesAfter[0], Id.unwrap(classId));
-    assertEq(systemTagClassesAfter[1], Id.unwrap(classId2));
 
-    ClassSystemTagMapData memory class2Tag1MapDataAfter = ClassSystemTagMap.get(classId2, taggedSystemTagId);
-    assertEq(class2Tag1MapDataAfter.hasTag, true);
-    assertEq(class2Tag1MapDataAfter.classIndex, 1);
-    assertEq(class2Tag1MapDataAfter.tagIndex, 0);
+    // TAG_TYPE_PROPERTY
+    // ONLY EntitySystem can set CLASS, OBJECT, ENTITY_COUNT tags
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setTag, (objectId, TagParams(CLASS_PROPERTY_TAG, bytes("")))));
 
-    // ENTITY_OBJECT case
-    // reverts if objectId has NOT been instantiated
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ObjectDoesNotExist.selector, objectId));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (objectId, taggedSystemTagId)));
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setTag, (objectId, TagParams(OBJECT_PROPERTY_TAG, bytes("")))));
 
-    // instantiate the 1st Object
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (classId, objectId)));
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(TagSystem.setTag, (objectId, TagParams(ENTITY_COUNT_PROPERTY_TAG, bytes(""))))
+    );
 
-    // check that the data tables have been correctly updated
+    // TAG_TYPE_ENTITY_RELATION
+    // ONLY EntitySystem can set INHERITANCE type ENTITY_RELATION tags
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(
+        TagSystem.setTag,
+        (objectId, TagParams(OBJECT_RELATION_TAG, abi.encode(EntityRelationValue("INHERITANCE", classId))))
+      )
+    );
 
-    // before
-    bytes32[] memory objectSystemTagsBefore = Objects.getSystemTags(objectId);
-    assertEq(objectSystemTagsBefore.length, 0);
+    // TAG_TYPE_RESOURCE_RELATION
+    // reverts if the RESOURCE RELATION Tag's correlated resourceId has not been registered on the World
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_ResourceNotRegistered.selector, UNREGISTERED_SYSTEM_ID));
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(
+        TagSystem.setTag,
+        (
+          classId,
+          TagParams(
+            unregisteredSystemTagId,
+            abi.encode(
+              ResourceRelationValue(
+                "COMPOSITION",
+                UNREGISTERED_SYSTEM_ID.getType(),
+                UNREGISTERED_SYSTEM_ID.getResourceName()
+              )
+            )
+          )
+        )
+      )
+    );
 
-    bytes32[] memory systemTagObjectsBefore = SystemTags.getObjects(taggedSystemTagId);
-    assertEq(systemTagObjectsBefore.length, 0);
+    // INVALID TAG TYPE
+    // revert Tag_TagTypeNotDefined(TagId.getType(inputTagData.tagId));
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_TagTypeNotDefined.selector, bytes2("XX")));
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(
+        TagSystem.setTag,
+        (classId, TagParams(TagIdLib.encode(bytes2("XX"), bytes30("INVALID_TAG_TYPE")), bytes("")))
+      )
+    );
 
-    ObjectSystemTagMapData memory object1Tag1MapDataBefore = ObjectSystemTagMap.get(objectId, taggedSystemTagId);
-    assertEq(object1Tag1MapDataBefore.hasTag, false);
-    // successfull call
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (objectId, taggedSystemTagId)));
+    // SUCCESS CASE
 
-    // after
-    bytes32[] memory object1SystemTagsAfter = Objects.getSystemTags(objectId);
-    assertEq(object1SystemTagsAfter.length, 1);
-    assertEq(object1SystemTagsAfter[0], Id.unwrap(taggedSystemTagId));
+    // check data tables
+    // before (class)
+    bytes32[] memory classPropertyTagsBefore = Entity.getPropertyTags(classId);
+    assertEq(classPropertyTagsBefore.length, 2);
+    assertEq(classPropertyTagsBefore[0], TagId.unwrap(CLASS_PROPERTY_TAG));
+    assertEq(classPropertyTagsBefore[1], TagId.unwrap(ENTITY_COUNT_PROPERTY_TAG));
+    assertEq(EntityTagMap.getHasTag(classId, COLOR_TAG), false);
 
-    bytes32[] memory tagObjectsAfter = SystemTags.getObjects(taggedSystemTagId);
-    assertEq(tagObjectsAfter.length, 1);
-    assertEq(tagObjectsAfter[0], Id.unwrap(objectId));
+    assertEq(TagId.unwrap(Entity.getEntityRelationTag(classId)), bytes32(0));
+    assertEq(
+      EntityTagMap.getHasTag(classId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId)))),
+      false
+    );
 
-    ObjectSystemTagMapData memory objectTagMapDataAfter = ObjectSystemTagMap.get(objectId, taggedSystemTagId);
-    assertEq(objectTagMapDataAfter.hasTag, true);
-
-    // revert if Object already has this SystemTag
-    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_EntityAlreadyHasTag.selector, objectId, taggedSystemTagId));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (objectId, taggedSystemTagId)));
-
-    // check multi-object tagging data
-    // instantiate TEST_OBJECT_2 without any tags
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (classId, objectId2)));
-
-    // add our tag to objectId2
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTag, (objectId2, taggedSystemTagId)));
-    bytes32[] memory systemTagObjectsAfter = SystemTags.getObjects(taggedSystemTagId);
-    assertEq(systemTagObjectsAfter.length, 2);
-    assertEq(systemTagObjectsAfter[0], Id.unwrap(objectId));
-    assertEq(systemTagObjectsAfter[1], Id.unwrap(objectId2));
-
-    ObjectSystemTagMapData memory object2Tag1MapDataAfter = ObjectSystemTagMap.get(objectId2, taggedSystemTagId);
-    assertEq(object2Tag1MapDataAfter.hasTag, true);
-    assertEq(object2Tag1MapDataAfter.objectIndex, 1);
-    assertEq(object2Tag1MapDataAfter.tagIndex, 0);
-
-    vm.stopPrank();
-  }
-
-  function test_setSystemTags() public {
-    vm.startPrank(deployer);
-    // check that multiple tag data is correctly updated
-    // CLASS tagging
-    // before
-    bytes32[] memory classSystemTagsBefore = Classes.getSystemTags(classId);
+    bytes32[] memory classSystemTagsBefore = Entity.getResourceRelationTags(classId);
     assertEq(classSystemTagsBefore.length, 0);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId), false);
 
-    bytes32[] memory systemTagClassessBefore = SystemTags.getClasses(taggedSystemTagId);
-    assertEq(systemTagClassessBefore.length, 0);
+    // before (object)
+    bytes32[] memory objectPropertyTagsBefore = Entity.getPropertyTags(objectId);
+    assertEq(objectPropertyTagsBefore.length, 0);
+    assertEq(EntityTagMap.getHasTag(objectId, COLOR_TAG), false);
 
-    ClassSystemTagMapData memory class1Tag1MapDataBefore = ClassSystemTagMap.get(classId, taggedSystemTagId);
-    assertEq(class1Tag1MapDataBefore.hasTag, false);
+    assertEq(TagId.unwrap(Entity.getEntityRelationTag(objectId)), bytes32(0));
+    assertEq(
+      EntityTagMap.getHasTag(objectId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId)))),
+      false
+    );
 
-    // successful call
-    Id[] memory ids = new Id[](3);
-    ids[0] = taggedSystemTagId;
-    ids[1] = taggedSystemTagId2;
-    ids[2] = taggedSystemTagId3;
+    bytes32[] memory objectResourceRelationTagsBefore = Entity.getResourceRelationTags(objectId);
+    assertEq(objectResourceRelationTagsBefore.length, 0);
+    assertEq(EntityTagMap.getHasTag(objectId, taggedSystemTagId), false);
 
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTags, (classId, ids)));
-    // after
-    bytes32[] memory classSystemTagsAfter = Classes.getSystemTags(classId);
-    assertEq(classSystemTagsAfter.length, 3);
-    assertEq(classSystemTagsAfter[0], Id.unwrap(taggedSystemTagId));
-    assertEq(classSystemTagsAfter[1], Id.unwrap(taggedSystemTagId2));
-    assertEq(classSystemTagsAfter[2], Id.unwrap(taggedSystemTagId3));
+    // successfull calls
 
-    bytes32[] memory systemTag1ClassesAfter = SystemTags.getClasses(taggedSystemTagId);
-    assertEq(systemTag1ClassesAfter.length, 1);
-    assertEq(systemTag1ClassesAfter[0], Id.unwrap(classId));
-
-    bytes32[] memory systemTag2ClassesAfter = SystemTags.getClasses(taggedSystemTagId2);
-    assertEq(systemTag2ClassesAfter.length, 1);
-    assertEq(systemTag2ClassesAfter[0], Id.unwrap(classId));
-
-    bytes32[] memory systemTag3ClassesAfter = SystemTags.getClasses(taggedSystemTagId3);
-    assertEq(systemTag3ClassesAfter.length, 1);
-    assertEq(systemTag3ClassesAfter[0], Id.unwrap(classId));
-
-    ClassSystemTagMapData memory class1Tag1MapAfter = ClassSystemTagMap.get(classId, taggedSystemTagId);
-    assertEq(class1Tag1MapAfter.hasTag, true);
-
-    ClassSystemTagMapData memory class1Tag2MapAfter = ClassSystemTagMap.get(classId, taggedSystemTagId2);
-    assertEq(class1Tag2MapAfter.hasTag, true);
-    assertEq(class1Tag2MapAfter.tagIndex, 1);
-
-    ClassSystemTagMapData memory class1Tag3MapAfter = ClassSystemTagMap.get(classId, taggedSystemTagId3);
-    assertEq(class1Tag3MapAfter.hasTag, true);
-    assertEq(class1Tag3MapAfter.tagIndex, 2);
-
-    // OBJECT tagging
-    // revert, if object does not exist
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ObjectDoesNotExist.selector, objectId));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTags, (objectId, ids)));
-
-    // instantiate the Object
+    // instantiating object adds classId to the Entity.entityRealtionTag of the object
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (classId, objectId)));
 
-    // before
-    bytes32[] memory objectSystemTagsBefore = Objects.getSystemTags(objectId);
-    assertEq(objectSystemTagsBefore.length, 0);
+    // add an entityRelationTag for the class (class2 as its super class)
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(
+        TagSystem.setTag,
+        (
+          classId,
+          TagParams(
+            TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId))),
+            abi.encode(EntityRelationValue("SUPER_CLASS", classId2))
+          )
+        )
+      )
+    );
 
-    bytes32[] memory systemTagObjectsBefore = SystemTags.getObjects(taggedSystemTagId);
-    assertEq(systemTagObjectsBefore.length, 0);
+    // add the COLOR property tag (with value BLUE) for the class
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(TagSystem.setTag, (classId, TagParams(COLOR_TAG, bytes(abi.encode("BLUE")))))
+    );
 
-    ObjectSystemTagMapData memory object1Tag1MapDataBefore = ObjectSystemTagMap.get(objectId, taggedSystemTagId);
-    assertEq(object1Tag1MapDataBefore.hasTag, false);
+    // a system resource tag for the class
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(
+        TagSystem.setTag,
+        (
+          classId,
+          TagParams(
+            taggedSystemTagId,
+            abi.encode(
+              ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID.getType(), TAGGED_SYSTEM_ID.getResourceName())
+            )
+          )
+        )
+      )
+    );
 
-    // successful call
+    // add the COLOR property tag (with value GREEN) for the object
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(TagSystem.setTag, (objectId, TagParams(COLOR_TAG, bytes(abi.encode("GREEN")))))
+    );
 
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTags, (objectId, ids)));
-    // after
-    bytes32[] memory objectSystemTagsAfter = Objects.getSystemTags(objectId);
-    assertEq(objectSystemTagsAfter.length, 3);
-    assertEq(objectSystemTagsAfter[0], Id.unwrap(taggedSystemTagId));
-    assertEq(objectSystemTagsAfter[1], Id.unwrap(taggedSystemTagId2));
-    assertEq(objectSystemTagsAfter[2], Id.unwrap(taggedSystemTagId3));
+    // a system resource tag for the object
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(
+        TagSystem.setTag,
+        (
+          objectId,
+          TagParams(
+            taggedSystemTagId,
+            abi.encode(
+              ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID.getType(), TAGGED_SYSTEM_ID.getResourceName())
+            )
+          )
+        )
+      )
+    );
 
-    bytes32[] memory systemTag1ObjectsAfter = SystemTags.getObjects(taggedSystemTagId);
-    assertEq(systemTag1ObjectsAfter.length, 1);
-    assertEq(systemTag1ObjectsAfter[0], Id.unwrap(objectId));
+    // check data tables
+    // after (class)
+    bytes32[] memory classPropertyTagsAfter = Entity.getPropertyTags(classId);
+    assertEq(classPropertyTagsAfter.length, 3);
+    assertEq(classPropertyTagsAfter[0], TagId.unwrap(CLASS_PROPERTY_TAG));
+    assertEq(classPropertyTagsAfter[1], TagId.unwrap(ENTITY_COUNT_PROPERTY_TAG));
+    assertEq(classPropertyTagsAfter[2], TagId.unwrap(COLOR_TAG));
+    assertEq(EntityTagMap.getHasTag(classId, COLOR_TAG), true);
+    assertEq(EntityTagMap.getTagIndex(classId, COLOR_TAG), 2);
+    string memory classColorValue = abi.decode(EntityTagMap.getValue(classId, COLOR_TAG), (string));
+    assertEq(classColorValue, "BLUE");
 
-    bytes32[] memory systemTag2ObjectsAfter = SystemTags.getObjects(taggedSystemTagId2);
-    assertEq(systemTag2ObjectsAfter.length, 1);
-    assertEq(systemTag2ObjectsAfter[0], Id.unwrap(objectId));
+    assertEq(
+      TagId.unwrap(Entity.getEntityRelationTag(classId)),
+      TagId.unwrap(TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId))))
+    );
+    assertEq(
+      EntityTagMap.getHasTag(classId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId)))),
+      true
+    );
+    EntityRelationValue memory classEntityRelationTagValue = abi.decode(
+      EntityTagMap.getValue(classId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId)))),
+      (EntityRelationValue)
+    );
+    assertEq(classEntityRelationTagValue.relationType, "SUPER_CLASS");
+    assertEq(classEntityRelationTagValue.relatedEntityId, classId2);
 
-    bytes32[] memory systemTag3ObjectsAfter = SystemTags.getObjects(taggedSystemTagId3);
-    assertEq(systemTag3ObjectsAfter.length, 1);
-    assertEq(systemTag3ObjectsAfter[0], Id.unwrap(objectId));
+    bytes32[] memory classSystemTagsAfter = Entity.getResourceRelationTags(classId);
+    assertEq(classSystemTagsAfter.length, 1);
+    assertEq(classSystemTagsAfter[0], TagId.unwrap(taggedSystemTagId));
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId), true);
+    ResourceRelationValue memory classResourceRelationTagValue = abi.decode(
+      EntityTagMap.getValue(classId, taggedSystemTagId),
+      (ResourceRelationValue)
+    );
+    assertEq(classResourceRelationTagValue.relationType, "COMPOSITION");
+    assertEq(classResourceRelationTagValue.resourceType, TAGGED_SYSTEM_ID.getType());
+    assertEq(classResourceRelationTagValue.resourceIdentifier, TAGGED_SYSTEM_ID.getResourceName());
 
-    ObjectSystemTagMapData memory object1Tag1MapAfter = ObjectSystemTagMap.get(objectId, taggedSystemTagId);
-    assertEq(object1Tag1MapAfter.hasTag, true);
+    // after (object)
+    bytes32[] memory objectPropertyTagsAfter = Entity.getPropertyTags(objectId);
+    assertEq(objectPropertyTagsAfter.length, 2);
+    assertEq(EntityTagMap.getHasTag(objectId, COLOR_TAG), true);
+    assertEq(EntityTagMap.getTagIndex(objectId, COLOR_TAG), 1);
+    string memory objectColorValue = abi.decode(EntityTagMap.getValue(objectId, COLOR_TAG), (string));
+    assertEq(objectColorValue, "GREEN");
 
-    ObjectSystemTagMapData memory object1Tag2MapAfter = ObjectSystemTagMap.get(objectId, taggedSystemTagId2);
-    assertEq(object1Tag2MapAfter.hasTag, true);
-    assertEq(object1Tag2MapAfter.tagIndex, 1);
+    assertEq(
+      TagId.unwrap(Entity.getEntityRelationTag(objectId)),
+      TagId.unwrap(TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId))))
+    );
+    assertEq(
+      EntityTagMap.getHasTag(objectId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId)))),
+      true
+    );
+    EntityRelationValue memory objectEntityRelationTagValue = abi.decode(
+      EntityTagMap.getValue(objectId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId)))),
+      (EntityRelationValue)
+    );
+    assertEq(objectEntityRelationTagValue.relationType, "INHERITANCE");
+    assertEq(objectEntityRelationTagValue.relatedEntityId, classId);
 
-    ObjectSystemTagMapData memory object1Tag3MapAfter = ObjectSystemTagMap.get(objectId, taggedSystemTagId3);
-    assertEq(object1Tag3MapAfter.hasTag, true);
-    assertEq(object1Tag3MapAfter.tagIndex, 2);
+    bytes32[] memory objectResourceRelationTagsAfter = Entity.getResourceRelationTags(objectId);
+    assertEq(objectResourceRelationTagsAfter.length, 1);
+    assertEq(EntityTagMap.getHasTag(objectId, taggedSystemTagId), true);
+    ResourceRelationValue memory objectResourceRelationTagValue = abi.decode(
+      EntityTagMap.getValue(objectId, taggedSystemTagId),
+      (ResourceRelationValue)
+    );
+    assertEq(objectResourceRelationTagValue.relationType, "COMPOSITION");
+    assertEq(objectResourceRelationTagValue.resourceType, TAGGED_SYSTEM_ID.getType());
+    assertEq(objectResourceRelationTagValue.resourceIdentifier, TAGGED_SYSTEM_ID.getResourceName());
+
+    // revert if Entity already has this Tag
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_EntityAlreadyHasTag.selector, classId, taggedSystemTagId));
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(
+        TagSystem.setTag,
+        (
+          classId,
+          TagParams(
+            taggedSystemTagId,
+            abi.encode(
+              ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID.getType(), TAGGED_SYSTEM_ID.getResourceName())
+            )
+          )
+        )
+      )
+    );
+
     vm.stopPrank();
   }
 
-  function test_removeSystemTag() public {
+  function test_setTags() public {
     vm.startPrank(deployer);
-    // add 3 system tags to classId & classId2
-    Id[] memory ids = new Id[](3);
-    ids[0] = taggedSystemTagId;
-    ids[1] = taggedSystemTagId2;
-    ids[2] = taggedSystemTagId3;
+    bytes32[] memory classResourceTagsBefore = Entity.getResourceRelationTags(classId);
+    assertEq(classResourceTagsBefore.length, 0);
 
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTags, (classId, ids)));
-    // register TEST_CLASS_2 with the same tags as TEST_CLASS
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (classId2, classAccessRole, ids)));
+    // add three system resource tags for the class
+    TagParams[] memory tags = new TagParams[](3);
+    tags[0] = TagParams(
+      taggedSystemTagId,
+      abi.encode(ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID.getType(), TAGGED_SYSTEM_ID.getResourceName()))
+    );
+    tags[1] = TagParams(
+      taggedSystemTagId2,
+      abi.encode(
+        ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID_2.getType(), TAGGED_SYSTEM_ID_2.getResourceName())
+      )
+    );
+    tags[2] = TagParams(
+      taggedSystemTagId3,
+      abi.encode(
+        ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID_3.getType(), TAGGED_SYSTEM_ID_3.getResourceName())
+      )
+    );
 
-    // reverts if classId has NOT been registered
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ClassDoesNotExist.selector, unregisteredClassId));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeSystemTag, (unregisteredClassId, taggedSystemTagId)));
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setTags, (classId, tags)));
 
-    // reverts if tagId does NOT exist
-    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_TagDoesNotExist.selector, untaggedSystemTagId));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeSystemTag, (classId, untaggedSystemTagId)));
+    // check stored tag results
+    bytes32[] memory classResourceTagsAfter = Entity.getResourceRelationTags(classId);
+    assertEq(classResourceTagsAfter.length, 3);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId), true);
+    assertEq(EntityTagMap.getTagIndex(classId, taggedSystemTagId), 0);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId2), true);
+    assertEq(EntityTagMap.getTagIndex(classId, taggedSystemTagId2), 1);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId3), true);
+    assertEq(EntityTagMap.getTagIndex(classId, taggedSystemTagId3), 2);
+    ResourceRelationValue memory classResourceRelationTagValue1 = abi.decode(
+      EntityTagMap.getValue(classId, taggedSystemTagId),
+      (ResourceRelationValue)
+    );
+    assertEq(classResourceRelationTagValue1.relationType, "COMPOSITION");
+    assertEq(classResourceRelationTagValue1.resourceType, TAGGED_SYSTEM_ID.getType());
+    assertEq(classResourceRelationTagValue1.resourceIdentifier, TAGGED_SYSTEM_ID.getResourceName());
+    ResourceRelationValue memory classResourceRelationTagValue2 = abi.decode(
+      EntityTagMap.getValue(classId, taggedSystemTagId2),
+      (ResourceRelationValue)
+    );
+    assertEq(classResourceRelationTagValue2.relationType, "COMPOSITION");
+    assertEq(classResourceRelationTagValue2.resourceType, TAGGED_SYSTEM_ID_2.getType());
+    assertEq(classResourceRelationTagValue2.resourceIdentifier, TAGGED_SYSTEM_ID_2.getResourceName());
+    ResourceRelationValue memory classResourceRelationTagValue3 = abi.decode(
+      EntityTagMap.getValue(classId, taggedSystemTagId3),
+      (ResourceRelationValue)
+    );
+    assertEq(classResourceRelationTagValue3.relationType, "COMPOSITION");
+    assertEq(classResourceRelationTagValue3.resourceType, TAGGED_SYSTEM_ID_3.getType());
+    assertEq(classResourceRelationTagValue3.resourceIdentifier, TAGGED_SYSTEM_ID_3.getResourceName());
+  }
 
-    // correctly updates data: Classes.systemTags, SystemTags.classes, ClasSystemTagMap
-    // before
-    bytes32[] memory class1SystemTagsBefore = Classes.getSystemTags(classId);
-    assertEq(class1SystemTagsBefore.length, 3);
-    assertEq(class1SystemTagsBefore[0], Id.unwrap(taggedSystemTagId));
-    assertEq(class1SystemTagsBefore[1], Id.unwrap(taggedSystemTagId2));
-    assertEq(class1SystemTagsBefore[2], Id.unwrap(taggedSystemTagId3));
+  function test_removeTag() public {
+    test_setTag();
+    vm.startPrank(deployer);
+    // add additional property and resource tags so we can test removing a tag from the middle of a list
+    // a SHAPE property tag (with value SQUARE) for the class
+    TagId SHAPE_TAG = TagIdLib.encode(TAG_TYPE_PROPERTY, bytes30("SHAPE"));
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setTag, (classId, TagParams(SHAPE_TAG, abi.encode("SQUARE")))));
+    // another system resource tag for the class
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(
+        TagSystem.setTag,
+        (
+          classId,
+          TagParams(
+            taggedSystemTagId2,
+            abi.encode(
+              ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID_2.getType(), TAGGED_SYSTEM_ID_2.getResourceName())
+            )
+          )
+        )
+      )
+    );
 
-    bytes32[] memory class2SystemTagsBefore = Classes.getSystemTags(classId2);
-    assertEq(class2SystemTagsBefore.length, 3);
-    assertEq(class2SystemTagsBefore[0], Id.unwrap(taggedSystemTagId));
-    assertEq(class2SystemTagsBefore[1], Id.unwrap(taggedSystemTagId2));
-    assertEq(class2SystemTagsBefore[2], Id.unwrap(taggedSystemTagId3));
+    // reverts if entityId/tagId map not found
+    vm.expectRevert(
+      abi.encodeWithSelector(ITagSystem.Tag_TagNotFound.selector, unregisteredClassId, taggedSystemTagId)
+    );
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (unregisteredClassId, taggedSystemTagId)));
 
-    bytes32[] memory systemTag1ClassesBefore = SystemTags.getClasses(taggedSystemTagId);
-    assertEq(systemTag1ClassesBefore.length, 2);
-    assertEq(systemTag1ClassesBefore[0], Id.unwrap(classId));
-    assertEq(systemTag1ClassesBefore[1], Id.unwrap(classId2));
+    // reverts if entityId/tagId map not found
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_TagNotFound.selector, classId, untaggedSystemTagId));
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (classId, untaggedSystemTagId)));
 
-    bytes32[] memory systemTag2ClassesBefore = SystemTags.getClasses(taggedSystemTagId2);
-    assertEq(systemTag2ClassesBefore.length, 2);
-    assertEq(systemTag2ClassesBefore[0], Id.unwrap(classId));
-    assertEq(systemTag2ClassesBefore[1], Id.unwrap(classId2));
+    // TAG_TYPE_PROPERTY
+    // ONLY EntitySystem can remove CLASS, OBJECT, ENTITY_COUNT tags
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (classId, CLASS_PROPERTY_TAG)));
 
-    bytes32[] memory systemTag3ClassesBefore = SystemTags.getClasses(taggedSystemTagId3);
-    assertEq(systemTag3ClassesBefore.length, 2);
-    assertEq(systemTag3ClassesBefore[0], Id.unwrap(classId));
-    assertEq(systemTag3ClassesBefore[1], Id.unwrap(classId2));
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (objectId, OBJECT_PROPERTY_TAG)));
 
-    ClassSystemTagMapData memory class1Tag1MapDataBefore = ClassSystemTagMap.get(classId, taggedSystemTagId);
-    assertEq(class1Tag1MapDataBefore.hasTag, true);
-    assertEq(class1Tag1MapDataBefore.classIndex, 0);
-    assertEq(class1Tag1MapDataBefore.tagIndex, 0);
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (classId, ENTITY_COUNT_PROPERTY_TAG)));
 
-    ClassSystemTagMapData memory class1Tag2MapDataBefore = ClassSystemTagMap.get(classId, taggedSystemTagId2);
-    assertEq(class1Tag2MapDataBefore.hasTag, true);
-    assertEq(class1Tag2MapDataBefore.classIndex, 0);
-    assertEq(class1Tag2MapDataBefore.tagIndex, 1);
+    // TAG_TYPE_ENTITY_RELATION
+    // ONLY EntitySystem can remove INHERITANCE type ENTITY_RELATION tags
+    vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (objectId, OBJECT_RELATION_TAG)));
 
-    ClassSystemTagMapData memory class1Tag3MapDataBefore = ClassSystemTagMap.get(classId, taggedSystemTagId3);
-    assertEq(class1Tag3MapDataBefore.hasTag, true);
-    assertEq(class1Tag3MapDataBefore.classIndex, 0);
-    assertEq(class1Tag3MapDataBefore.tagIndex, 2);
+    // successfull calls
 
-    ClassSystemTagMapData memory class2Tag1MapDataBefore = ClassSystemTagMap.get(classId2, taggedSystemTagId);
-    assertEq(class2Tag1MapDataBefore.hasTag, true);
-    assertEq(class2Tag1MapDataBefore.classIndex, 1);
-    assertEq(class2Tag1MapDataBefore.tagIndex, 0);
+    // remove the entity relation tag from classId
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(
+        TagSystem.removeTag,
+        (classId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId))))
+      )
+    );
 
-    ClassSystemTagMapData memory class2Tag2MapDataBefore = ClassSystemTagMap.get(classId2, taggedSystemTagId2);
-    assertEq(class2Tag2MapDataBefore.hasTag, true);
-    assertEq(class2Tag2MapDataBefore.classIndex, 1);
-    assertEq(class2Tag2MapDataBefore.tagIndex, 1);
+    // remove the color tag from classId
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (classId, COLOR_TAG)));
 
-    ClassSystemTagMapData memory class2Tag3MapDataBefore = ClassSystemTagMap.get(classId2, taggedSystemTagId3);
-    assertEq(class2Tag3MapDataBefore.hasTag, true);
-    assertEq(class2Tag3MapDataBefore.classIndex, 1);
-    assertEq(class2Tag3MapDataBefore.tagIndex, 2);
+    // remove the first tagged system tag from classId
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (classId, taggedSystemTagId)));
 
-    // successful call
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeSystemTag, (classId, taggedSystemTagId)));
+    // check data state after
+    assertEq(TagId.unwrap(Entity.getEntityRelationTag(classId)), bytes32(0));
+    assertEq(
+      EntityTagMap.getHasTag(classId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId)))),
+      false
+    );
 
-    // after
-    bytes32[] memory class1SystemTagsAfter = Classes.getSystemTags(classId);
-    assertEq(class1SystemTagsAfter.length, 2);
-    assertEq(class1SystemTagsAfter[0], Id.unwrap(taggedSystemTagId3));
-    assertEq(class1SystemTagsAfter[1], Id.unwrap(taggedSystemTagId2));
+    bytes32[] memory classPropertyTagsAfter = Entity.getPropertyTags(classId);
+    assertEq(classPropertyTagsAfter.length, 3);
+    assertEq(classPropertyTagsAfter[0], TagId.unwrap(CLASS_PROPERTY_TAG));
+    assertEq(classPropertyTagsAfter[1], TagId.unwrap(ENTITY_COUNT_PROPERTY_TAG));
+    assertEq(classPropertyTagsAfter[2], TagId.unwrap(SHAPE_TAG));
+    assertEq(EntityTagMap.getHasTag(classId, COLOR_TAG), false);
+    assertEq(EntityTagMap.getHasTag(classId, SHAPE_TAG), true);
+    assertEq(EntityTagMap.getTagIndex(classId, SHAPE_TAG), 2);
+    string memory classShapeValue = abi.decode(EntityTagMap.getValue(classId, SHAPE_TAG), (string));
+    assertEq(classShapeValue, "SQUARE");
 
-    bytes32[] memory class2SystemTagsAfter = Classes.getSystemTags(classId2);
-    assertEq(class2SystemTagsAfter.length, 3);
-    assertEq(class2SystemTagsAfter[0], Id.unwrap(taggedSystemTagId));
-    assertEq(class2SystemTagsAfter[1], Id.unwrap(taggedSystemTagId2));
-    assertEq(class2SystemTagsAfter[2], Id.unwrap(taggedSystemTagId3));
+    bytes32[] memory classSystemTagsAfter = Entity.getResourceRelationTags(classId);
+    assertEq(classSystemTagsAfter.length, 1);
+    assertEq(classSystemTagsAfter[0], TagId.unwrap(taggedSystemTagId2));
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId), false);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId2), true);
+    ResourceRelationValue memory classResourceRelationTagValue = abi.decode(
+      EntityTagMap.getValue(classId, taggedSystemTagId2),
+      (ResourceRelationValue)
+    );
+    assertEq(classResourceRelationTagValue.relationType, "COMPOSITION");
+    assertEq(classResourceRelationTagValue.resourceType, TAGGED_SYSTEM_ID_2.getType());
+    assertEq(classResourceRelationTagValue.resourceIdentifier, TAGGED_SYSTEM_ID_2.getResourceName());
 
-    bytes32[] memory systemTag1ClassesAfter = SystemTags.getClasses(taggedSystemTagId);
-    assertEq(systemTag1ClassesAfter.length, 1);
-    assertEq(systemTag1ClassesAfter[0], Id.unwrap(classId2));
-
-    bytes32[] memory systemTag2ClassesAfter = SystemTags.getClasses(taggedSystemTagId2);
-    assertEq(systemTag2ClassesAfter.length, 2);
-    assertEq(systemTag2ClassesAfter[0], Id.unwrap(classId));
-    assertEq(systemTag2ClassesAfter[1], Id.unwrap(classId2));
-
-    bytes32[] memory systemTag3ClassesAfter = SystemTags.getClasses(taggedSystemTagId3);
-    assertEq(systemTag3ClassesAfter.length, 2);
-    assertEq(systemTag3ClassesAfter[0], Id.unwrap(classId));
-    assertEq(systemTag3ClassesAfter[1], Id.unwrap(classId2));
-
-    ClassSystemTagMapData memory class1Tag1MapDataAfter = ClassSystemTagMap.get(classId, taggedSystemTagId);
-    assertEq(class1Tag1MapDataAfter.hasTag, false);
-    assertEq(class1Tag1MapDataAfter.classIndex, 0);
-    assertEq(class1Tag1MapDataAfter.tagIndex, 0);
-
-    ClassSystemTagMapData memory class1Tag2MapDataAfter = ClassSystemTagMap.get(classId, taggedSystemTagId2);
-    assertEq(class1Tag2MapDataAfter.hasTag, true);
-    assertEq(class1Tag2MapDataAfter.classIndex, 0);
-    assertEq(class1Tag2MapDataAfter.tagIndex, 1);
-
-    ClassSystemTagMapData memory class1Tag3MapDataAfter = ClassSystemTagMap.get(classId, taggedSystemTagId3);
-    assertEq(class1Tag3MapDataAfter.hasTag, true);
-    assertEq(class1Tag3MapDataAfter.classIndex, 0);
-    assertEq(class1Tag3MapDataAfter.tagIndex, 0);
-
-    ClassSystemTagMapData memory class2Tag1MapDataAfter = ClassSystemTagMap.get(classId2, taggedSystemTagId);
-    assertEq(class2Tag1MapDataAfter.hasTag, true);
-    assertEq(class2Tag1MapDataAfter.classIndex, 0);
-    assertEq(class2Tag1MapDataAfter.tagIndex, 0);
-
-    ClassSystemTagMapData memory class2Tag2MapDataAfter = ClassSystemTagMap.get(classId2, taggedSystemTagId2);
-    assertEq(class2Tag2MapDataAfter.hasTag, true);
-    assertEq(class2Tag2MapDataAfter.classIndex, 1);
-    assertEq(class2Tag2MapDataAfter.tagIndex, 1);
-
-    ClassSystemTagMapData memory class2Tag3MapDataAfter = ClassSystemTagMap.get(classId2, taggedSystemTagId3);
-    assertEq(class2Tag3MapDataAfter.hasTag, true);
-    assertEq(class2Tag3MapDataAfter.classIndex, 1);
-    assertEq(class2Tag3MapDataAfter.tagIndex, 2);
     vm.stopPrank();
   }
 
-  function test_removeSystemTags() public {
+  function test_removeTags() public {
+    test_setTags();
     vm.startPrank(deployer);
-    // add 3 system tags to classId & classId2
-    Id[] memory ids = new Id[](3);
-    ids[0] = taggedSystemTagId;
-    ids[1] = taggedSystemTagId2;
-    ids[2] = taggedSystemTagId3;
+    // add three system resource tags for class 2
+    TagParams[] memory tags = new TagParams[](3);
+    tags[0] = TagParams(
+      taggedSystemTagId,
+      abi.encode(ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID.getType(), TAGGED_SYSTEM_ID.getResourceName()))
+    );
+    tags[1] = TagParams(
+      taggedSystemTagId2,
+      abi.encode(
+        ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID_2.getType(), TAGGED_SYSTEM_ID_2.getResourceName())
+      )
+    );
+    tags[2] = TagParams(
+      taggedSystemTagId3,
+      abi.encode(
+        ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID_3.getType(), TAGGED_SYSTEM_ID_3.getResourceName())
+      )
+    );
 
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setSystemTags, (classId, ids)));
-    // register TEST_CLASS_2 with the same tags as TEST_CLASS
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (classId2, classAccessRole, ids)));
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setTags, (classId2, tags)));
 
-    // correctly updates data: Classes.systemTags, SystemTags.classes, ClasSystemTagMap
-    // before
-    bytes32[] memory class1SystemTagsBefore = Classes.getSystemTags(classId);
-    assertEq(class1SystemTagsBefore.length, 3);
-    assertEq(class1SystemTagsBefore[0], Id.unwrap(taggedSystemTagId));
-    assertEq(class1SystemTagsBefore[1], Id.unwrap(taggedSystemTagId2));
-    assertEq(class1SystemTagsBefore[2], Id.unwrap(taggedSystemTagId3));
+    // check data state before
+    bytes32[] memory class1ResourceTagsBefore = Entity.getResourceRelationTags(classId);
+    assertEq(class1ResourceTagsBefore.length, 3);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId), true);
+    assertEq(EntityTagMap.getTagIndex(classId, taggedSystemTagId), 0);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId2), true);
+    assertEq(EntityTagMap.getTagIndex(classId, taggedSystemTagId2), 1);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId3), true);
+    assertEq(EntityTagMap.getTagIndex(classId, taggedSystemTagId3), 2);
 
-    bytes32[] memory class2SystemTagsBefore = Classes.getSystemTags(classId2);
-    assertEq(class2SystemTagsBefore.length, 3);
-    assertEq(class2SystemTagsBefore[0], Id.unwrap(taggedSystemTagId));
-    assertEq(class2SystemTagsBefore[1], Id.unwrap(taggedSystemTagId2));
-    assertEq(class2SystemTagsBefore[2], Id.unwrap(taggedSystemTagId3));
+    bytes32[] memory class2ResourceTagsBefore = Entity.getResourceRelationTags(classId2);
+    assertEq(class2ResourceTagsBefore.length, 3);
+    assertEq(EntityTagMap.getHasTag(classId2, taggedSystemTagId), true);
+    assertEq(EntityTagMap.getTagIndex(classId2, taggedSystemTagId), 0);
+    assertEq(EntityTagMap.getHasTag(classId2, taggedSystemTagId2), true);
+    assertEq(EntityTagMap.getTagIndex(classId2, taggedSystemTagId2), 1);
+    assertEq(EntityTagMap.getHasTag(classId2, taggedSystemTagId3), true);
+    assertEq(EntityTagMap.getTagIndex(classId2, taggedSystemTagId3), 2);
 
-    bytes32[] memory systemTag1ClassesBefore = SystemTags.getClasses(taggedSystemTagId);
-    assertEq(systemTag1ClassesBefore.length, 2);
-    assertEq(systemTag1ClassesBefore[0], Id.unwrap(classId));
-    assertEq(systemTag1ClassesBefore[1], Id.unwrap(classId2));
-
-    bytes32[] memory systemTag2ClassesBefore = SystemTags.getClasses(taggedSystemTagId2);
-    assertEq(systemTag2ClassesBefore.length, 2);
-    assertEq(systemTag2ClassesBefore[0], Id.unwrap(classId));
-    assertEq(systemTag2ClassesBefore[1], Id.unwrap(classId2));
-
-    bytes32[] memory systemTag3ClassesBefore = SystemTags.getClasses(taggedSystemTagId3);
-    assertEq(systemTag3ClassesBefore.length, 2);
-    assertEq(systemTag3ClassesBefore[0], Id.unwrap(classId));
-    assertEq(systemTag3ClassesBefore[1], Id.unwrap(classId2));
-
-    ClassSystemTagMapData memory class1Tag1MapDataBefore = ClassSystemTagMap.get(classId, taggedSystemTagId);
-    assertEq(class1Tag1MapDataBefore.hasTag, true);
-    assertEq(class1Tag1MapDataBefore.classIndex, 0);
-    assertEq(class1Tag1MapDataBefore.tagIndex, 0);
-
-    ClassSystemTagMapData memory class1Tag2MapDataBefore = ClassSystemTagMap.get(classId, taggedSystemTagId2);
-    assertEq(class1Tag2MapDataBefore.hasTag, true);
-    assertEq(class1Tag2MapDataBefore.classIndex, 0);
-    assertEq(class1Tag2MapDataBefore.tagIndex, 1);
-
-    ClassSystemTagMapData memory class1Tag3MapDataBefore = ClassSystemTagMap.get(classId, taggedSystemTagId3);
-    assertEq(class1Tag3MapDataBefore.hasTag, true);
-    assertEq(class1Tag3MapDataBefore.classIndex, 0);
-    assertEq(class1Tag3MapDataBefore.tagIndex, 2);
-
-    ClassSystemTagMapData memory class2Tag1MapDataBefore = ClassSystemTagMap.get(classId2, taggedSystemTagId);
-    assertEq(class2Tag1MapDataBefore.hasTag, true);
-    assertEq(class2Tag1MapDataBefore.classIndex, 1);
-    assertEq(class2Tag1MapDataBefore.tagIndex, 0);
-
-    ClassSystemTagMapData memory class2Tag2MapDataBefore = ClassSystemTagMap.get(classId2, taggedSystemTagId2);
-    assertEq(class2Tag2MapDataBefore.hasTag, true);
-    assertEq(class2Tag2MapDataBefore.classIndex, 1);
-    assertEq(class2Tag2MapDataBefore.tagIndex, 1);
-
-    ClassSystemTagMapData memory class2Tag3MapDataBefore = ClassSystemTagMap.get(classId2, taggedSystemTagId3);
-    assertEq(class2Tag3MapDataBefore.hasTag, true);
-    assertEq(class2Tag3MapDataBefore.classIndex, 1);
-    assertEq(class2Tag3MapDataBefore.tagIndex, 2);
-
-    // successfull call
     // remove tags
-    Id[] memory class1RemoveIds = new Id[](2);
-    class1RemoveIds[0] = taggedSystemTagId3;
-    class1RemoveIds[1] = taggedSystemTagId;
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeSystemTags, (classId, class1RemoveIds)));
+    TagId[] memory class1RemoveTags = new TagId[](2);
+    class1RemoveTags[0] = taggedSystemTagId3;
+    class1RemoveTags[1] = taggedSystemTagId;
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTags, (classId, class1RemoveTags)));
 
-    Id[] memory class2RemoveIds = new Id[](2);
-    class2RemoveIds[0] = taggedSystemTagId;
-    class2RemoveIds[1] = taggedSystemTagId2;
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeSystemTags, (classId2, class2RemoveIds)));
+    TagId[] memory class2RemoveTags = new TagId[](2);
+    class2RemoveTags[0] = taggedSystemTagId;
+    class2RemoveTags[1] = taggedSystemTagId2;
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTags, (classId2, class2RemoveTags)));
 
-    // after
-    bytes32[] memory class1SystemTagsAfter = Classes.getSystemTags(classId);
-    assertEq(class1SystemTagsAfter.length, 1);
-    assertEq(class1SystemTagsAfter[0], Id.unwrap(taggedSystemTagId2));
+    // check data state after
+    bytes32[] memory class1ResourceTagsAfter = Entity.getResourceRelationTags(classId);
+    assertEq(class1ResourceTagsAfter.length, 1);
+    assertEq(class1ResourceTagsAfter[0], TagId.unwrap(taggedSystemTagId2));
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId), false);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId2), true);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId3), false);
 
-    bytes32[] memory class2SystemTagsAfter = Classes.getSystemTags(classId2);
-    assertEq(class2SystemTagsAfter.length, 1);
-    assertEq(class2SystemTagsAfter[0], Id.unwrap(taggedSystemTagId3));
+    bytes32[] memory class2ResourceTagsAfter = Entity.getResourceRelationTags(classId2);
+    assertEq(class2ResourceTagsAfter.length, 1);
+    assertEq(class2ResourceTagsAfter[0], TagId.unwrap(taggedSystemTagId3));
+    assertEq(EntityTagMap.getHasTag(classId2, taggedSystemTagId), false);
+    assertEq(EntityTagMap.getHasTag(classId2, taggedSystemTagId2), false);
+    assertEq(EntityTagMap.getHasTag(classId2, taggedSystemTagId3), true);
 
-    bytes32[] memory systemTag1ClassesAfter = SystemTags.getClasses(taggedSystemTagId);
-    assertEq(systemTag1ClassesAfter.length, 0);
-
-    bytes32[] memory systemTag2ClassesAfter = SystemTags.getClasses(taggedSystemTagId2);
-    assertEq(systemTag2ClassesAfter.length, 1);
-    assertEq(systemTag2ClassesAfter[0], Id.unwrap(classId));
-
-    bytes32[] memory systemTag3ClassesAfter = SystemTags.getClasses(taggedSystemTagId3);
-    assertEq(systemTag3ClassesAfter.length, 1);
-    assertEq(systemTag3ClassesAfter[0], Id.unwrap(classId2));
-
-    ClassSystemTagMapData memory class1Tag1MapDataAfter = ClassSystemTagMap.get(classId, taggedSystemTagId);
-    assertEq(class1Tag1MapDataAfter.hasTag, false);
-    assertEq(class1Tag1MapDataAfter.classIndex, 0);
-    assertEq(class1Tag1MapDataAfter.tagIndex, 0);
-
-    ClassSystemTagMapData memory class1Tag2MapDataAfter = ClassSystemTagMap.get(classId, taggedSystemTagId2);
-    assertEq(class1Tag2MapDataAfter.hasTag, true);
-    assertEq(class1Tag2MapDataAfter.classIndex, 0);
-    assertEq(class1Tag2MapDataAfter.tagIndex, 0);
-
-    ClassSystemTagMapData memory class1Tag3MapDataAfter = ClassSystemTagMap.get(classId, taggedSystemTagId3);
-    assertEq(class1Tag3MapDataAfter.hasTag, false);
-    assertEq(class1Tag3MapDataAfter.classIndex, 0);
-    assertEq(class1Tag3MapDataAfter.tagIndex, 0);
-
-    ClassSystemTagMapData memory class2Tag1MapDataAfter = ClassSystemTagMap.get(classId2, taggedSystemTagId);
-    assertEq(class2Tag1MapDataAfter.hasTag, false);
-    assertEq(class2Tag1MapDataAfter.classIndex, 0);
-    assertEq(class2Tag1MapDataAfter.tagIndex, 0);
-
-    ClassSystemTagMapData memory class2Tag2MapDataAfter = ClassSystemTagMap.get(classId2, taggedSystemTagId2);
-    assertEq(class2Tag2MapDataAfter.hasTag, false);
-    assertEq(class2Tag2MapDataAfter.classIndex, 0);
-    assertEq(class2Tag2MapDataAfter.tagIndex, 0);
-
-    ClassSystemTagMapData memory class2Tag3MapDataAfter = ClassSystemTagMap.get(classId2, taggedSystemTagId3);
-    assertEq(class2Tag3MapDataAfter.hasTag, true);
-    assertEq(class2Tag3MapDataAfter.classIndex, 0);
-    assertEq(class2Tag3MapDataAfter.tagIndex, 0);
     vm.stopPrank();
   }
 }

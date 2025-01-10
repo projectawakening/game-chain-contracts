@@ -2,7 +2,6 @@
 pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/world/src/WorldResourceId.sol";
-import { Id } from "../../../libs/Id.sol";
 
 /**
  * @title IAccessConfigSystem

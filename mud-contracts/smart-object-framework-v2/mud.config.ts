@@ -8,7 +8,7 @@ export default defineWorld({
     },
   },
   userTypes: {
-    Id: { type: "bytes32", filePath: "./src/libs/Id.sol" },
+    TagId: { type: "bytes32", filePath: "./src/libs/TagId.sol" },
     ResourceId: { type: "bytes32", filePath: "@latticexyz/store/src/ResourceId.sol" },
   },
   excludeSystems: ["SmartObjectFramework"],
@@ -75,66 +75,26 @@ export default defineWorld({
         /*******************
          * ENTITES and ENTITY MAPPED DATA *
          *******************/
-        Classes: {
+        Entity: {
           schema: {
-            classId: "Id",
+            entityId: "uint256",
             exists: "bool",
             accessRole: "bytes32",
-            systemTags: "bytes32[]",
-            objects: "bytes32[]",
+            entityRelationTag: "TagId",
+            propertyTags: "bytes32[]",
+            resourceRelationTags: "bytes32[]",
           },
-          key: ["classId"],
+          key: ["entityId"],
         },
-        ClassSystemTagMap: {
+        EntityTagMap: {
           schema: {
-            classId: "Id",
-            tagId: "Id",
+            entityId: "uint256",
+            tagId: "TagId",
             hasTag: "bool",
-            classIndex: "uint256",
             tagIndex: "uint256",
+            value: "bytes",
           },
-          key: ["classId", "tagId"],
-        },
-        ClassObjectMap: {
-          schema: {
-            classId: "Id",
-            objectId: "Id",
-            instanceOf: "bool",
-            objectIndex: "uint256",
-          },
-          key: ["classId", "objectId"],
-        },
-        Objects: {
-          schema: {
-            objectId: "Id",
-            exists: "bool",
-            class: "Id",
-            accessRole: "bytes32",
-            systemTags: "bytes32[]",
-          },
-          key: ["objectId"],
-        },
-        ObjectSystemTagMap: {
-          schema: {
-            objectId: "Id",
-            tagId: "Id",
-            hasTag: "bool",
-            objectIndex: "uint256",
-            tagIndex: "uint256",
-          },
-          key: ["objectId", "tagId"],
-        },
-        /*******************
-         * TAGS *
-         *******************/
-        SystemTags: {
-          schema: {
-            tagId: "Id",
-            exists: "bool",
-            classes: "bytes32[]",
-            objects: "bytes32[]",
-          },
-          key: ["tagId"],
+          key: ["entityId", "tagId"],
         },
       },
     },

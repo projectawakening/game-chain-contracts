@@ -20,13 +20,8 @@ import { Utils as EntitySystemUtils } from "../src/namespaces/evefrontier/system
 
 import { SystemMock } from "./mocks/SystemMock.sol";
 import { TransientContext } from "./mocks/types.sol";
-import { Classes } from "../src/namespaces/evefrontier/codegen/tables/Classes.sol";
 
 import "../src/namespaces/evefrontier/codegen/index.sol";
-
-import { Id, IdLib } from "../src/libs/Id.sol";
-import { ENTITY_CLASS, ENTITY_OBJECT } from "../src/types/entityTypes.sol";
-import { TAG_SYSTEM } from "../src/types/tagTypes.sol";
 
 import { SmartObjectFramework } from "../src/inherit/SmartObjectFramework.sol";
 
@@ -42,8 +37,6 @@ contract WorldWithContextTest is MudTest {
   ResourceId constant NAMESPACE_ID = ResourceId.wrap(bytes32(abi.encodePacked(RESOURCE_NAMESPACE, NAMESPACE)));
   ResourceId constant MOCK_SYSTEM_ID =
     ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("SystemMock")))));
-
-  Id classId = IdLib.encode(ENTITY_CLASS, bytes30("TEST_CLASS"));
 
   string mnemonic = "test test test test test test test test test test test junk";
   uint256 deployerPrivateKey;
@@ -70,9 +63,6 @@ contract WorldWithContextTest is MudTest {
     world.registerSystem(MOCK_SYSTEM_ID, System(systemMock), true);
     world.registerFunctionSelector(MOCK_SYSTEM_ID, "primaryCall()");
     vm.stopPrank();
-
-    vm.prank(deployer);
-    world.grantAccess(Classes._tableId, address(systemMock));
   }
 
   function testSetup() public {

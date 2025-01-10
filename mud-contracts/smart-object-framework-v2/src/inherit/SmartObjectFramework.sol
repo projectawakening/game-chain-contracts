@@ -5,15 +5,14 @@ import { System } from "@latticexyz/world/src/System.sol";
 import { ResourceId } from "@latticexyz/world/src/WorldResourceId.sol";
 import { SystemRegistry } from "@latticexyz/world/src/codegen/tables/SystemRegistry.sol";
 
-import { Id } from "../libs/Id.sol";
+import { TagId, TagIdLib } from "../libs/TagId.sol";
 import { Bytes } from "../libs/Bytes.sol";
 
-import { TAG_SYSTEM } from "../types/tagTypes.sol";
-import { ENTITY_CLASS, ENTITY_OBJECT } from "../types/entityTypes.sol";
+import { TAG_TYPE_PROPERTY, TAG_TYPE_ENTITY_RELATION, TAG_TYPE_RESOURCE_RELATION, TAG_IDENTIFIER_CLASS, TAG_IDENTIFIER_OBJECT, EntityRelationValue } from "../namespaces/evefrontier/systems/tag-system/types.sol";
 
-import { Objects } from "../namespaces/evefrontier/codegen/tables/Objects.sol";
-import { ClassSystemTagMap } from "../namespaces/evefrontier/codegen/tables/ClassSystemTagMap.sol";
-import { ObjectSystemTagMap } from "../namespaces/evefrontier/codegen/tables/ObjectSystemTagMap.sol";
+import { Entity, EntityData } from "../namespaces/evefrontier/codegen/tables/Entity.sol";
+import { EntityTagMap } from "../namespaces/evefrontier/codegen/tables/EntityTagMap.sol";
+
 import { AccessConfigData, AccessConfig } from "../namespaces/evefrontier/codegen/tables/AccessConfig.sol";
 
 import { IEntitySystem } from "../namespaces/evefrontier/interfaces/IEntitySystem.sol";
@@ -36,13 +35,13 @@ contract SmartObjectFramework is System {
    * @param entityId The entity ID that was checked
    * @param systemId The system ID that was called
    */
-  error SOF_UnscopedSystemCall(Id entityId, ResourceId systemId);
+  error SOF_UnscopedSystemCall(uint256 entityId, ResourceId systemId);
 
   /**
    * @notice Thrown when an invalid entity type is passed to the scope() modifier
-   * @param givenType The given incorrect entity type data
+   * @param givenEntity The given entity has neither CLASS nor OBJECT tags
    */
-  error SOF_InvalidEntityType(bytes2 givenType);
+  error SOF_InvalidEntityType(uint256 givenEntity);
 
   /**
    * @notice Thrown when a system call beyond a prohibited depth is made
@@ -73,7 +72,7 @@ contract SmartObjectFramework is System {
    * @dev Checks if system can operate on given entity based on class tags
    * @param entityId The entity ID to check scope fo
    */
-  modifier scope(Id entityId) {
+  modifier scope(uint256 entityId) {
     // check that the current system is in scope for the given entity
     ResourceId systemId = SystemRegistry.get(address(this));
     _scope(entityId, systemId);
@@ -86,7 +85,7 @@ contract SmartObjectFramework is System {
     _;
   }
 
-  modifier access(Id entityId) {
+  modifier access(uint256 entityId) {
     bytes32 target = keccak256(abi.encodePacked(SystemRegistry.get(address(this)), msg.sig));
     _access(entityId, target);
     _;
@@ -169,28 +168,31 @@ contract SmartObjectFramework is System {
     return Bytes.slice(callDataWithContext, 0, callDataWithContext.length - MUD_CONTEXT_BYTES);
   }
 
-  function _scope(Id entityId, ResourceId systemId) internal view virtual {
-    if (Id.unwrap(entityId) != bytes32(0)) {
-      bool classHasTag;
-      if (entityId.getType() == ENTITY_CLASS) {
-        classHasTag = ClassSystemTagMap.getHasTag(entityId, Id.wrap(ResourceId.unwrap(systemId)));
-        if (!classHasTag) {
+  function _scope(uint256 entityId, ResourceId systemId) internal view virtual {
+    TagId systemTagId = TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(systemId)));
+    if (entityId != uint256(0)) {
+      if (EntityTagMap.getHasTag(entityId, TagIdLib.encode(TAG_TYPE_PROPERTY, TAG_IDENTIFIER_CLASS))) {
+        if (!EntityTagMap.getHasTag(entityId, systemTagId)) {
           revert SOF_UnscopedSystemCall(entityId, systemId);
         }
-      } else if (entityId.getType() == ENTITY_OBJECT) {
-        Id classId = Objects.getClass(entityId);
-        classHasTag = ClassSystemTagMap.getHasTag(classId, Id.wrap(ResourceId.unwrap(systemId)));
-        bool objectHasTag = ObjectSystemTagMap.getHasTag(entityId, Id.wrap(ResourceId.unwrap(systemId)));
-        if (!(classHasTag || objectHasTag)) {
+      } else if (EntityTagMap.getHasTag(entityId, TagIdLib.encode(TAG_TYPE_PROPERTY, TAG_IDENTIFIER_OBJECT))) {
+        EntityRelationValue memory entityRelationValue = abi.decode(
+          EntityTagMap.getValue(entityId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(entityId)))),
+          (EntityRelationValue)
+        );
+        if (
+          !(EntityTagMap.getHasTag(entityRelationValue.relatedEntityId, systemTagId) ||
+            EntityTagMap.getHasTag(entityId, systemTagId))
+        ) {
           revert SOF_UnscopedSystemCall(entityId, systemId);
         }
       } else {
-        revert SOF_InvalidEntityType(entityId.getType());
+        revert SOF_InvalidEntityType(entityId);
       }
     }
   }
 
-  function _access(Id entityId, bytes32 target) internal view virtual {
+  function _access(uint256 entityId, bytes32 target) internal view virtual {
     AccessConfigData memory accessConfig = AccessConfig.get(target);
     // target function selector is 4 bytes, _msgSender is 20 bytes, _msgValue is 32 bytes = 56
     bytes memory callData = Bytes.slice(msg.data, 4, msg.data.length - 56);

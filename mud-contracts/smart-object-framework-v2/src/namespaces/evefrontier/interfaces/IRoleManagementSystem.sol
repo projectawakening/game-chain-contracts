@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.24;
 
-import { ResourceId } from "@latticexyz/world/src/WorldResourceId.sol";
-
 /**
  * @title IRoleManagementSystem
  * @dev An interface for the Role Management System functionality
