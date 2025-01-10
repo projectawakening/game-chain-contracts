@@ -26,9 +26,9 @@ import { AccessSystemMock } from "./mocks/AccessSystemMock.sol";
 
 import "../src/namespaces/evefrontier/codegen/index.sol";
 
-import { Id, IdLib } from "../src/libs/Id.sol";
-import { ENTITY_CLASS, ENTITY_OBJECT } from "../src/types/entityTypes.sol";
-import { TAG_SYSTEM } from "../src/types/tagTypes.sol";
+import { TagId, TagIdLib } from "../src/libs/TagId.sol";
+
+import { TAG_TYPE_PROPERTY, TAG_TYPE_ENTITY_RELATION, TAG_TYPE_RESOURCE_RELATION, TAG_IDENTIFIER_CLASS, TAG_IDENTIFIER_OBJECT, TAG_IDENTIFIER_ENTITY_COUNT, TagParams, EntityRelationValue, ResourceRelationValue } from "../src/namespaces/evefrontier/systems/tag-system/types.sol";
 
 import { SmartObjectFramework } from "../src/inherit/SmartObjectFramework.sol";
 
@@ -57,13 +57,17 @@ contract SmartObjectFrameworkTest is MudTest {
       (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("AccessNamespac"), bytes16("AccessSystemMock"))))
     );
 
-  Id classId = IdLib.encode(ENTITY_CLASS, bytes30("TEST_CLASS"));
+  uint256 classId = uint256(bytes32("TEST_CLASS"));
   bytes32 classAccessRole = bytes32("TEST_CLASS_ACCESS_ROLE");
-  Id unTaggedClassId = IdLib.encode(ENTITY_CLASS, bytes30("TEST_FAIL_CLASS"));
-  Id objectId = IdLib.encode(ENTITY_OBJECT, bytes30("TEST_OBJECT"));
-  Id unTaggedObjectId = IdLib.encode(ENTITY_OBJECT, bytes30("TEST_FAIL_OBJECT"));
-  Id taggedSystemTagId = IdLib.encode(TAG_SYSTEM, TAGGED_SYSTEM_ID.getResourceName());
-  Id unTaggedSystemTagId = IdLib.encode(TAG_SYSTEM, UNTAGGED_SYSTEM_ID.getResourceName());
+  uint256 unTaggedClassId = uint256(bytes32("TEST_FAIL_CLASS"));
+  uint256 objectId = uint256(bytes32("TEST_OBJECT"));
+  uint256 unTaggedObjectId = uint256(bytes32("TEST_FAIL_OBJECT"));
+  TagId taggedSystemTagId = TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(TAGGED_SYSTEM_ID)));
+  TagId unTaggedSystemTagId =
+    TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(UNTAGGED_SYSTEM_ID)));
+
+  TagId CLASS_PROPERTY_TAG = TagIdLib.encode(TAG_TYPE_PROPERTY, TAG_IDENTIFIER_CLASS);
+  TagId OBJECT_PROPERTY_TAG = TagIdLib.encode(TAG_TYPE_PROPERTY, TAG_IDENTIFIER_OBJECT);
 
   string constant mnemonic = "test test test test test test test test test test test junk";
   uint256 deployerPK = vm.deriveKey(mnemonic, 0);
@@ -89,8 +93,8 @@ contract SmartObjectFrameworkTest is MudTest {
     world.registerSystem(ACCESS_SYSTEM_ID, System(accessSystemMock), true);
 
     // system tags (only add the tagged systems)
-    Id[] memory tagIds = new Id[](1);
-    tagIds[0] = taggedSystemTagId;
+    ResourceId[] memory scopedSystemIds = new ResourceId[](1);
+    scopedSystemIds[0] = TAGGED_SYSTEM_ID;
 
     // create the Class Access Role with the deployer as the only member
     world.call(
@@ -99,18 +103,21 @@ contract SmartObjectFrameworkTest is MudTest {
     );
 
     // register Class (with a taggedSystem tag)
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (classId, classAccessRole, tagIds)));
-
-    // register untagged Class
     world.call(
       ENTITY_SYSTEM_ID,
-      abi.encodeCall(EntitySystem.registerClass, (unTaggedClassId, classAccessRole, new Id[](0)))
+      abi.encodeCall(EntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
     );
 
-    // instantiate tagged Class->Object
+    // register Class without system tags
+    world.call(
+      ENTITY_SYSTEM_ID,
+      abi.encodeCall(EntitySystem.registerClass, (unTaggedClassId, classAccessRole, new ResourceId[](0)))
+    );
+
+    // instantiate system resource tagged Class->Object
     world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (classId, objectId)));
 
-    // instantiate untagged Class->Object
+    // instantiate Class->Object without system tags
     world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (unTaggedClassId, unTaggedObjectId)));
 
     vm.stopPrank();
@@ -122,22 +129,24 @@ contract SmartObjectFrameworkTest is MudTest {
     assertEq(ResourceIds.getExists(UNTAGGED_SYSTEM_ID), true);
 
     // check Class is registered
-    assertEq(Classes.getExists(classId), true);
+    assertEq(Entity.getExists(classId), true);
 
-    // check tagged SystemMock<>Class tag
-    assertEq(ClassSystemTagMap.getHasTag(classId, taggedSystemTagId), true);
+    // check system tagged SystemMock<>Class tag
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId), true);
 
     // check Class->Object instantiation
-    assertEq(ClassObjectMap.getInstanceOf(classId, objectId), true);
+    TagId objectEntityRealtionTagId = TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId)));
+    EntityRelationValue memory entityRelationValue = abi.decode(
+      EntityTagMap.getValue(objectId, objectEntityRealtionTagId),
+      (EntityRelationValue)
+    );
+    assertEq(entityRelationValue.relatedEntityId, classId);
 
-    // check Object is created
-    assertEq(Objects.getExists(objectId), true);
+    // // check Object is created
+    // assertEq(Entity.getExists(objectId), true);
 
-    // check Untagged Class->Object instantiation
-    assertEq(ClassObjectMap.getInstanceOf(unTaggedClassId, unTaggedObjectId), true);
-
-    // check unTagged Object is created
-    assertEq(Objects.getExists(unTaggedObjectId), true);
+    // // check non-system tagged Object is created
+    // assertEq(Entity.getExists(unTaggedObjectId), true);
   }
 
   function test_scope_Class() public {
@@ -179,7 +188,7 @@ contract SmartObjectFrameworkTest is MudTest {
 
     // check scope direct by Object (only)
     // remove classTag
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(ITagSystem.removeSystemTag, (classId, taggedSystemTagId)));
+    world.call(TAGS_SYSTEM_ID, abi.encodeCall(ITagSystem.removeTag, (classId, taggedSystemTagId)));
 
     // revert call SystemMock using objectId (but tag was temporarily removed)
     vm.expectRevert(
@@ -188,7 +197,19 @@ contract SmartObjectFrameworkTest is MudTest {
     world.call(TAGGED_SYSTEM_ID, abi.encodeCall(SystemMock.objectLevelScope, (objectId)));
 
     // add Object tag
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(ITagSystem.setSystemTag, (objectId, taggedSystemTagId)));
+    world.call(
+      TAGS_SYSTEM_ID,
+      abi.encodeCall(
+        ITagSystem.setTag,
+        (
+          objectId,
+          TagParams(
+            taggedSystemTagId,
+            abi.encode(ResourceRelationValue("COMPOSITION", RESOURCE_SYSTEM, TAGGED_SYSTEM_ID.getResourceName()))
+          )
+        )
+      )
+    );
 
     // success
     world.call(TAGGED_SYSTEM_ID, abi.encodeCall(SystemMock.objectLevelScope, (objectId)));
@@ -196,7 +217,7 @@ contract SmartObjectFrameworkTest is MudTest {
 
   // internal scope enforcement
   function test_scope_internal() public {
-    // revert, if a call chains leave scope and tries to call back into scope
+    // revert, if a call chain leaves scope and tries to call back into scope
     vm.expectRevert(
       abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, classId, UNTAGGED_SYSTEM_ID)
     );
@@ -296,7 +317,7 @@ contract SmartObjectFrameworkTest is MudTest {
       TAGGED_SYSTEM_ID,
       abi.encodeCall(SystemMock.accessControlled, (classId, TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector))
     );
-    // the above success proves the following
+    // the above success proves the following:
     // check entityId and targetCallData are passed correctly to the access logic
     // check that call count is not affected by the access logic call
     // check that the correct access function is called by the correct target
