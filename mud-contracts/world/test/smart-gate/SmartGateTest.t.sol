@@ -161,7 +161,7 @@ contract SmartGateTest is MudTest {
       100000000 * 1e18 // maxDistance
     );
 
-    smartDeployable.depositFuel(smartObjectId, 1);
+    smartDeployable.depositFuel(smartObjectId, 100000);
     smartDeployable.bringOnline(smartObjectId);
 
     assertEq(uint256(SmartAssemblyTable.get(smartObjectId)), uint256(SmartAssemblyType.SMART_GATE));
@@ -303,7 +303,7 @@ contract SmartGateTest is MudTest {
       1 // maxDistance
     );
 
-    smartDeployable.depositFuel(smartObjectIdA, 1);
+    smartDeployable.depositFuel(smartObjectIdA, 100000);
     smartDeployable.bringOnline(smartObjectIdA);
 
     smartGate.createAndAnchorSmartGate(
@@ -317,7 +317,7 @@ contract SmartGateTest is MudTest {
       1 // maxDistance
     );
 
-    smartDeployable.depositFuel(smartObjectIdB, 1);
+    smartDeployable.depositFuel(smartObjectIdB, 100000);
     smartDeployable.bringOnline(smartObjectIdB);
 
     vm.expectRevert(
