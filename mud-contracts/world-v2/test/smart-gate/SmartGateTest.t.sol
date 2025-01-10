@@ -12,16 +12,17 @@ import { DeployableState } from "../../src/namespaces/evefrontier/codegen/tables
 import { SmartAssembly } from "../../src/namespaces/evefrontier/codegen/tables/SmartAssembly.sol";
 import { State, SmartObjectData } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
 import { SmartGateCustomMock } from "./SmartGateCustomMock.sol";
-import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
-import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
-import { SmartGateUtils } from "../../src/namespaces/evefrontier/systems/smart-gate/SmartGateUtils.sol";
-import { FuelUtils } from "../../src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
-import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
-import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
 import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
 import { WorldPosition, Coord } from "../../src/namespaces/evefrontier/systems/location/types.sol";
-import { FuelSystem } from "../../src/namespaces/evefrontier/systems/fuel/FuelSystem.sol";
+
 import { SmartGateSystem } from "../../src/namespaces/evefrontier/systems/smart-gate/SmartGateSystem.sol";
+import { DeployableSystemLib, deployableSystem } from "../../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
+import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
+import { SmartGateSystemLib, smartGateSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartGateSystemLib.sol";
+import { FuelSystemLib, fuelSystem } from "../../src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
+import { CreateAndAnchorDeployableParams } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
+
+import { LocationData } from "../../src/namespaces/evefrontier/codegen/tables/Location.sol";
 
 import { SMART_GATE } from "../../src/namespaces/evefrontier/systems/constants.sol";
 
@@ -55,11 +56,6 @@ contract SmartGateTest is MudTest {
   EntityRecordData entityRecord;
   WorldPosition worldPosition;
 
-  ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
-  ResourceId characterSystemId = SmartCharacterUtils.smartCharacterSystemId();
-  ResourceId smartGateSystemId = SmartGateUtils.smartGateSystemId();
-  ResourceId fuelSystemId = FuelUtils.fuelSystemId();
-
   function setUp() public virtual override {
     super.setUp();
     world = IBaseWorld(worldAddress);
@@ -91,38 +87,34 @@ contract SmartGateTest is MudTest {
 
     vm.stopPrank();
 
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.globalResume, ()));
-    world.call(
-      characterSystemId,
-      abi.encodeCall(
-        SmartCharacterSystem.createCharacter,
-        (characterId, alice, tribeId, entityRecord, entityRecordMetadata)
-      )
-    );
+    deployableSystem.globalResume();
+    smartCharacterSystem.createCharacter(characterId, alice, tribeId, entityRecord, entityRecordMetadata);
   }
 
   function testAnchorSmartGate(uint256 smartObjectId) public {
     vm.assume(smartObjectId != 0);
 
-    world.call(
-      smartGateSystemId,
-      abi.encodeCall(
-        SmartGateSystem.createAndAnchorSmartGate,
-        (
-          smartObjectId,
-          entityRecord,
-          smartObjectData,
-          worldPosition,
-          fuelUnitVolume,
-          fuelConsumptionIntervalInSeconds,
-          fuelMaxCapacity,
-          maxDistance
-        )
-      )
+    smartGateSystem.createAndAnchorSmartGate(
+      CreateAndAnchorDeployableParams({
+        smartObjectId: smartObjectId,
+        smartAssemblyType: SMART_GATE,
+        entityRecordData: entityRecord,
+        smartObjectData: smartObjectData,
+        fuelUnitVolume: fuelUnitVolume,
+        fuelConsumptionIntervalInSeconds: fuelConsumptionIntervalInSeconds,
+        fuelMaxCapacity: fuelMaxCapacity,
+        locationData: LocationData({
+          solarSystemId: worldPosition.solarSystemId,
+          x: worldPosition.position.x,
+          y: worldPosition.position.y,
+          z: worldPosition.position.z
+        })
+      }),
+      maxDistance
     );
 
-    world.call(fuelSystemId, abi.encodeCall(FuelSystem.depositFuel, (smartObjectId, 1)));
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOnline, (smartObjectId)));
+    fuelSystem.depositFuel(smartObjectId, 1);
+    deployableSystem.bringOnline(smartObjectId);
     assertEq(SmartAssembly.getSmartAssemblyType(smartObjectId), SMART_GATE);
 
     State currentState = DeployableState.getCurrentState(smartObjectId);
@@ -130,20 +122,13 @@ contract SmartGateTest is MudTest {
   }
 
   function testLinkSmartGates() public {
-    world.call(smartGateSystemId, abi.encodeCall(SmartGateSystem.linkSmartGates, (sourceGateId, destinationGateId)));
+    smartGateSystem.linkSmartGates(sourceGateId, destinationGateId);
 
-    bytes memory returnData = world.call(
-      smartGateSystemId,
-      abi.encodeCall(SmartGateSystem.isGateLinked, (sourceGateId, destinationGateId))
-    );
-    assert(abi.decode(returnData, (bool)));
+    bool isLinked = smartGateSystem.isGateLinked(sourceGateId, destinationGateId);
+    assert(isLinked);
 
-    returnData = world.call(
-      smartGateSystemId,
-      abi.encodeCall(SmartGateSystem.isGateLinked, (destinationGateId, sourceGateId))
-    );
-
-    assert(abi.decode(returnData, (bool)));
+    isLinked = smartGateSystem.isGateLinked(destinationGateId, sourceGateId);
+    assert(isLinked);
   }
 
   function tesRevertLinkSmartGates() public {
@@ -155,20 +140,16 @@ contract SmartGateTest is MudTest {
       )
     );
 
-    world.call(smartGateSystemId, abi.encodeCall(SmartGateSystem.linkSmartGates, (sourceGateId, sourceGateId)));
+    smartGateSystem.linkSmartGates(sourceGateId, sourceGateId);
   }
 
   function testUnlinkSmartGates() public {
     testLinkSmartGates();
 
-    world.call(smartGateSystemId, abi.encodeCall(SmartGateSystem.unlinkSmartGates, (sourceGateId, destinationGateId)));
+    smartGateSystem.unlinkSmartGates(sourceGateId, destinationGateId);
 
-    bytes memory returnData = world.call(
-      smartGateSystemId,
-      abi.encodeCall(SmartGateSystem.isGateLinked, (sourceGateId, destinationGateId))
-    );
-
-    assert(!abi.decode(returnData, (bool)));
+    bool isLinked = smartGateSystem.isGateLinked(sourceGateId, destinationGateId);
+    assert(!isLinked);
   }
 
   function testRevertExistingLink() public {
@@ -177,7 +158,7 @@ contract SmartGateTest is MudTest {
       abi.encodeWithSelector(SmartGateSystem.SmartGate_GateAlreadyLinked.selector, sourceGateId, destinationGateId)
     );
 
-    world.call(smartGateSystemId, abi.encodeCall(SmartGateSystem.linkSmartGates, (sourceGateId, destinationGateId)));
+    smartGateSystem.linkSmartGates(sourceGateId, destinationGateId);
   }
 
   function testLinkRevertDistanceAboveMax() public {
@@ -193,50 +174,54 @@ contract SmartGateTest is MudTest {
       position: Coord({ x: 1000000000, y: 1000000000, z: 1000000000 })
     });
 
-    world.call(
-      smartGateSystemId,
-      abi.encodeCall(
-        SmartGateSystem.createAndAnchorSmartGate,
-        (
-          smartObjectIdA,
-          entityRecord,
-          smartObjectData,
-          worldPositionA,
-          fuelUnitVolume,
-          fuelConsumptionIntervalInSeconds,
-          fuelMaxCapacity,
-          1 // maxDistance
-        )
-      )
+    smartGateSystem.createAndAnchorSmartGate(
+      CreateAndAnchorDeployableParams({
+        smartObjectId: smartObjectIdA,
+        smartAssemblyType: SMART_GATE,
+        entityRecordData: entityRecord,
+        smartObjectData: smartObjectData,
+        fuelUnitVolume: fuelUnitVolume,
+        fuelConsumptionIntervalInSeconds: fuelConsumptionIntervalInSeconds,
+        fuelMaxCapacity: fuelMaxCapacity,
+        locationData: LocationData({
+          solarSystemId: worldPositionA.solarSystemId,
+          x: worldPositionA.position.x,
+          y: worldPositionA.position.y,
+          z: worldPositionA.position.z
+        })
+      }),
+      1 // maxDistance
     );
 
-    world.call(fuelSystemId, abi.encodeCall(FuelSystem.depositFuel, (smartObjectIdA, 1)));
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOnline, (smartObjectIdA)));
+    fuelSystem.depositFuel(smartObjectIdA, 1);
+    deployableSystem.bringOnline(smartObjectIdA);
 
-    world.call(
-      smartGateSystemId,
-      abi.encodeCall(
-        SmartGateSystem.createAndAnchorSmartGate,
-        (
-          smartObjectIdB,
-          entityRecord,
-          smartObjectData,
-          worldPositionB,
-          fuelUnitVolume,
-          fuelConsumptionIntervalInSeconds,
-          fuelMaxCapacity,
-          1 // maxDistance
-        )
-      )
+    smartGateSystem.createAndAnchorSmartGate(
+      CreateAndAnchorDeployableParams({
+        smartObjectId: smartObjectIdB,
+        smartAssemblyType: SMART_GATE,
+        entityRecordData: entityRecord,
+        smartObjectData: smartObjectData,
+        fuelUnitVolume: fuelUnitVolume,
+        fuelConsumptionIntervalInSeconds: fuelConsumptionIntervalInSeconds,
+        fuelMaxCapacity: fuelMaxCapacity,
+        locationData: LocationData({
+          solarSystemId: worldPositionB.solarSystemId,
+          x: worldPositionB.position.x,
+          y: worldPositionB.position.y,
+          z: worldPositionB.position.z
+        })
+      }),
+      1 // maxDistance
     );
 
-    world.call(fuelSystemId, abi.encodeCall(FuelSystem.depositFuel, (smartObjectIdB, 1)));
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOnline, (smartObjectIdB)));
+    fuelSystem.depositFuel(smartObjectIdB, 1);
+    deployableSystem.bringOnline(smartObjectIdB);
 
     vm.expectRevert(
       abi.encodeWithSelector(SmartGateSystem.SmartGate_NotWithtinRange.selector, smartObjectIdA, smartObjectIdB)
     );
-    world.call(smartGateSystemId, abi.encodeCall(SmartGateSystem.linkSmartGates, (smartObjectIdA, smartObjectIdB)));
+    smartGateSystem.linkSmartGates(smartObjectIdA, smartObjectIdB);
   }
 
   function testRevertUnlinkSmartGates() public {
@@ -244,14 +229,11 @@ contract SmartGateTest is MudTest {
       abi.encodeWithSelector(SmartGateSystem.SmartGate_GateNotLinked.selector, sourceGateId, destinationGateId)
     );
 
-    world.call(smartGateSystemId, abi.encodeCall(SmartGateSystem.unlinkSmartGates, (sourceGateId, destinationGateId)));
+    smartGateSystem.unlinkSmartGates(sourceGateId, destinationGateId);
   }
 
   function testConfigureSmartGate() public {
-    world.call(
-      smartGateSystemId,
-      abi.encodeCall(SmartGateSystem.configureSmartGate, (sourceGateId, SMART_GATE_CUSTOM_MOCK_SYSTEM_ID))
-    );
+    smartGateSystem.configureSmartGate(sourceGateId, SMART_GATE_CUSTOM_MOCK_SYSTEM_ID);
 
     ResourceId systemId = SmartGateConfig.getSystemId(sourceGateId);
     assertEq(ResourceId.unwrap(systemId), ResourceId.unwrap(SMART_GATE_CUSTOM_MOCK_SYSTEM_ID));
@@ -261,12 +243,9 @@ contract SmartGateTest is MudTest {
     testAnchorSmartGate(sourceGateId);
     testAnchorSmartGate(destinationGateId);
     testLinkSmartGates();
-    bytes memory returnData = world.call(
-      smartGateSystemId,
-      abi.encodeCall(SmartGateSystem.canJump, (characterId, sourceGateId, destinationGateId))
-    );
 
-    assert(abi.decode(returnData, (bool)));
+    bool canJump = smartGateSystem.canJump(characterId, sourceGateId, destinationGateId);
+    assert(canJump);
   }
 
   function testCanJumpFalse() public {
@@ -276,23 +255,16 @@ contract SmartGateTest is MudTest {
     testAnchorSmartGate(destinationGateId);
     testLinkSmartGates();
 
-    bytes memory returnData = world.call(
-      smartGateSystemId,
-      abi.encodeCall(SmartGateSystem.canJump, (characterId, sourceGateId, destinationGateId))
-    );
-
-    assert(!abi.decode(returnData, (bool)));
+    bool canJump = smartGateSystem.canJump(characterId, sourceGateId, destinationGateId);
+    assert(!canJump);
   }
 
   function testCanJump2way() public {
     testAnchorSmartGate(sourceGateId);
     testAnchorSmartGate(destinationGateId);
     testLinkSmartGates();
-    bytes memory returnData = world.call(
-      smartGateSystemId,
-      abi.encodeCall(SmartGateSystem.canJump, (characterId, destinationGateId, sourceGateId))
-    );
 
-    assert(abi.decode(returnData, (bool)));
+    bool canJump = smartGateSystem.canJump(characterId, destinationGateId, sourceGateId);
+    assert(canJump);
   }
 }

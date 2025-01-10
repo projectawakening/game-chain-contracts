@@ -12,6 +12,8 @@ import { InventoryUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/sy
 import { EphemeralInventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/EphemeralInventorySystem.sol";
 import { EphemeralInvItem, EphemeralInvItemData } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/EphemeralInvItem.sol";
 
+import { ephemeralInventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/EphemeralInventorySystemLib.sol";
+
 contract WithdrawFromEphemeral is Script {
   function run(address worldAddress) public {
     StoreSwitch.setStoreAddress(worldAddress);
@@ -27,7 +29,6 @@ contract WithdrawFromEphemeral is Script {
     // Start broadcasting transactions from the deployer account
     vm.startBroadcast(deployerPrivateKey);
     IBaseWorld world = IBaseWorld(worldAddress);
-    ResourceId ephemeralSystemId = InventoryUtils.ephemeralInventorySystemId();
 
     uint256 smartObjectId = uint256(keccak256(abi.encode("item:<tenant_id>-<db_id>-00001")));
     InventoryItem[] memory items = new InventoryItem[](2);
@@ -49,13 +50,7 @@ contract WithdrawFromEphemeral is Script {
       quantity: 1
     });
 
-    world.call(
-      ephemeralSystemId,
-      abi.encodeCall(
-        EphemeralInventorySystem.withdrawFromEphemeralInventory,
-        (smartObjectId, ephemeralInvOwner1, items)
-      )
-    );
+    ephemeralInventorySystem.withdrawFromEphemeralInventory(smartObjectId, ephemeralInvOwner1, items);
 
     items = new InventoryItem[](1);
     items[0] = InventoryItem({
@@ -67,13 +62,7 @@ contract WithdrawFromEphemeral is Script {
       quantity: 250
     });
 
-    world.call(
-      ephemeralSystemId,
-      abi.encodeCall(
-        EphemeralInventorySystem.withdrawFromEphemeralInventory,
-        (smartObjectId, ephemeralInvOwner2, items)
-      )
-    );
+    ephemeralInventorySystem.withdrawFromEphemeralInventory(smartObjectId, ephemeralInvOwner2, items);
 
     EphemeralInvItemData memory invItem = EphemeralInvItem.get(
       smartObjectId,

@@ -8,6 +8,7 @@ import { SmartAssemblyData, SmartAssembly } from "../../codegen/index.sol";
 import { EntityRecordUtils } from "../entity-record/EntityRecordUtils.sol";
 import { EntityRecordData } from "../entity-record/types.sol";
 import { EntityRecordSystem } from "../entity-record/EntityRecordSystem.sol";
+import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.sol";
 
 import { DEPLOYMENT_NAMESPACE } from "./../constants.sol";
 import { EveSystem } from "../EveSystem.sol";
@@ -22,8 +23,6 @@ contract SmartAssemblySystem is EveSystem {
   error SmartAssemblyTypeCannotBeEmpty(uint256 smartObjectId);
   error SmartAssemblyDoesNotExist(uint256 smartObjectId);
 
-  ResourceId entityRecordUtils = EntityRecordUtils.entityRecordSystemId();
-
   /**
    * @notice Create a new smart assembly
    * @param smartObjectId The ID of the smart assembly
@@ -36,10 +35,7 @@ contract SmartAssemblySystem is EveSystem {
     string memory smartAssemblyType,
     EntityRecordData memory entityRecord
   ) public {
-    world().call(
-      entityRecordUtils,
-      abi.encodeCall(EntityRecordSystem.createEntityRecord, (smartObjectId, entityRecord))
-    );
+    entityRecordSystem.createEntityRecord(smartObjectId, entityRecord);
     setSmartAssemblyType(smartObjectId, smartAssemblyType);
   }
 

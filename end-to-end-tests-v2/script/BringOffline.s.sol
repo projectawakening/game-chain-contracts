@@ -8,6 +8,8 @@ import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.
 import { DeployableUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
 import { DeployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
 
+import { deployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
+
 contract BringOffline is Script {
   // assumes CreateAndAnchor.s.sol and Deposit fuel has been run
 
@@ -19,11 +21,9 @@ contract BringOffline is Script {
     // Start broadcasting transactions from the deployer account
     vm.startBroadcast(deployerPrivateKey);
     IBaseWorld world = IBaseWorld(worldAddress);
-
-    ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
     uint256 smartObjectId = uint256(keccak256(abi.encode("item:<tenant_id>-<db_id>-00001")));
 
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOffline, (smartObjectId))); // needs to have some fuel in it to work, else it will just let the state to offline
+    deployableSystem.bringOffline(smartObjectId);
 
     vm.stopBroadcast();
   }

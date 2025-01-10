@@ -8,6 +8,8 @@ import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.
 import { FuelSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/fuel/FuelSystem.sol";
 import { FuelUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
 
+import { fuelSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
+
 contract DepositFuel is Script {
   function run(address worldAddress) public {
     StoreSwitch.setStoreAddress(worldAddress);
@@ -18,10 +20,8 @@ contract DepositFuel is Script {
     vm.startBroadcast(deployerPrivateKey);
     IBaseWorld world = IBaseWorld(worldAddress);
 
-    ResourceId fuelSystemId = FuelUtils.fuelSystemId();
-
     uint256 smartObjectId = uint256(keccak256(abi.encode("item:<tenant_id>-<db_id>-00001")));
-    world.call(fuelSystemId, abi.encodeCall(FuelSystem.depositFuel, (smartObjectId, 1000)));
+    fuelSystem.depositFuel(smartObjectId, 1000);
 
     vm.stopBroadcast();
   }

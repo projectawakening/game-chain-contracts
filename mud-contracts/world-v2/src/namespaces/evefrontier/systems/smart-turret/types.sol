@@ -20,3 +20,12 @@ struct Turret {
   uint256 ammoTypeId;
   uint256 chargesLeft;
 }
+
+struct AggressionParams {
+  uint256 smartObjectId;
+  uint256 turretOwnerCharacterId;
+  TargetPriority[] priorityQueue;
+  Turret turret;
+  SmartTurretTarget aggressor;
+  SmartTurretTarget victim;
+}
