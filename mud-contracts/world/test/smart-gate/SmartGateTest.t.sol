@@ -24,11 +24,12 @@ import { Utils as SmartCharacterUtils } from "../../src/modules/smart-character/
 import { SmartCharacterLib } from "../../src/modules/smart-character/SmartCharacterLib.sol";
 import { EntityRecordData as EntityRecordCharacter } from "../../src/modules/smart-character/types.sol";
 import { Utils as SmartDeployableUtils } from "../../src/modules/smart-deployable/Utils.sol";
+import { IAccessSystemErrors } from "../../src/modules/access/interfaces/IAccessSystemErrors.sol";
 
 import { SmartGateConfigTable } from "../../src/codegen/tables/SmartGateConfigTable.sol";
 import { EntityRecordOffchainTableData } from "../../src/codegen/tables/EntityRecordOffchainTable.sol";
 import { SmartAssemblyTable } from "../../src/codegen/tables/SmartAssemblyTable.sol";
-import { DeployableState } from "../../src/codegen/tables/DeployableState.sol";
+import { DeployableState, DeployableStateData } from "../../src/codegen/tables/DeployableState.sol";
 import { SmartGateLinkTable, SmartGateLinkTableData } from "../../src/codegen/tables/SmartGateLinkTable.sol";
 
 import { IERC721 } from "../../src/modules/eve-erc721-puppet/IERC721.sol";
@@ -172,18 +173,18 @@ contract SmartGateTest is MudTest {
   }
 
   function testLinkSmartGates() public {
+    testAnchorSmartGate(sourceGateId);
+    testAnchorSmartGate(destinationGateId);
     smartGate.linkSmartGates(sourceGateId, destinationGateId);
     assert(smartGate.isGateLinked(sourceGateId, destinationGateId));
     assert(smartGate.isGateLinked(destinationGateId, sourceGateId));
   }
 
-  function tesReverttLinkSmartGates() public {
+  function testRevertLinkSmartGates() public {
+    testAnchorSmartGate(sourceGateId);
+    testAnchorSmartGate(destinationGateId);
     vm.expectRevert(
-      abi.encodeWithSelector(
-        SmartGateSystem.SmartGate_SameSourceAndDestination.selector,
-        sourceGateId,
-        destinationGateId
-      )
+      abi.encodeWithSelector(SmartGateSystem.SmartGate_SameSourceAndDestination.selector, sourceGateId, sourceGateId)
     );
     smartGate.linkSmartGates(sourceGateId, sourceGateId);
   }
@@ -266,7 +267,14 @@ contract SmartGateTest is MudTest {
   }
 
   function testRevertExistingLink() public {
-    testLinkSmartGates();
+    testAnchorSmartGate(sourceGateId);
+    testAnchorSmartGate(destinationGateId);
+    smartGate.linkSmartGates(sourceGateId, destinationGateId);
+
+    SmartGateLinkTableData memory linkData = SmartGateLinkTable.get(sourceGateId);
+    assertEq(linkData.destinationGateId, destinationGateId);
+    assertTrue(linkData.isLinked);
+
     vm.expectRevert(
       abi.encodeWithSelector(SmartGateSystem.SmartGate_GateAlreadyLinked.selector, sourceGateId, destinationGateId)
     );
@@ -342,24 +350,17 @@ contract SmartGateTest is MudTest {
   }
 
   function testCanJump() public {
-    testAnchorSmartGate(sourceGateId);
-    testAnchorSmartGate(destinationGateId);
     testLinkSmartGates();
     assert(smartGate.canJump(characterId, sourceGateId, destinationGateId));
   }
 
   function testCanJumpFalse() public {
     testConfigureSmartGate();
-
-    testAnchorSmartGate(sourceGateId);
-    testAnchorSmartGate(destinationGateId);
     testLinkSmartGates();
     assert(!smartGate.canJump(characterId, sourceGateId, destinationGateId));
   }
 
   function testCanJump2way() public {
-    testAnchorSmartGate(sourceGateId);
-    testAnchorSmartGate(destinationGateId);
     testLinkSmartGates();
     assert(smartGate.canJump(characterId, destinationGateId, sourceGateId));
   }

@@ -63,6 +63,16 @@ contract SmartGateSystem is EveSystem, AccessModified {
     _;
   }
 
+  modifier onlyOnline(uint256 smartObjectId) {
+    if (DeployableState.getCurrentState(smartObjectId) != State.ONLINE) {
+      revert SmartDeployableErrors.SmartDeployable_IncorrectState(
+        smartObjectId,
+        DeployableState.getCurrentState(smartObjectId)
+      );
+    }
+    _;
+  }
+
   /**
     * @notice Create and anchor a Smart Gate
     * @param smartObjectId is smart object id of the Smart Gate
@@ -120,7 +130,17 @@ contract SmartGateSystem is EveSystem, AccessModified {
    * @param sourceGateId is the smartObjectId of the source gate
    * @param destinationGateId is the smartObjectId of the destination gate
    */
-  function linkSmartGates(uint256 sourceGateId, uint256 destinationGateId) public onlyAdminOrObjectOwner(sourceGateId) {
+  function linkSmartGates(
+    uint256 sourceGateId,
+    uint256 destinationGateId
+  )
+    public
+    onlyAdminOrObjectOwner(sourceGateId)
+    onlyAdminOrObjectOwner(destinationGateId)
+    onlyOnline(sourceGateId)
+    onlyOnline(destinationGateId)
+    onlyActive
+  {
     if (isAnyGateLinked(sourceGateId, destinationGateId)) {
       revert SmartGate_GateAlreadyLinked(sourceGateId, destinationGateId);
     }
@@ -147,7 +167,7 @@ contract SmartGateSystem is EveSystem, AccessModified {
   function unlinkSmartGates(
     uint256 sourceGateId,
     uint256 destinationGateId
-  ) public onlyAdminOrObjectOwner(sourceGateId) {
+  ) public onlyAdminOrObjectOwner(sourceGateId) onlyAdminOrObjectOwner(destinationGateId) {
     //Check if the gates are linked
     if (!isGateLinked(sourceGateId, destinationGateId)) {
       revert SmartGate_GateNotLinked(sourceGateId, destinationGateId);
