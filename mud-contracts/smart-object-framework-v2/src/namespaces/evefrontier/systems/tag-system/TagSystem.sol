@@ -2,209 +2,229 @@
 pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/world/src/WorldResourceId.sol";
+import { SystemRegistry } from "@latticexyz/world/src/codegen/tables/SystemRegistry.sol";
 import { ResourceIds } from "@latticexyz/store/src/codegen/tables/ResourceIds.sol";
+import { ResourceIdLib } from "@latticexyz/store/src/ResourceId.sol";
 import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 
-import { Classes } from "../../codegen/tables/Classes.sol";
-import { ClassSystemTagMap, ClassSystemTagMapData } from "../../codegen/tables/ClassSystemTagMap.sol";
-import { Objects } from "../../codegen/tables/Objects.sol";
-import { ObjectSystemTagMap, ObjectSystemTagMapData } from "../../codegen/tables/ObjectSystemTagMap.sol";
-import { SystemTags } from "../../codegen/tables/SystemTags.sol";
+import { Entity, EntityData } from "../../codegen/tables/Entity.sol";
+import { EntityTagMap, EntityTagMapData } from "../../codegen/tables/EntityTagMap.sol";
+import { Utils as EntitySystemUtils } from "../entity-system/Utils.sol";
 
-import { Id, IdLib } from "../../../../libs/Id.sol";
-import { ENTITY_CLASS, ENTITY_OBJECT } from "../../../../types/entityTypes.sol";
-import { TAG_SYSTEM } from "../../../../types/tagTypes.sol";
+import { TagId, TagIdLib } from "../../../../libs/TagId.sol";
 
-import { IEntitySystem } from "../../interfaces/IEntitySystem.sol";
+import { TAG_TYPE_PROPERTY, TAG_TYPE_ENTITY_RELATION, TAG_TYPE_RESOURCE_RELATION, TAG_IDENTIFIER_CLASS, TAG_IDENTIFIER_OBJECT, TAG_IDENTIFIER_ENTITY_COUNT, TagParams, EntityRelationValue, ResourceRelationValue } from "./types.sol";
+
 import { ITagSystem } from "../../interfaces/ITagSystem.sol";
+import { IEntitySystem } from "../../interfaces/IEntitySystem.sol";
+
+import { IWorldWithContext } from "../../../../IWorldWithContext.sol";
 
 import { SmartObjectFramework } from "../../../../inherit/SmartObjectFramework.sol";
 
 contract TagSystem is ITagSystem, SmartObjectFramework {
+  using TagIdLib for TagId;
+
   /**
-   * @notice set a SystemTag for a Class or Object
-   * @param entityId An Id referencing an existing Class or Object to tag with `systemTagId`
-   * @param systemTagId A TAG_SYSTEM type Id referencing a MUD System that has been registered on to the World which will be tagged to `entityId`
+   * @notice set a Tag for an Entity
+   * @param entityId A unique uint256 entity ID
+   * @param tagParams A TagParams struct containing the tagId and value
    */
-  function setSystemTag(Id entityId, Id systemTagId) public context access(entityId) {
-    _setSystemTag(entityId, systemTagId);
+  function setTag(uint256 entityId, TagParams memory tagParams) public context access(entityId) {
+    _setTag(entityId, tagParams);
   }
 
   /**
-   * @notice set multiple SystemTags for a Class or Object
-   * @param entityId An Id referencing an existing Class or Object to tag with each System reference in `systemTagIds`
-   * @param systemTagIds An array of TAG_SYSTEM type Ids each referencing a MUD System that has been registered on to the World and each of which will be tagged to `entityId`
+   * @notice set multiple Tags for an Entity
+   * @param entityId A unique uint256 entity ID
+   * @param tagParams An array of TagParams structs containing the tagId and value
    */
-  function setSystemTags(Id entityId, Id[] memory systemTagIds) public {
-    for (uint i = 0; i < systemTagIds.length; i++) {
-      _setSystemTag(entityId, systemTagIds[i]);
+  function setTags(uint256 entityId, TagParams[] memory tagParams) public {
+    for (uint i = 0; i < tagParams.length; i++) {
+      _setTag(entityId, tagParams[i]);
     }
   }
 
   /**
-   * @notice remove a SystemTag for a Class or Object
-   * @dev removing a SystemTag from a Class may trigger/require dependent data deletions of Class/Object data entries in that System's associated Tables. Be sure to handle these dependencies accordingly in your System logic before removing a SystemTag
-   * @param entityId An Id referencing an existing Class or Object to remove each System reference in `systemTagIds` from
-   * @param systemTagId A TAG_SYSTEM type Id referencing a MUD System to remove from `entityId`
+   * @notice remove a Tag from an Entity
+   * @param entityId A unique uint256 entity ID
+   * @param tagId A TagId tagId
+   * @dev Warning: removing a Tag from an Entity may trigger/require dependent data deletions of in associated Enity or Resource Tables. Be sure to handle these dependencies accordingly in your System logic before removing a Tag
+
    */
-  function removeSystemTag(Id entityId, Id systemTagId) public context access(entityId) {
-    _removeSystemTag(entityId, systemTagId);
+  function removeTag(uint256 entityId, TagId tagId) public context access(entityId) {
+    _removeTag(entityId, tagId);
   }
 
   /**
    * @notice remove multiple SystemTags for a Class or Object
-   * @param entityId An ENTITY_CLASS type Id referencing an existing Class or Object to tag with `systemTagId`
-   * @param systemTagIds An array of TAG_SYSTEM type Ids each referencing a MUD System to remove from `entityId`
+   * @param entityId A unique uint256 entity ID
+   * @param tagIds An array of TagId tagIds
    */
-  function removeSystemTags(Id entityId, Id[] memory systemTagIds) public {
-    for (uint i = 0; i < systemTagIds.length; i++) {
-      _removeSystemTag(entityId, systemTagIds[i]);
+  function removeTags(uint256 entityId, TagId[] memory tagIds) public {
+    for (uint i = 0; i < tagIds.length; i++) {
+      _removeTag(entityId, tagIds[i]);
     }
   }
 
-  function _setSystemTag(Id entityId, Id tagId) private {
-    if (Id.unwrap(tagId) == bytes32(0)) {
-      revert Tag_InvalidTagId(tagId);
-    }
-    if (tagId.getType() != TAG_SYSTEM) {
-      bytes2[] memory expected = new bytes2[](1);
-      expected[0] = TAG_SYSTEM;
-      revert Tag_WrongTagType(tagId.getType(), expected);
+  function _setTag(uint256 entityId, TagParams memory tagParams) private {
+    if (TagId.unwrap(tagParams.tagId) == bytes32(0)) {
+      revert Tag_InvalidTagId(tagParams.tagId);
     }
 
-    ResourceId systemId = ResourceId.wrap((Id.unwrap(tagId)));
-    if (!(ResourceIds.getExists(systemId))) {
-      revert Tag_SystemNotRegistered(systemId);
-    }
+    if (!EntityTagMap.getHasTag(entityId, tagParams.tagId)) {
+      uint256 tagIndex;
+      if (tagParams.tagId.getType() == TAG_TYPE_PROPERTY) {
+        if (
+          tagParams.tagId.getIdentifier() == TAG_IDENTIFIER_OBJECT ||
+          tagParams.tagId.getIdentifier() == TAG_IDENTIFIER_CLASS ||
+          tagParams.tagId.getIdentifier() == TAG_IDENTIFIER_ENTITY_COUNT
+        ) {
+          uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
+          // we only allow EntitySystem.sol as a caller to set these tags
+          if (callCount <= 1) {
+            // revert, no direct calls
+            revert Tag_InvalidCaller(_msgSender());
+          } else {
+            (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
+            ResourceId callingSystemId = SystemRegistry.get(msgSender);
+            if (callingSystemId.unwrap() != EntitySystemUtils.entitySystemId().unwrap()) {
+              revert Tag_InvalidCaller(msgSender);
+            }
+          }
+        }
 
-    if (!SystemTags.getExists(tagId)) {
-      SystemTags.set(tagId, true, new bytes32[](0), new bytes32[](0));
-    }
+        tagIndex = Entity.lengthPropertyTags(entityId);
 
-    bytes2 entityType = entityId.getType();
-    if (entityType == ENTITY_CLASS) {
-      if (!Classes.getExists(entityId)) {
-        revert IEntitySystem.Entity_ClassDoesNotExist(entityId);
-      }
-      if (!ClassSystemTagMap.getHasTag(entityId, tagId)) {
-        ClassSystemTagMap.set(
-          entityId,
-          tagId,
-          true,
-          SystemTags.lengthClasses(tagId),
-          Classes.lengthSystemTags(entityId)
+        Entity.pushPropertyTags(entityId, TagId.unwrap(tagParams.tagId));
+      } else if (tagParams.tagId.getType() == TAG_TYPE_ENTITY_RELATION) {
+        EntityRelationValue memory entityRelationValue = abi.decode(tagParams.value, (EntityRelationValue));
+
+        if (
+          keccak256(abi.encodePacked(entityRelationValue.relationType)) == keccak256(abi.encodePacked("INHERITANCE"))
+        ) {
+          uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
+          // we only allow EntitySystem.sol as a caller to set these tags
+          if (callCount <= 1) {
+            // revert, no direct calls
+            revert Tag_InvalidCaller(_msgSender());
+          } else {
+            (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
+            ResourceId callingSystemId = SystemRegistry.get(msgSender);
+            if (callingSystemId.unwrap() != EntitySystemUtils.entitySystemId().unwrap()) {
+              revert Tag_InvalidCaller(msgSender);
+            }
+          }
+        }
+
+        if (!Entity.getExists(entityRelationValue.relatedEntityId)) {
+          revert IEntitySystem.Entity_EntityDoesNotExist(entityRelationValue.relatedEntityId);
+        }
+
+        tagIndex = 0;
+
+        Entity.setEntityRelationTag(entityId, tagParams.tagId);
+      } else if (tagParams.tagId.getType() == TAG_TYPE_RESOURCE_RELATION) {
+        ResourceRelationValue memory resourceRelationValue = abi.decode(tagParams.value, (ResourceRelationValue));
+        ResourceId resourceId = ResourceIdLib.encode(
+          resourceRelationValue.resourceType,
+          resourceRelationValue.resourceIdentifier
         );
-        Classes.pushSystemTags(entityId, Id.unwrap(tagId));
-        SystemTags.pushClasses(tagId, Id.unwrap(entityId));
+
+        if (!(ResourceIds.getExists(resourceId))) {
+          revert Tag_ResourceNotRegistered(resourceId);
+        }
+
+        tagIndex = Entity.lengthResourceRelationTags(entityId);
+
+        Entity.pushResourceRelationTags(entityId, TagId.unwrap(tagParams.tagId));
       } else {
-        revert Tag_EntityAlreadyHasTag(entityId, tagId);
+        revert Tag_TagTypeNotDefined(tagParams.tagId.getType());
       }
-    } else if (entityType == ENTITY_OBJECT) {
-      if (!Objects.getExists(entityId)) {
-        revert IEntitySystem.Entity_ObjectDoesNotExist(entityId);
-      }
-      if (!ObjectSystemTagMap.getHasTag(entityId, tagId)) {
-        ObjectSystemTagMap.set(
-          entityId,
-          tagId,
-          true,
-          SystemTags.lengthObjects(tagId),
-          Objects.lengthSystemTags(entityId)
-        );
-        Objects.pushSystemTags(entityId, Id.unwrap(tagId));
-        SystemTags.pushObjects(tagId, Id.unwrap(entityId));
-      } else {
-        revert Tag_EntityAlreadyHasTag(entityId, tagId);
-      }
+
+      EntityTagMap.set(entityId, tagParams.tagId, true, tagIndex, tagParams.value);
     } else {
-      revert IEntitySystem.Entity_InvalidEntityType(entityType);
+      revert Tag_EntityAlreadyHasTag(entityId, tagParams.tagId);
     }
   }
 
-  function _removeSystemTag(Id entityId, Id tagId) private {
-    if (!SystemTags.getExists(tagId)) {
-      revert Tag_TagDoesNotExist(tagId);
-    }
+  function _removeTag(uint256 entityId, TagId tagId) private {
+    EntityTagMapData memory entityTagMapData = EntityTagMap.get(entityId, tagId);
 
-    bytes2 entityType = entityId.getType();
-    if (entityType == ENTITY_CLASS) {
-      if (!Classes.getExists(entityId)) {
-        revert IEntitySystem.Entity_ClassDoesNotExist(entityId);
+    if (entityTagMapData.hasTag) {
+      if (tagId.getType() == TAG_TYPE_PROPERTY) {
+        if (
+          tagId.getIdentifier() == TAG_IDENTIFIER_OBJECT ||
+          tagId.getIdentifier() == TAG_IDENTIFIER_CLASS ||
+          tagId.getIdentifier() == TAG_IDENTIFIER_ENTITY_COUNT
+        ) {
+          uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
+          // we only allow EntitySystem.sol as a caller to set these tags
+          if (callCount <= 1) {
+            // revert, no direct calls
+            revert Tag_InvalidCaller(_msgSender());
+          } else {
+            (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
+            ResourceId callingSystemId = SystemRegistry.get(msgSender);
+            if (callingSystemId.unwrap() != EntitySystemUtils.entitySystemId().unwrap()) {
+              revert Tag_InvalidCaller(msgSender);
+            }
+          }
+        }
+
+        Entity.updatePropertyTags(
+          entityId,
+          entityTagMapData.tagIndex,
+          Entity.getItemPropertyTags(entityId, Entity.lengthPropertyTags(entityId) - 1)
+        );
+
+        EntityTagMap.setTagIndex(
+          entityId,
+          TagId.wrap(Entity.getItemPropertyTags(entityId, Entity.lengthPropertyTags(entityId) - 1)),
+          entityTagMapData.tagIndex
+        );
+
+        Entity.popPropertyTags(entityId);
+      } else if (tagId.getType() == TAG_TYPE_ENTITY_RELATION) {
+        EntityRelationValue memory entityRelationValue = abi.decode(entityTagMapData.value, (EntityRelationValue));
+
+        if (
+          keccak256(abi.encodePacked(entityRelationValue.relationType)) == keccak256(abi.encodePacked("INHERITANCE"))
+        ) {
+          uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
+          // we only allow EntitySystem.sol as a caller to remove these tags
+          if (callCount <= 1) {
+            // revert, no direct calls
+            revert Tag_InvalidCaller(_msgSender());
+          } else {
+            (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
+            ResourceId callingSystemId = SystemRegistry.get(msgSender);
+            if (callingSystemId.unwrap() != EntitySystemUtils.entitySystemId().unwrap()) {
+              revert Tag_InvalidCaller(msgSender);
+            }
+          }
+        }
+
+        Entity.setEntityRelationTag(entityId, TagId.wrap(bytes32(0)));
+      } else if (tagId.getType() == TAG_TYPE_RESOURCE_RELATION) {
+        Entity.updateResourceRelationTags(
+          entityId,
+          entityTagMapData.tagIndex,
+          Entity.getItemResourceRelationTags(entityId, Entity.lengthResourceRelationTags(entityId) - 1)
+        );
+
+        EntityTagMap.setTagIndex(
+          entityId,
+          TagId.wrap(Entity.getItemResourceRelationTags(entityId, Entity.lengthResourceRelationTags(entityId) - 1)),
+          entityTagMapData.tagIndex
+        );
+
+        Entity.popResourceRelationTags(entityId);
       }
 
-      ClassSystemTagMapData memory classTagMapData = ClassSystemTagMap.get(entityId, tagId);
-      if (classTagMapData.hasTag) {
-        Classes.updateSystemTags(
-          entityId,
-          classTagMapData.tagIndex,
-          Classes.getItemSystemTags(entityId, Classes.lengthSystemTags(entityId) - 1)
-        );
-
-        SystemTags.updateClasses(
-          tagId,
-          classTagMapData.classIndex,
-          SystemTags.getItemClasses(tagId, SystemTags.lengthClasses(tagId) - 1)
-        );
-
-        ClassSystemTagMap.setTagIndex(
-          entityId,
-          Id.wrap(Classes.getItemSystemTags(entityId, Classes.lengthSystemTags(entityId) - 1)),
-          classTagMapData.tagIndex
-        );
-
-        ClassSystemTagMap.setClassIndex(
-          Id.wrap(SystemTags.getItemClasses(tagId, SystemTags.lengthClasses(tagId) - 1)),
-          tagId,
-          classTagMapData.classIndex
-        );
-
-        ClassSystemTagMap.deleteRecord(entityId, tagId);
-
-        Classes.popSystemTags(entityId);
-        SystemTags.popClasses(tagId);
-      } else {
-        revert Tag_TagNotFound(entityId, tagId);
-      }
-    } else if (entityType == ENTITY_OBJECT) {
-      if (!Objects.getExists(entityId)) {
-        revert IEntitySystem.Entity_ObjectDoesNotExist(entityId);
-      }
-
-      ObjectSystemTagMapData memory objectTagMapData = ObjectSystemTagMap.get(entityId, tagId);
-      if (objectTagMapData.hasTag) {
-        Objects.updateSystemTags(
-          entityId,
-          objectTagMapData.tagIndex,
-          Objects.getItemSystemTags(entityId, Objects.lengthSystemTags(entityId) - 1)
-        );
-
-        SystemTags.updateObjects(
-          tagId,
-          objectTagMapData.objectIndex,
-          SystemTags.getItemObjects(tagId, SystemTags.lengthObjects(tagId) - 1)
-        );
-
-        ObjectSystemTagMap.setTagIndex(
-          entityId,
-          Id.wrap(Objects.getItemSystemTags(entityId, Objects.lengthSystemTags(entityId) - 1)),
-          objectTagMapData.tagIndex
-        );
-
-        ObjectSystemTagMap.setObjectIndex(
-          Id.wrap(SystemTags.getItemObjects(tagId, SystemTags.lengthObjects(tagId) - 1)),
-          tagId,
-          objectTagMapData.objectIndex
-        );
-
-        ObjectSystemTagMap.deleteRecord(entityId, tagId);
-
-        Objects.popSystemTags(entityId);
-        SystemTags.popObjects(tagId);
-      } else {
-        revert Tag_TagNotFound(entityId, tagId);
-      }
+      EntityTagMap.deleteRecord(entityId, tagId);
     } else {
-      revert IEntitySystem.Entity_InvalidEntityType(entityType);
+      revert Tag_TagNotFound(entityId, tagId);
     }
   }
 }
