@@ -17,9 +17,6 @@ import { Utils as RoleManagementSystemUtils } from "../src/namespaces/evefrontie
 
 import "../src/namespaces/evefrontier/codegen/index.sol";
 
-import { Id, IdLib } from "../src/libs/Id.sol";
-import { ENTITY_CLASS, ENTITY_OBJECT } from "../src/types/entityTypes.sol";
-
 contract RoleManagementSystemTest is MudTest {
   using RoleManagementSystemUtils for bytes14;
 

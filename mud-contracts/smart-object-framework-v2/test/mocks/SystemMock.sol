@@ -11,22 +11,20 @@ import { SystemRegistry } from "@latticexyz/world/src/codegen/tables/SystemRegis
 import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 
 import { IWorldWithContext } from "../../src/IWorldWithContext.sol";
-import { Id, IdLib } from "../../src/libs/Id.sol";
-import { ENTITY_CLASS } from "../../src/types/entityTypes.sol";
 
 import { TransientContext } from "./types.sol";
 
 contract SystemMock is SmartObjectFramework {
   // scope testing functions
-  function classLevelScope(Id classId) public view scope(classId) returns (bool) {
+  function classLevelScope(uint256 classId) public view scope(classId) returns (bool) {
     return true;
   }
 
-  function objectLevelScope(Id objectId) public view scope(objectId) returns (bool) {
+  function objectLevelScope(uint256 objectId) public view scope(objectId) returns (bool) {
     return true;
   }
 
-  function entryScoped(Id classId, bool taggedCall) public scope(classId) returns (bytes memory) {
+  function entryScoped(uint256 classId, bool taggedCall) public scope(classId) returns (bytes memory) {
     ResourceId TAGGED_SYSTEM_ID = ResourceId.wrap(
       (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("TaggedSystemMock"))))
     );
@@ -45,7 +43,7 @@ contract SystemMock is SmartObjectFramework {
     }
   }
 
-  function entryNonScoped(Id classId) public returns (bytes memory) {
+  function entryNonScoped(uint256 classId) public returns (bytes memory) {
     ResourceId TAGGED_SYSTEM_ID = ResourceId.wrap(
       (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("TaggedSystemMock"))))
     );
@@ -54,7 +52,7 @@ contract SystemMock is SmartObjectFramework {
     return IWorldKernel(_world()).call(TAGGED_SYSTEM_ID, callData);
   }
 
-  function internalScoped(Id classId) public view scope(classId) returns (bool) {
+  function internalScoped(uint256 classId) public view scope(classId) returns (bool) {
     return true;
   }
 
@@ -142,7 +140,7 @@ contract SystemMock is SmartObjectFramework {
   }
 
   function accessControlled(
-    Id classId,
+    uint256 classId,
     ResourceId systemId,
     bytes4 functionId
   ) public enforceCallCount(1) access(classId) returns (ResourceId, bytes4) {

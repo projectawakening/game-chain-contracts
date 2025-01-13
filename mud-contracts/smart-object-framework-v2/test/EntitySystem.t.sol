@@ -10,6 +10,7 @@ import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.
 import { StoreSwitch } from "@latticexyz/store/src/StoreSwitch.sol";
 import { System } from "@latticexyz/world/src/System.sol";
 import { ResourceId, WorldResourceIdInstance, WorldResourceIdLib } from "@latticexyz/world/src/WorldResourceId.sol";
+import { ResourceIdInstance } from "@latticexyz/store/src/ResourceId.sol";
 import { RESOURCE_NAMESPACE, RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 import { ResourceIds } from "@latticexyz/store/src/codegen/tables/ResourceIds.sol";
 import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/FunctionSelectors.sol";
@@ -24,11 +25,13 @@ import { SystemMock } from "./mocks/SystemMock.sol";
 
 import "../src/namespaces/evefrontier/codegen/index.sol";
 
-import { Id, IdLib } from "../src/libs/Id.sol";
-import { ENTITY_CLASS, ENTITY_OBJECT } from "../src/types/entityTypes.sol";
-import { TAG_SYSTEM } from "../src/types/tagTypes.sol";
+import { TagId, TagIdLib } from "../src/libs/TagId.sol";
+
+import { TAG_TYPE_PROPERTY, TAG_TYPE_ENTITY_RELATION, TAG_TYPE_RESOURCE_RELATION, TAG_IDENTIFIER_CLASS, TAG_IDENTIFIER_OBJECT, TAG_IDENTIFIER_ENTITY_COUNT, EntityRelationValue, ResourceRelationValue } from "../src/namespaces/evefrontier/systems/tag-system/types.sol";
 
 contract EntitySystemTest is MudTest {
+  using WorldResourceIdInstance for ResourceId;
+
   IBaseWorld world;
   SystemMock taggedSystemMock;
   SystemMock taggedSystemMock2;
@@ -40,17 +43,22 @@ contract EntitySystemTest is MudTest {
   ResourceId ENTITIES_SYSTEM_ID = EntitySystemUtils.entitySystemId();
   ResourceId TAGS_SYSTEM_ID = TagSystemUtils.tagSystemId();
   ResourceId TAGGED_SYSTEM_ID =
-    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystemMock")))));
+    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystem")))));
   ResourceId constant TAGGED_SYSTEM_ID_2 =
-    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystemMoc2")))));
+    ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystem2")))));
 
-  Id classId = IdLib.encode(ENTITY_CLASS, bytes30("TEST_CLASS"));
+  uint256 classId = uint256(bytes32("TEST_CLASS"));
   bytes32 classAccessRole = bytes32("TEST_CLASS_ACCESS_ROLE");
-  Id classId2 = IdLib.encode(ENTITY_CLASS, bytes30("TEST_CLASS_2"));
-  Id objectId = IdLib.encode(ENTITY_OBJECT, bytes30("TEST_OBJECT"));
-  Id objectId2 = IdLib.encode(ENTITY_OBJECT, bytes30("TEST_OBJECT_2"));
-  Id taggedSystemTagId = IdLib.encode(TAG_SYSTEM, TAGGED_SYSTEM_ID.getResourceName());
-  Id taggedSystemTagId2 = IdLib.encode(TAG_SYSTEM, TAGGED_SYSTEM_ID_2.getResourceName());
+  uint256 classId2 = uint256(bytes32("TEST_CLASS_2"));
+  uint256 objectId = uint256(bytes32("TEST_OBJECT"));
+  uint256 objectId2 = uint256(bytes32("TEST_OBJECT_2"));
+  TagId taggedSystemTagId = TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(TAGGED_SYSTEM_ID)));
+  TagId taggedSystemTagId2 =
+    TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(TAGGED_SYSTEM_ID_2)));
+
+  TagId CLASS_PROPERTY_TAG = TagIdLib.encode(TAG_TYPE_PROPERTY, TAG_IDENTIFIER_CLASS);
+  TagId OBJECT_PROPERTY_TAG = TagIdLib.encode(TAG_TYPE_PROPERTY, TAG_IDENTIFIER_OBJECT);
+  TagId ENTITY_COUNT_PROPERTY_TAG = TagIdLib.encode(TAG_TYPE_PROPERTY, TAG_IDENTIFIER_ENTITY_COUNT);
 
   string constant mnemonic = "test test test test test test test test test test test junk";
   uint256 deployerPK = vm.deriveKey(mnemonic, 0);
@@ -124,28 +132,23 @@ contract EntitySystemTest is MudTest {
   }
 
   function test_registerClass() public {
-    Id[] memory tagIds = new Id[](2);
-    tagIds[0] = taggedSystemTagId;
-    tagIds[1] = taggedSystemTagId2;
-    // reverts if classId is bytes32(0)
+    ResourceId[] memory scopedSystemIds = new ResourceId[](2);
+    scopedSystemIds[0] = TAGGED_SYSTEM_ID;
+    scopedSystemIds[1] = TAGGED_SYSTEM_ID_2;
+    // reverts if classId is uint256(0)
     vm.startPrank(deployer);
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_InvalidEntityId.selector, Id.wrap(bytes32(0))));
+    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_InvalidEntityId.selector, uint256(0)));
     world.call(
       ENTITIES_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (Id.wrap(bytes32(0)), classAccessRole, tagIds))
+      abi.encodeCall(IEntitySystem.registerClass, (uint256(0), classAccessRole, scopedSystemIds))
     );
-
-    // reverts if classId is not a Class type
-    bytes2[] memory expected = new bytes2[](1);
-    expected[0] = ENTITY_CLASS;
-    vm.expectRevert(
-      abi.encodeWithSelector(IEntitySystem.Entity_WrongEntityType.selector, objectId.getType(), expected)
-    );
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (objectId, classAccessRole, tagIds)));
 
     // reverts if the entrypoint _msgSender() is not a member of the given access role
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_RoleAccessDenied.selector, classAccessRole, deployer));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, tagIds)));
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
 
     // create the Class Access Role with the deployer as the only member
     world.call(
@@ -154,19 +157,60 @@ contract EntitySystemTest is MudTest {
     );
 
     // succesful call
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, tagIds)));
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
 
     // after
-    assertEq(Classes.getExists(classId), true);
+    assertEq(Entity.getExists(classId), true);
 
-    bytes32[] memory class1SystemTagsAfter = Classes.getSystemTags(classId);
-    assertEq(class1SystemTagsAfter.length, 2);
-    assertEq(class1SystemTagsAfter[0], Id.unwrap(taggedSystemTagId));
-    assertEq(class1SystemTagsAfter[1], Id.unwrap(taggedSystemTagId2));
+    bytes32[] memory classPropertyTagsAfter = Entity.getPropertyTags(classId);
+    assertEq(classPropertyTagsAfter.length, 2);
+    assertEq(classPropertyTagsAfter[0], TagId.unwrap(CLASS_PROPERTY_TAG));
+    assertEq(classPropertyTagsAfter[1], TagId.unwrap(ENTITY_COUNT_PROPERTY_TAG));
+    EntityTagMapData memory classPropertyTagMapAfter = EntityTagMap.get(classId, CLASS_PROPERTY_TAG);
+    assertEq(classPropertyTagMapAfter.hasTag, true);
+    assertEq(classPropertyTagMapAfter.tagIndex, 0);
+    assertEq(bytes32(classPropertyTagMapAfter.value), bytes32(0));
+    EntityTagMapData memory classEntityCountTagMapAfter = EntityTagMap.get(classId, ENTITY_COUNT_PROPERTY_TAG);
+    assertEq(classEntityCountTagMapAfter.hasTag, true);
+    assertEq(classEntityCountTagMapAfter.tagIndex, 1);
+    assertEq(abi.decode(classEntityCountTagMapAfter.value, (uint256)), uint256(0));
+
+    TagId entityRelationTagAfter = Entity.getEntityRelationTag(classId);
+    assertEq(TagId.unwrap(entityRelationTagAfter), bytes32(0));
+    EntityTagMapData memory classEntityRelationTagMapAfter = EntityTagMap.get(
+      classId,
+      TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId)))
+    );
+    assertEq(classEntityRelationTagMapAfter.hasTag, false);
+
+    bytes32[] memory classResourceTagsAfter = Entity.getResourceRelationTags(classId);
+    assertEq(classResourceTagsAfter.length, 2);
+    assertEq(classResourceTagsAfter[0], TagId.unwrap(taggedSystemTagId));
+    assertEq(classResourceTagsAfter[1], TagId.unwrap(taggedSystemTagId2));
+
+    EntityTagMapData memory system1TagMapAfter = EntityTagMap.get(classId, taggedSystemTagId);
+    assertEq(system1TagMapAfter.hasTag, true);
+    assertEq(system1TagMapAfter.tagIndex, 0);
+    ResourceRelationValue memory system1ResourceValue = abi.decode(system1TagMapAfter.value, (ResourceRelationValue));
+    assertEq(system1ResourceValue.resourceType, ResourceIdInstance.getType(TAGGED_SYSTEM_ID));
+    assertEq(system1ResourceValue.resourceIdentifier, ResourceIdInstance.getResourceName(TAGGED_SYSTEM_ID));
+
+    EntityTagMapData memory system2TagMapAfter = EntityTagMap.get(classId, taggedSystemTagId2);
+    assertEq(system2TagMapAfter.hasTag, true);
+    assertEq(system2TagMapAfter.tagIndex, 1);
+    ResourceRelationValue memory system2ResourceValue = abi.decode(system2TagMapAfter.value, (ResourceRelationValue));
+    assertEq(system2ResourceValue.resourceType, ResourceIdInstance.getType(TAGGED_SYSTEM_ID_2));
+    assertEq(system2ResourceValue.resourceIdentifier, ResourceIdInstance.getResourceName(TAGGED_SYSTEM_ID_2));
 
     // reverts if classId is already registered
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ClassAlreadyExists.selector, classId));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, tagIds)));
+    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityAlreadyExists.selector, classId));
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
     vm.stopPrank();
   }
 
@@ -178,46 +222,77 @@ contract EntitySystemTest is MudTest {
     );
 
     // reverts if classId has NOT been registered
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ClassDoesNotExist.selector, classId));
+    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityDoesNotExist.selector, classId));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
 
     // register classId
     world.call(
       ENTITIES_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, new Id[](0)))
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, new ResourceId[](0)))
     );
 
-    // reverts if objectId is bytes32(0)
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_InvalidEntityId.selector, Id.wrap(bytes32(0))));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, Id.wrap(bytes32(0)))));
+    // reverts if objectId is uint256(0)
+    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_InvalidEntityId.selector, uint256(0)));
+    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, uint256(0))));
 
-    // reverts if objectId is not an ENTITY_OBJECT type
-    bytes2[] memory expected = new bytes2[](1);
-    expected[0] = ENTITY_OBJECT;
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_WrongEntityType.selector, classId.getType(), expected));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, classId)));
+    // before checks
+    assertEq(Entity.getExists(objectId), false);
+    bytes32[] memory objectPropertyTagsBefore = Entity.getPropertyTags(objectId);
+    assertEq(objectPropertyTagsBefore.length, 0);
+    TagId objectEntityRelationTagBefore = Entity.getEntityRelationTag(objectId);
+    assertEq(TagId.unwrap(objectEntityRelationTagBefore), bytes32(0));
+    EntityTagMapData memory classEntityCountTagMapBefore = EntityTagMap.get(classId, ENTITY_COUNT_PROPERTY_TAG);
+    assertEq(classEntityCountTagMapBefore.hasTag, true);
+    assertEq(abi.decode(classEntityCountTagMapBefore.value, (uint256)), uint256(0));
 
     // successful call
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+
+    // reverts if object entity is used as class entity
+    vm.expectRevert(
+      abi.encodeWithSelector(IEntitySystem.Entity_PropertyTagNotFound.selector, objectId, CLASS_PROPERTY_TAG)
+    );
+    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (objectId, objectId2)));
+
     // after checks
-    // creates an entry in the EntityIds table
-    assertEq(Objects.getExists(objectId), true);
+    // creates an entry in the Entity table
+    assertEq(Entity.getExists(objectId), true);
 
     // correctly creates/updates entries for the Classes, Objects, and ClassObjectMap Tables
-    bytes32[] memory classObjectAfter = Classes.getObjects(classId);
-    assertEq(classObjectAfter.length, 1);
-    assertEq(classObjectAfter[0], Id.unwrap(objectId));
+    bytes32[] memory objectPropertyTagsAfter = Entity.getPropertyTags(objectId);
+    assertEq(objectPropertyTagsAfter.length, 1);
+    assertEq(objectPropertyTagsAfter[0], TagId.unwrap(OBJECT_PROPERTY_TAG));
 
-    Id instanceOf = Objects.getClass(objectId);
-    assertEq(Id.unwrap(instanceOf), Id.unwrap(classId));
+    EntityTagMapData memory objectPropertyTagMapAfter = EntityTagMap.get(objectId, OBJECT_PROPERTY_TAG);
+    assertEq(objectPropertyTagMapAfter.hasTag, true);
+    assertEq(objectPropertyTagMapAfter.tagIndex, 0);
+    assertEq(bytes32(objectPropertyTagMapAfter.value), bytes32(0));
 
-    ClassObjectMapData memory classObjectMapData = ClassObjectMap.get(classId, objectId);
-    assertEq(classObjectMapData.instanceOf, true);
-    assertEq(classObjectMapData.objectIndex, 0);
+    TagId entityRelationTagAfter = Entity.getEntityRelationTag(objectId);
+    assertEq(
+      TagId.unwrap(entityRelationTagAfter),
+      TagId.unwrap(TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId))))
+    );
+
+    EntityTagMapData memory objectEntityRelationTagMapAfter = EntityTagMap.get(
+      objectId,
+      TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId)))
+    );
+    assertEq(objectEntityRelationTagMapAfter.hasTag, true);
+    assertEq(objectEntityRelationTagMapAfter.tagIndex, 0);
+    EntityRelationValue memory objectEntityRelationValue = abi.decode(
+      objectEntityRelationTagMapAfter.value,
+      (EntityRelationValue)
+    );
+    assertEq(objectEntityRelationValue.relationType, "INHERITANCE");
+    assertEq(objectEntityRelationValue.relatedEntityId, classId);
+
+    EntityTagMapData memory classEntityCountTagMapAfter = EntityTagMap.get(classId, ENTITY_COUNT_PROPERTY_TAG);
+    assertEq(classEntityCountTagMapAfter.hasTag, true);
+    assertEq(abi.decode(classEntityCountTagMapAfter.value, (uint256)), uint256(1));
 
     // reverts if objectId is already instantiated
-    Id instanceClass = Objects.getClass(objectId);
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ObjectAlreadyExists.selector, objectId, instanceClass));
+    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityAlreadyExists.selector, objectId));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
     vm.stopPrank();
   }
@@ -232,52 +307,64 @@ contract EntitySystemTest is MudTest {
     // setup - register classId
     world.call(
       ENTITIES_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, new Id[](0)))
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, new ResourceId[](0)))
     );
 
     // reverts if objectId doesn't exist (hasn't been instantiated)
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ObjectDoesNotExist.selector, objectId));
+    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityDoesNotExist.selector, objectId));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteObject, (objectId)));
 
-    // check data state
+    // create some objects
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId2)));
+
+    // check data state
     // before
-    bytes32[] memory classObjectsBefore = Classes.getObjects(classId);
-    assertEq(classObjectsBefore.length, 2);
-    assertEq(classObjectsBefore[0], Id.unwrap(objectId));
-    assertEq(classObjectsBefore[1], Id.unwrap(objectId2));
+    assertEq(Entity.getExists(objectId), true);
+    assertEq(Entity.getExists(objectId2), true);
 
-    ClassObjectMapData memory classObject1MapDataBefore = ClassObjectMap.get(classId, objectId);
-    assertEq(classObject1MapDataBefore.instanceOf, true);
-    assertEq(classObject1MapDataBefore.objectIndex, 0);
+    EntityTagMapData memory classEntityCountTagMapBefore = EntityTagMap.get(classId, ENTITY_COUNT_PROPERTY_TAG);
+    assertEq(abi.decode(classEntityCountTagMapBefore.value, (uint256)), uint256(2));
 
-    ClassObjectMapData memory classObject2MapDataBefore = ClassObjectMap.get(classId, objectId2);
-    assertEq(classObject2MapDataBefore.instanceOf, true);
-    assertEq(classObject2MapDataBefore.objectIndex, 1);
+    EntityTagMapData memory object1EntityRelationTagMapAfter = EntityTagMap.get(
+      objectId,
+      TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId)))
+    );
+    EntityRelationValue memory object1EntityRelationValue = abi.decode(
+      object1EntityRelationTagMapAfter.value,
+      (EntityRelationValue)
+    );
+    assertEq(object1EntityRelationValue.relatedEntityId, classId);
+
+    EntityTagMapData memory object2EntityRelationTagMapAfter = EntityTagMap.get(
+      objectId2,
+      TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId2)))
+    );
+    EntityRelationValue memory object2EntityRelationValue = abi.decode(
+      object2EntityRelationTagMapAfter.value,
+      (EntityRelationValue)
+    );
+    assertEq(object2EntityRelationValue.relatedEntityId, classId);
 
     // successful call
-
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteObject, (objectId)));
 
     // after
-    // Classes.objects array correctly updated
-    bytes32[] memory classObjectsAfter = Classes.getObjects(classId);
-    assertEq(classObjectsAfter.length, 1);
-    assertEq(classObjectsAfter[0], Id.unwrap(objectId2));
+    assertEq(Entity.getExists(objectId), false);
+    assertEq(Entity.getExists(objectId2), true);
 
-    // ClassObjectMap for removed object deleted
-    ClassObjectMapData memory classObject1MapDataAfter = ClassObjectMap.get(classId, objectId);
-    assertEq(classObject1MapDataAfter.instanceOf, false);
-    assertEq(classObject1MapDataAfter.objectIndex, 0);
+    EntityTagMapData memory classEntityCountTagMapAfter = EntityTagMap.get(classId, ENTITY_COUNT_PROPERTY_TAG);
+    assertEq(abi.decode(classEntityCountTagMapAfter.value, (uint256)), uint256(1));
 
-    // ClassObjectMap for last object correctly updated
-    ClassObjectMapData memory classObject2MapDataAfter = ClassObjectMap.get(classId, objectId2);
-    assertEq(classObject2MapDataAfter.instanceOf, true);
-    assertEq(classObject2MapDataAfter.objectIndex, 0);
+    assertEq(
+      EntityTagMap.getHasTag(objectId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId)))),
+      false
+    );
+    assertEq(
+      EntityTagMap.getHasTag(objectId2, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId2)))),
+      true
+    );
 
-    // Objects entry deleted
-    assertEq(Objects.getExists(objectId), false);
     vm.stopPrank();
   }
 
@@ -291,26 +378,43 @@ contract EntitySystemTest is MudTest {
     // correctly calls and executes deleteObject for multiple objectIds
     world.call(
       ENTITIES_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, new Id[](0)))
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, new ResourceId[](0)))
     );
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId2)));
 
-    assertEq(Objects.getExists(objectId), true);
-    assertEq(Id.unwrap(Objects.getClass(objectId)), Id.unwrap(classId));
-    assertEq(Objects.getExists(objectId2), true);
-    assertEq(Id.unwrap(Objects.getClass(objectId2)), Id.unwrap(classId));
+    assertEq(Entity.getExists(objectId), true);
+    assertEq(
+      EntityTagMap.getHasTag(objectId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId)))),
+      true
+    );
+    assertEq(Entity.getExists(objectId2), true);
+    assertEq(
+      EntityTagMap.getHasTag(objectId2, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId2)))),
+      true
+    );
+    EntityTagMapData memory classEntityCountTagMapBefore = EntityTagMap.get(classId, ENTITY_COUNT_PROPERTY_TAG);
+    assertEq(abi.decode(classEntityCountTagMapBefore.value, (uint256)), uint256(2));
 
-    Id[] memory objectsToDelete = new Id[](2);
+    uint256[] memory objectsToDelete = new uint256[](2);
     objectsToDelete[0] = objectId;
     objectsToDelete[1] = objectId2;
 
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteObjects, (objectsToDelete)));
 
-    assertEq(Objects.getExists(objectId), false);
-    assertEq(Id.unwrap(Objects.getClass(objectId)), bytes32(0));
-    assertEq(Objects.getExists(objectId2), false);
-    assertEq(Id.unwrap(Objects.getClass(objectId2)), bytes32(0));
+    assertEq(Entity.getExists(objectId), false);
+    assertEq(
+      EntityTagMap.getHasTag(objectId2, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId2)))),
+      false
+    );
+    assertEq(Entity.getExists(objectId2), false);
+    assertEq(
+      EntityTagMap.getHasTag(objectId2, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(objectId2)))),
+      false
+    );
+
+    EntityTagMapData memory classEntityCountTagMapAfter = EntityTagMap.get(classId, ENTITY_COUNT_PROPERTY_TAG);
+    assertEq(abi.decode(classEntityCountTagMapAfter.value, (uint256)), uint256(0));
     vm.stopPrank();
   }
 
@@ -322,35 +426,63 @@ contract EntitySystemTest is MudTest {
     );
 
     // reverts if classId doesn't exist (wasn't registered)
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ClassDoesNotExist.selector, classId));
+    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityDoesNotExist.selector, classId));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteClass, (classId)));
-    Id[] memory tagIds = new Id[](1);
-    tagIds[0] = taggedSystemTagId;
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, tagIds)));
+
+    // setup
+    ResourceId[] memory scopedSystemIds = new ResourceId[](1);
+    scopedSystemIds[0] = TAGGED_SYSTEM_ID;
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
 
+    // reverts if a non-class entity was passed to deleteClass
+    vm.expectRevert(
+      abi.encodeWithSelector(IEntitySystem.Entity_PropertyTagNotFound.selector, objectId, CLASS_PROPERTY_TAG)
+    );
+    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteClass, (objectId)));
+
     // reverts if Class has Object(s) instantiated still
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ClassHasObjects.selector, classId, 1));
+    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityRelationsFound.selector, classId, 1));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteClass, (classId)));
+
+    // delete the object
+    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteObject, (objectId)));
 
     // check data state updates
     // before
-    bytes32[] memory class1SystemTagsBefore = Classes.getSystemTags(classId);
-    assertEq(class1SystemTagsBefore.length, 1);
-    assertEq(class1SystemTagsBefore[0], Id.unwrap(taggedSystemTagId));
+    assertEq(Entity.getExists(classId), true);
+    bytes32[] memory classPropertyTagsBefore = Entity.getPropertyTags(classId);
+    assertEq(classPropertyTagsBefore.length, 2);
+    assertEq(classPropertyTagsBefore[0], TagId.unwrap(CLASS_PROPERTY_TAG));
+    assertEq(classPropertyTagsBefore[1], TagId.unwrap(ENTITY_COUNT_PROPERTY_TAG));
+    bytes32[] memory classSystemTagsBefore = Entity.getResourceRelationTags(classId);
+    assertEq(classSystemTagsBefore.length, 1);
+    assertEq(classSystemTagsBefore[0], TagId.unwrap(taggedSystemTagId));
 
-    assertEq(Classes.getExists(classId), true);
+    // map data
+    assertEq(EntityTagMap.getHasTag(classId, CLASS_PROPERTY_TAG), true);
+    assertEq(EntityTagMap.getHasTag(classId, ENTITY_COUNT_PROPERTY_TAG), true);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId), true);
 
     // successful call
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteObject, (objectId)));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteClass, (classId)));
-    // after
-    // removes all SystemTags
-    bytes32[] memory class1SystemTagsAfter = Classes.getSystemTags(classId);
-    assertEq(class1SystemTagsAfter.length, 0);
 
-    // removes the EntityIds entry
-    assertEq(Classes.getExists(classId), false);
+    // after
+    assertEq(Entity.getExists(classId), false);
+    // removes all Tags
+    bytes32[] memory classPropertyTagsAfter = Entity.getPropertyTags(classId);
+    assertEq(classPropertyTagsAfter.length, 0);
+    bytes32[] memory classSystemTagsAfter = Entity.getResourceRelationTags(classId);
+    assertEq(classSystemTagsAfter.length, 0);
+
+    // removes map data
+    assertEq(EntityTagMap.getHasTag(classId, CLASS_PROPERTY_TAG), false);
+    assertEq(EntityTagMap.getHasTag(classId, ENTITY_COUNT_PROPERTY_TAG), false);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId), false);
+
     vm.stopPrank();
   }
 
@@ -362,65 +494,99 @@ contract EntitySystemTest is MudTest {
     );
 
     // corectly calls and executes deleteClass for multiple classIds
-    Id[] memory tagIds = new Id[](1);
-    tagIds[0] = taggedSystemTagId;
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, tagIds)));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId2, classAccessRole, tagIds)));
+    ResourceId[] memory scopedSystemIds = new ResourceId[](1);
+    scopedSystemIds[0] = TAGGED_SYSTEM_ID;
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId2, classAccessRole, scopedSystemIds))
+    );
 
     // check data state updates
     // before
-    bytes32[] memory class1SystemTagsBefore = Classes.getSystemTags(classId);
+    bytes32[] memory class1PropertyTagsBefore = Entity.getPropertyTags(classId);
+    assertEq(class1PropertyTagsBefore.length, 2);
+    assertEq(class1PropertyTagsBefore[0], TagId.unwrap(CLASS_PROPERTY_TAG));
+    assertEq(class1PropertyTagsBefore[1], TagId.unwrap(ENTITY_COUNT_PROPERTY_TAG));
+    bytes32[] memory class1SystemTagsBefore = Entity.getResourceRelationTags(classId);
     assertEq(class1SystemTagsBefore.length, 1);
-    assertEq(class1SystemTagsBefore[0], Id.unwrap(taggedSystemTagId));
-    bytes32[] memory class2SystemTagsBefore = Classes.getSystemTags(classId2);
+    assertEq(class1SystemTagsBefore[0], TagId.unwrap(taggedSystemTagId));
+    bytes32[] memory class2PropertyTagsBefore = Entity.getPropertyTags(classId2);
+    assertEq(class2PropertyTagsBefore.length, 2);
+    assertEq(class2PropertyTagsBefore[0], TagId.unwrap(CLASS_PROPERTY_TAG));
+    assertEq(class2PropertyTagsBefore[1], TagId.unwrap(ENTITY_COUNT_PROPERTY_TAG));
+    bytes32[] memory class2SystemTagsBefore = Entity.getResourceRelationTags(classId2);
     assertEq(class2SystemTagsBefore.length, 1);
-    assertEq(class2SystemTagsBefore[0], Id.unwrap(taggedSystemTagId));
-    assertEq(Classes.getExists(classId), true);
-    assertEq(Classes.getExists(classId2), true);
+    assertEq(class2SystemTagsBefore[0], TagId.unwrap(taggedSystemTagId));
+    assertEq(Entity.getExists(classId), true);
+    assertEq(Entity.getExists(classId2), true);
+    assertEq(EntityTagMap.getHasTag(classId, CLASS_PROPERTY_TAG), true);
+    assertEq(EntityTagMap.getHasTag(classId, ENTITY_COUNT_PROPERTY_TAG), true);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId), true);
+    assertEq(EntityTagMap.getHasTag(classId2, CLASS_PROPERTY_TAG), true);
+    assertEq(EntityTagMap.getHasTag(classId2, ENTITY_COUNT_PROPERTY_TAG), true);
+    assertEq(EntityTagMap.getHasTag(classId2, taggedSystemTagId), true);
 
     // successful call
-    Id[] memory classIds = new Id[](2);
+    uint256[] memory classIds = new uint256[](2);
     classIds[0] = classId;
     classIds[1] = classId2;
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteClasses, (classIds)));
 
     // after
-    bytes32[] memory class1SystemTagsAfter = Classes.getSystemTags(classId);
+    bytes32[] memory class1PropertyTagsAfter = Entity.getPropertyTags(classId);
+    assertEq(class1PropertyTagsAfter.length, 0);
+    bytes32[] memory class2PropertyTagsAfter = Entity.getPropertyTags(classId2);
+    assertEq(class2PropertyTagsAfter.length, 0);
+    bytes32[] memory class1SystemTagsAfter = Entity.getResourceRelationTags(classId);
     assertEq(class1SystemTagsAfter.length, 0);
-    bytes32[] memory class2SystemTagsAfter = Classes.getSystemTags(classId2);
+    bytes32[] memory class2SystemTagsAfter = Entity.getResourceRelationTags(classId2);
     assertEq(class2SystemTagsAfter.length, 0);
-    assertEq(Classes.getExists(classId), false);
-    assertEq(Classes.getExists(classId2), false);
+    assertEq(EntityTagMap.getHasTag(classId, CLASS_PROPERTY_TAG), false);
+    assertEq(EntityTagMap.getHasTag(classId, ENTITY_COUNT_PROPERTY_TAG), false);
+    assertEq(EntityTagMap.getHasTag(classId, taggedSystemTagId), false);
+    assertEq(EntityTagMap.getHasTag(classId2, CLASS_PROPERTY_TAG), false);
+    assertEq(EntityTagMap.getHasTag(classId2, ENTITY_COUNT_PROPERTY_TAG), false);
+    assertEq(EntityTagMap.getHasTag(classId2, taggedSystemTagId), false);
+    assertEq(Entity.getExists(classId), false);
+    assertEq(Entity.getExists(classId2), false);
     vm.stopPrank();
   }
 
   function test_setClassAccessRole() public {
     vm.startPrank(deployer);
-    Id[] memory tagIds = new Id[](1);
-    tagIds[0] = taggedSystemTagId;
+    ResourceId[] memory scopedSystemIds = new ResourceId[](1);
+    scopedSystemIds[0] = TAGGED_SYSTEM_ID;
     // create original Class access role
     world.call(
       ROLE_MANAGEMENT_SYSTEM_ID,
       abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
     );
     // register Class
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, tagIds)));
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
     // set invalid params
-    Id invalidClassId = IdLib.encode(ENTITY_CLASS, bytes30("INVALID_CLASS"));
+    uint256 invalidClassId = uint256(bytes32("INVALID_CLASS_ID"));
     bytes32 invalidRole = bytes32("INVALID_ROLE");
 
     // reverts, if classId in not registered
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ClassDoesNotExist.selector, invalidClassId));
+    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityDoesNotExist.selector, invalidClassId));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.setClassAccessRole, (invalidClassId, classAccessRole)));
 
     // reverts, if newAccessRole does not exist
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_RoleDoesNotExist.selector, invalidRole));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.setClassAccessRole, (classId, invalidRole)));
 
-    //check old access role
-    bytes32 accessRoleBefore = Classes.getAccessRole(classId);
+    // check for old access role
+    bytes32 accessRoleBefore = Entity.getAccessRole(classId);
     assertEq(accessRoleBefore, classAccessRole);
 
+    // create new class access role
     bytes32 newClassAccessRole = bytes32("NEW_CLASS_ACCESS_ROLE");
     world.call(
       ROLE_MANAGEMENT_SYSTEM_ID,
@@ -429,32 +595,35 @@ contract EntitySystemTest is MudTest {
     // success
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.setClassAccessRole, (classId, newClassAccessRole)));
 
-    //check new access role
-    bytes32 accessRoleAfter = Classes.getAccessRole(classId);
+    //check for new access role
+    bytes32 accessRoleAfter = Entity.getAccessRole(classId);
     assertEq(accessRoleAfter, newClassAccessRole);
     vm.stopPrank();
   }
 
   function test_setObjectAccessRole() public {
     vm.startPrank(deployer);
-    Id[] memory tagIds = new Id[](1);
-    tagIds[0] = taggedSystemTagId;
+    ResourceId[] memory scopedSystemIds = new ResourceId[](1);
+    scopedSystemIds[0] = TAGGED_SYSTEM_ID;
     // create Class access role
     world.call(
       ROLE_MANAGEMENT_SYSTEM_ID,
       abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
     );
     // register Class
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, tagIds)));
+    world.call(
+      ENTITIES_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
     // instantiate Object
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
 
     // set invalid params
-    Id invalidObjectId = IdLib.encode(ENTITY_CLASS, bytes30("INVALID_OBJECT"));
+    uint256 invalidObjectId = uint256(bytes32("INVALID_OBJECT_ID"));
     bytes32 invalidRole = bytes32("INVALID_ROLE");
 
     // reverts, if objectId in not instantiated
-    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_ObjectDoesNotExist.selector, invalidObjectId));
+    vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityDoesNotExist.selector, invalidObjectId));
     world.call(
       ENTITIES_SYSTEM_ID,
       abi.encodeCall(IEntitySystem.setObjectAccessRole, (invalidObjectId, classAccessRole))
@@ -464,8 +633,8 @@ contract EntitySystemTest is MudTest {
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_RoleDoesNotExist.selector, invalidRole));
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.setObjectAccessRole, (objectId, invalidRole)));
 
-    //check old access role
-    bytes32 accessRoleBefore = Objects.getAccessRole(objectId);
+    // check for old access role
+    bytes32 accessRoleBefore = Entity.getAccessRole(objectId);
     assertEq(accessRoleBefore, bytes32(0));
 
     bytes32 newObjectAccessRole = bytes32("NEW_OBJECT_ACCESS_ROLE");
@@ -476,8 +645,8 @@ contract EntitySystemTest is MudTest {
     // success
     world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.setObjectAccessRole, (objectId, newObjectAccessRole)));
 
-    //check new access role
-    bytes32 accessRoleAfter = Objects.getAccessRole(objectId);
+    // check for new access role
+    bytes32 accessRoleAfter = Entity.getAccessRole(objectId);
     assertEq(accessRoleAfter, newObjectAccessRole);
     vm.stopPrank();
   }
