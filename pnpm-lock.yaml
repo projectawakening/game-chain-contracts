@@ -392,9 +392,9 @@ importers:
       '@eveworld/common-constants':
         specifier: 0.0.13
         version: 0.0.13(@aws-sdk/client-kms@3.658.1)(asn1.js@5.4.1)(typescript@5.4.5)(zod@3.23.8)
-      '@eveworld/smart-object-framework':
-        specifier: link:../smart-object-framework
-        version: link:../smart-object-framework
+      '@eveworld/smart-object-framework-v2':
+        specifier: link:../smart-object-framework-v2
+        version: link:../smart-object-framework-v2
       '@latticexyz/cli':
         specifier: 2.2.15-main-ba5191c3d6f74b3c4982afd465cf449d23d70bb7
         version: 2.2.15-main-ba5191c3d6f74b3c4982afd465cf449d23d70bb7(react@18.3.1)

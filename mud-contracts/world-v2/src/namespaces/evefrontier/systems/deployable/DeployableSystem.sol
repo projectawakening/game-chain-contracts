@@ -25,6 +25,7 @@ import { EveSystem } from "../EveSystem.sol";
 
 import { State, SmartObjectData, CreateAndAnchorDeployableParams } from "./types.sol";
 import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 
 /**
  * @title DeployableSystem
@@ -32,7 +33,7 @@ import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
  * DeployableSystem stores the deployable state of a smart object on-chain
  */
 
-contract DeployableSystem is EveSystem {
+contract DeployableSystem is SmartObjectFramework {
   error Deployable_IncorrectState(uint256 smartObjectId, State currentState);
   error Deployable_NoFuel(uint256 smartObjectId);
   error Deployable_StateTransitionPaused();
@@ -55,7 +56,7 @@ contract DeployableSystem is EveSystem {
    * @dev creates and anchors a deployable
    * @param params struct containing all parameters for creating and anchoring a deployable
    */
-  function createAndAnchorDeployable(CreateAndAnchorDeployableParams memory params) public {
+  function createAndAnchorDeployable(CreateAndAnchorDeployableParams memory params) public context {
     smartAssemblySystem.createSmartAssembly(params.smartObjectId, params.smartAssemblyType, params.entityRecordData);
 
     registerDeployable(

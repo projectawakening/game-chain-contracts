@@ -1,6 +1,12 @@
 import { defineWorld } from "@latticexyz/world";
 
 export default defineWorld({
+  deploy: {
+    customWorld: {
+      sourcePath: "src/WorldWithContextProxy.sol",
+      name: "WorldWithContextProxy",
+    },
+  },
   userTypes: {
     ResourceId: { filePath: "@latticexyz/store/src/ResourceId.sol", type: "bytes32" },
   },
