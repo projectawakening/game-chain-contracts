@@ -7,6 +7,9 @@ export default defineWorld({
       name: "WorldWithContext",
     },
   },
+  codegen: {
+    generateSystemLibraries: true,
+  },
   userTypes: {
     TagId: { type: "bytes32", filePath: "./src/libs/TagId.sol" },
     ResourceId: { type: "bytes32", filePath: "@latticexyz/store/src/ResourceId.sol" },
