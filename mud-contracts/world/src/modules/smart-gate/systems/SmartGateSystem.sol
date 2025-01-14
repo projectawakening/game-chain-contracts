@@ -154,6 +154,10 @@ contract SmartGateSystem is EveSystem, AccessModified {
       revert SmartGate_NotWithtinRange(sourceGateId, destinationGateId);
     }
 
+    //Delete the existing records for the source and destination gate before creating a new link to avoid replacing the record
+    _deleteExistingLink(sourceGateId);
+    _deleteExistingLink(destinationGateId);
+
     //Create a 2 way link between the gates
     SmartGateLinkTable.set(sourceGateId, destinationGateId, true);
     SmartGateLinkTable.set(destinationGateId, sourceGateId, true);
@@ -280,6 +284,22 @@ contract SmartGateSystem is EveSystem, AccessModified {
     // Sum of squares (distance squared in meters)
     uint256 distanceSquaredMeters = (dx * dx) + (dy * dy) + (dz * dz);
     return distanceSquaredMeters <= (maxDistance * maxDistance);
+  }
+
+  /**
+   * @notice delete the existing link between the source and destination gate
+   * @param sourceGateId is the smartObjectId of the source gate
+   */
+  function _deleteExistingLink(uint256 sourceGateId) internal {
+    uint256 destinationGateId;
+    //delete the source gate record
+    SmartGateLinkTableData memory linkData = SmartGateLinkTable.get(sourceGateId);
+    if (!linkData.isLinked) {
+      destinationGateId = SmartGateLinkTable.get(sourceGateId).destinationGateId;
+
+      SmartGateLinkTable.deleteRecord(sourceGateId);
+      SmartGateLinkTable.deleteRecord(destinationGateId);
+    }
   }
 
   function _entityRecordLib() internal view returns (EntityRecordLib.World memory) {

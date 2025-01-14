@@ -42,6 +42,7 @@ import { EntityRecordData as CharEntityRecordData } from "../../src/modules/smar
 
 import { SmartGateCustomMock } from "./SmartGateCustomMock.sol";
 
+
 /**
  * @title SmartGateTest
  * @dev Not including Fuzz test as it has issues
@@ -264,6 +265,49 @@ contract SmartGateTest is MudTest {
     SmartGateLinkTableData memory linkDataDC = SmartGateLinkTable.get(smartGateD);
     assertEq(linkDataDC.destinationGateId, smartGateC);
     assertTrue(linkDataDC.isLinked);
+  }
+
+  function testLinkFromSourceAndUnlinkFromDest() public {
+    uint256 smartGateA = 123;
+    uint256 smartGateB = 124;
+    uint256 smartGateC = 125;
+
+    testAnchorSmartGate(smartGateA);
+    testAnchorSmartGate(smartGateB);
+    testAnchorSmartGate(smartGateC);
+
+    //link AB
+    smartGate.linkSmartGates(smartGateA, smartGateB);
+    SmartGateLinkTableData memory linkDataAB = SmartGateLinkTable.get(smartGateA);
+    assertTrue(linkDataAB.isLinked);
+
+    SmartGateLinkTableData memory linkDataBA = SmartGateLinkTable.get(smartGateB);
+    assertTrue(linkDataBA.isLinked);
+
+    //unlink BA
+    smartGate.unlinkSmartGates(smartGateB, smartGateA);
+    linkDataBA = SmartGateLinkTable.get(smartGateB);
+    assertFalse(linkDataBA.isLinked);
+
+    linkDataAB = SmartGateLinkTable.get(smartGateA);
+    assertFalse(linkDataAB.isLinked);
+
+    //link BC
+    smartGate.linkSmartGates(smartGateB, smartGateC);
+    SmartGateLinkTableData memory linkDataBC = SmartGateLinkTable.get(smartGateB);
+    assert(linkDataBC.isLinked);
+
+    SmartGateLinkTableData memory linkDataCB = SmartGateLinkTable.get(smartGateC);
+    assert(linkDataCB.isLinked);
+
+    //BA link should be replaced with BC
+    linkDataBA = SmartGateLinkTable.get(smartGateB);
+    assertFalse(linkDataBA.destinationGateId == smartGateA);
+    assert(linkDataBA.destinationGateId == smartGateC);
+
+    //AB link record should not exists
+    linkDataAB = SmartGateLinkTable.get(smartGateA);
+    assert(linkDataAB.destinationGateId == 0);
   }
 
   function testRevertExistingLink() public {
