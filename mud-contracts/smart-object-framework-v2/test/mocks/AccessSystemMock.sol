@@ -11,37 +11,34 @@ import { SystemRegistry } from "@latticexyz/world/src/codegen/tables/SystemRegis
 import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 
 import { IWorldWithContext } from "../../src/IWorldWithContext.sol";
-import { Id, IdLib } from "../../src/libs/Id.sol";
-import { ENTITY_CLASS } from "../../src/types/entityTypes.sol";
-import { Classes } from "../../src/namespaces/evefrontier/codegen/tables/Classes.sol";
 
 import { SystemMock } from "./SystemMock.sol";
 
 contract AccessSystemMock is SmartObjectFramework {
-  error AccessSystemMock_IncorrectEntityId(Id entityId, Id classId);
+  error AccessSystemMock_IncorrectEntityId(uint256 entityId, uint256 classId);
   error AccessSystemMock_IncorrectCallData();
   error AccessSystemMock_IncorrectCallCount();
   error AccessSystemMock_IncorrectCaller();
 
-  function accessController(Id entityId, bytes memory targetCallData) public view {
+  function accessController(uint256 entityId, bytes memory targetCallData) public view {
     // the goal of this controller is to ensure all data flows work properly for the access modifier
     // the following revert errors will only occur if the access modifier logic is incorrect
     // normally access logic will only revert when access permissions are breached
 
     // assume these values for verification in our test (they are the same values used in SmartObjectFramewrokTest.test_access())
-    Id classId = IdLib.encode(ENTITY_CLASS, bytes30("TEST_CLASS"));
+    uint256 classId = uint256(bytes32("TEST_CLASS"));
     ResourceId targetSystemId = ResourceId.wrap(
       (bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("evefrontier"), bytes16("TaggedSystemMock"))))
     );
     bytes4 targetFunctionId = SystemMock.accessControlled.selector;
 
-    (Id targetParam1, ResourceId targetParam2, bytes4 targetParam3) = abi.decode(
+    (uint256 targetParam1, ResourceId targetParam2, bytes4 targetParam3) = abi.decode(
       targetCallData,
-      (Id, ResourceId, bytes4)
+      (uint256, ResourceId, bytes4)
     );
 
     // check entityId and targetCallData are passed correctly to the access logic
-    if (Id.unwrap(entityId) != Id.unwrap(classId) || Id.unwrap(entityId) != Id.unwrap(targetParam1)) {
+    if (entityId != classId || entityId != targetParam1) {
       revert AccessSystemMock_IncorrectEntityId(entityId, classId);
     }
     if (ResourceId.unwrap(targetParam2) != ResourceId.unwrap(targetSystemId) || targetParam3 != targetFunctionId) {
@@ -63,7 +60,10 @@ contract AccessSystemMock is SmartObjectFramework {
   }
 
   // check that non-view access functions throw an error
-  function invalidAccessController(Id entityId, bytes memory targetCallData) public returns (Id, bytes memory) {
+  function invalidAccessController(
+    uint256 entityId,
+    bytes memory targetCallData
+  ) public returns (uint256, bytes memory) {
     // transient storage setting to ensure this is not a static call
     uint256 maxSlot = type(uint256).max;
     assembly {
