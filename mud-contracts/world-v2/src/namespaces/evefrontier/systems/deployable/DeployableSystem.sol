@@ -26,7 +26,6 @@ import { EveSystem } from "../EveSystem.sol";
 import { State, SmartObjectData, CreateAndAnchorDeployableParams } from "./types.sol";
 import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
 import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
-
 /**
  * @title DeployableSystem
  * @author CCP Games

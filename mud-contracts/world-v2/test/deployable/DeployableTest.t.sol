@@ -24,8 +24,12 @@ import { CreateAndAnchorDeployableParams } from "../../src/namespaces/evefrontie
 
 import { ONE_UNIT_IN_WEI } from "../../src/namespaces/evefrontier/systems/constants.sol";
 
+import { IWorldWithContext } from "@eveworld/smart-object-framework-v2/src/IWorldWithContext.sol";
+
+import "forge-std/console.sol";
+
 contract DeployableTest is MudTest {
-  IBaseWorld world;
+  IWorldWithContext world;
 
   string mnemonic = "test test test test test test test test test test test junk";
   uint256 deployerPK = vm.deriveKey(mnemonic, 0);
@@ -38,7 +42,7 @@ contract DeployableTest is MudTest {
 
   function setUp() public virtual override {
     super.setUp();
-    world = IBaseWorld(worldAddress);
+    world = IWorldWithContext(worldAddress);
 
     EntityRecordData memory entityRecord = EntityRecordData({ typeId: 123, itemId: 234, volume: 100 });
 
@@ -224,5 +228,6 @@ contract DeployableTest is MudTest {
     assertEq(locationData.y, location.y);
     assertEq(locationData.z, location.z);
     assertEq(uint8(State.ANCHORED), uint8(DeployableState.getCurrentState(smartObjectId)));
+    // assertEq(world.getWorldCallCount(), 1);
   }
 }
