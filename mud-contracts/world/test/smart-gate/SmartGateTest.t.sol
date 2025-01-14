@@ -42,7 +42,6 @@ import { EntityRecordData as CharEntityRecordData } from "../../src/modules/smar
 
 import { SmartGateCustomMock } from "./SmartGateCustomMock.sol";
 
-
 /**
  * @title SmartGateTest
  * @dev Not including Fuzz test as it has issues
