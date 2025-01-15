@@ -187,13 +187,33 @@ contract smartDeployableTest is MudTest {
     uint256 fuelMaxCapacity,
     LocationTableData memory location
   ) public {
+    uint256 fuelAmount = 2;
     vm.assume(entityId != 0);
     testAnchor(entityId, fuelUnitVolume, fuelConsumptionPerMinute, fuelMaxCapacity, location);
     vm.assume(fuelUnitVolume < type(uint64).max / 2);
     vm.assume(fuelUnitVolume < fuelMaxCapacity);
-    smartDeployable.depositFuel(entityId, 1);
+    vm.assume(fuelMaxCapacity > fuelAmount * fuelUnitVolume);
+    smartDeployable.depositFuel(entityId, fuelAmount);
     smartDeployable.bringOnline(entityId);
     assertEq(uint8(State.ONLINE), uint8(DeployableState.getCurrentState(entityId)));
+  }
+
+  function testBringOnlineWith1Fuel(
+    uint256 entityId,
+    uint256 fuelUnitVolume,
+    uint256 fuelConsumptionPerMinute,
+    uint256 fuelMaxCapacity,
+    LocationTableData memory location
+  ) public {
+    uint256 fuelAmount = 1;
+    vm.assume(entityId != 0);
+    testAnchor(entityId, fuelUnitVolume, fuelConsumptionPerMinute, fuelMaxCapacity, location);
+    vm.assume(fuelUnitVolume < type(uint64).max / 2);
+    vm.assume(fuelUnitVolume < fuelMaxCapacity);
+    vm.assume(fuelMaxCapacity > fuelAmount * fuelUnitVolume);
+    smartDeployable.depositFuel(entityId, fuelAmount);
+    smartDeployable.bringOnline(entityId);
+    assertEq(uint8(State.ANCHORED), uint8(DeployableState.getCurrentState(entityId)));
   }
 
   function testBringOffline(

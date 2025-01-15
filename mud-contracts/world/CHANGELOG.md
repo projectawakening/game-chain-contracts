@@ -1,4 +1,8 @@
 # @eveworld/world
+## 0.0.21
+- Fuel bug fixes for edge cases
+- smart gate additional checks and conditions related to external services
+
 ## 0.0.19
 - Added additional condition to check if anyGateIsLinked previously
 
