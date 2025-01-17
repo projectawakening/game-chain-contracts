@@ -26,6 +26,9 @@ import { EveSystem } from "../EveSystem.sol";
 import { State, SmartObjectData, CreateAndAnchorDeployableParams } from "./types.sol";
 import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
 import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
+import { RoleManagementSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/systems/role-management-system/RoleManagementSystem.sol";
+import { roleManagementSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/RoleManagementSystemLib.sol";
+
 /**
  * @title DeployableSystem
  * @author CCP Games
@@ -55,7 +58,7 @@ contract DeployableSystem is SmartObjectFramework {
    * @dev creates and anchors a deployable
    * @param params struct containing all parameters for creating and anchoring a deployable
    */
-  function createAndAnchorDeployable(CreateAndAnchorDeployableParams memory params) public context {
+  function createAndAnchorDeployable(CreateAndAnchorDeployableParams memory params) public context access(0) {
     smartAssemblySystem.createSmartAssembly(params.smartObjectId, params.smartAssemblyType, params.entityRecordData);
 
     registerDeployable(

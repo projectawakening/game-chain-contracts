@@ -25,24 +25,18 @@ import { CreateAndAnchorDeployableParams } from "../../src/namespaces/evefrontie
 import { ONE_UNIT_IN_WEI } from "../../src/namespaces/evefrontier/systems/constants.sol";
 
 import { IWorldWithContext } from "@eveworld/smart-object-framework-v2/src/IWorldWithContext.sol";
+import { EveTest } from "../EveTest.sol";
 
 import "forge-std/console.sol";
 
-contract DeployableTest is MudTest {
-  IWorldWithContext world;
-
-  string mnemonic = "test test test test test test test test test test test junk";
-  uint256 deployerPK = vm.deriveKey(mnemonic, 0);
-  uint256 alicePK = vm.deriveKey(mnemonic, 2);
-
+contract DeployableTest is EveTest {
   uint256 characterId = 123;
-  address alice = vm.addr(alicePK);
+
   uint256 tribeId = 100;
   SmartObjectData smartObjectData;
 
   function setUp() public virtual override {
     super.setUp();
-    world = IWorldWithContext(worldAddress);
 
     EntityRecordData memory entityRecord = EntityRecordData({ typeId: 123, itemId: 234, volume: 100 });
 
@@ -198,6 +192,8 @@ contract DeployableTest is MudTest {
     vm.assume(fuelMaxCapacity != 0);
     vm.assume((keccak256(abi.encodePacked(smartAssemblyType)) != keccak256(abi.encodePacked(""))));
 
+    vm.startPrank(deployer);
+
     deployableSystem.globalResume();
     deployableSystem.createAndAnchorDeployable(
       CreateAndAnchorDeployableParams({
@@ -212,14 +208,7 @@ contract DeployableTest is MudTest {
       })
     );
 
-    //   uint256 smartObjectId;
-    // string smartAssemblyType;
-    // EntityRecordData entityRecordData;
-    // SmartObjectData smartObjectData;
-    // uint256 fuelUnitVolume;
-    // uint256 fuelConsumptionIntervalInSeconds;
-    // uint256 fuelMaxCapacity;
-    // LocationData locationData;
+    vm.stopPrank();
 
     LocationData memory location = Location.get(smartObjectId);
 
@@ -228,6 +217,5 @@ contract DeployableTest is MudTest {
     assertEq(locationData.y, location.y);
     assertEq(locationData.z, location.z);
     assertEq(uint8(State.ANCHORED), uint8(DeployableState.getCurrentState(smartObjectId)));
-    // assertEq(world.getWorldCallCount(), 1);
   }
 }
