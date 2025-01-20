@@ -58,7 +58,9 @@ contract DeployableSystem is SmartObjectFramework {
    * @dev creates and anchors a deployable
    * @param params struct containing all parameters for creating and anchoring a deployable
    */
-  function createAndAnchorDeployable(CreateAndAnchorDeployableParams memory params) public context access(0) {
+  function createAndAnchorDeployable(
+    CreateAndAnchorDeployableParams memory params
+  ) public context access(params.smartObjectId) {
     smartAssemblySystem.createSmartAssembly(params.smartObjectId, params.smartAssemblyType, params.entityRecordData);
 
     registerDeployable(
@@ -75,7 +77,7 @@ contract DeployableSystem is SmartObjectFramework {
    * @dev sets the ERC721 address for a deployable token
    * @param erc721Address the address of the ERC721 contract
    */
-  function registerDeployableToken(address erc721Address) public {
+  function registerDeployableToken(address erc721Address) public context access(0) {
     if (DeployableToken.getErc721Address() != address(0)) {
       revert DeployableERC721AlreadyInitialized();
     }
@@ -97,7 +99,7 @@ contract DeployableSystem is SmartObjectFramework {
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity
-  ) public onlyActive {
+  ) public onlyActive context access(smartObjectId) {
     State previousState = DeployableState.getCurrentState(smartObjectId);
     if (!(previousState == State.NULL || previousState == State.UNANCHORED)) {
       revert Deployable_IncorrectState(smartObjectId, previousState);
@@ -147,7 +149,7 @@ contract DeployableSystem is SmartObjectFramework {
    * @dev destroys a smart deployable
    * @param smartObjectId on-chain id of the in-game deployable
    */
-  function destroyDeployable(uint256 smartObjectId) public onlyActive {
+  function destroyDeployable(uint256 smartObjectId) public onlyActive context access(smartObjectId) {
     State previousState = DeployableState.getCurrentState(smartObjectId);
     if (!(previousState == State.ANCHORED || previousState == State.ONLINE)) {
       revert Deployable_IncorrectState(smartObjectId, previousState);
@@ -160,7 +162,7 @@ contract DeployableSystem is SmartObjectFramework {
    * @dev brings a smart deployable online
    * @param smartObjectId of the deployable
    */
-  function bringOnline(uint256 smartObjectId) public onlyActive {
+  function bringOnline(uint256 smartObjectId) public onlyActive context access(smartObjectId) {
     State previousState = DeployableState.getCurrentState(smartObjectId);
     if (previousState != State.ANCHORED) {
       revert Deployable_IncorrectState(smartObjectId, previousState);
@@ -180,7 +182,7 @@ contract DeployableSystem is SmartObjectFramework {
    * @dev brings a smart deployable offline
    * @param smartObjectId id of the deployable
    */
-  function bringOffline(uint256 smartObjectId) public onlyActive {
+  function bringOffline(uint256 smartObjectId) public onlyActive context access(smartObjectId) {
     State previousState = DeployableState.getCurrentState(smartObjectId);
     if (previousState != State.ONLINE) {
       revert Deployable_IncorrectState(smartObjectId, previousState);
@@ -195,7 +197,10 @@ contract DeployableSystem is SmartObjectFramework {
    * @param smartObjectId on-chain of the deployable
    * @param locationData the location data of the object
    */
-  function anchor(uint256 smartObjectId, LocationData memory locationData) public onlyActive {
+  function anchor(
+    uint256 smartObjectId,
+    LocationData memory locationData
+  ) public onlyActive context access(smartObjectId) {
     State previousState = DeployableState.getCurrentState(smartObjectId);
     if (previousState != State.UNANCHORED) {
       revert Deployable_IncorrectState(smartObjectId, previousState);
@@ -212,7 +217,7 @@ contract DeployableSystem is SmartObjectFramework {
    * @dev unanchors a smart deployable
    * @param smartObjectId on-chain of the deployable
    */
-  function unanchor(uint256 smartObjectId) public onlyActive {
+  function unanchor(uint256 smartObjectId) public onlyActive context access(smartObjectId) {
     State previousState = DeployableState.getCurrentState(smartObjectId);
     if (!(previousState == State.ANCHORED || previousState == State.ONLINE)) {
       revert Deployable_IncorrectState(smartObjectId, previousState);
@@ -229,7 +234,7 @@ contract DeployableSystem is SmartObjectFramework {
    * @dev brings all smart deployables online
    * TODO: limit to admin use only
    */
-  function globalPause() public {
+  function globalPause() public context access(0) {
     GlobalDeployableState.setIsPaused(false);
     GlobalDeployableState.setUpdatedBlockNumber(block.number);
     GlobalDeployableState.setLastGlobalOffline(block.timestamp);
@@ -239,7 +244,7 @@ contract DeployableSystem is SmartObjectFramework {
    * @dev brings all smart deployables offline
    * TODO: limit to admin use only
    */
-  function globalResume() public {
+  function globalResume() public context access(0) {
     GlobalDeployableState.setIsPaused(true);
     GlobalDeployableState.setUpdatedBlockNumber(block.number);
     GlobalDeployableState.setLastGlobalOnline(block.timestamp);

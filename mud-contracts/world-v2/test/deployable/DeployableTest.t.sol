@@ -71,6 +71,7 @@ contract DeployableTest is EveTest {
     vm.assume(fuelConsumptionIntervalInSeconds >= 1);
     vm.assume(fuelMaxCapacity != 0);
 
+    vm.startPrank(deployer);
     deployableSystem.globalResume();
 
     DeployableStateData memory data = DeployableStateData({
@@ -91,6 +92,8 @@ contract DeployableTest is EveTest {
       fuelMaxCapacity
     );
 
+    vm.stopPrank();
+
     DeployableStateData memory tableData = DeployableState.get(smartObjectId);
 
     assertEq(data.createdAt, tableData.createdAt);
@@ -108,7 +111,9 @@ contract DeployableTest is EveTest {
     vm.assume(smartObjectId != 0);
     testRegisterDeployable(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity);
 
+    vm.startPrank(deployer);
     deployableSystem.anchor(smartObjectId, location);
+    vm.stopPrank();
 
     LocationData memory tableData = Location.get(smartObjectId);
 
@@ -132,9 +137,10 @@ contract DeployableTest is EveTest {
     vm.assume(fuelUnitVolume < type(uint64).max / 2);
     vm.assume(fuelUnitVolume < fuelMaxCapacity);
 
+    vm.startPrank(deployer);
     fuelSystem.depositFuel(smartObjectId, 1);
-
     deployableSystem.bringOnline(smartObjectId);
+    vm.stopPrank();
     assertEq(uint8(State.ONLINE), uint8(DeployableState.getCurrentState(smartObjectId)));
   }
 
@@ -147,7 +153,9 @@ contract DeployableTest is EveTest {
   ) public {
     vm.assume(smartObjectId != 0);
     testBringOnline(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    vm.startPrank(deployer);
     deployableSystem.bringOffline(smartObjectId);
+    vm.stopPrank();
     assertEq(uint8(State.ANCHORED), uint8(DeployableState.getCurrentState(smartObjectId)));
   }
 
@@ -160,7 +168,9 @@ contract DeployableTest is EveTest {
   ) public {
     vm.assume(smartObjectId != 0);
     testAnchor(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    vm.startPrank(deployer);
     deployableSystem.unanchor(smartObjectId);
+    vm.stopPrank();
     assertEq(uint8(State.UNANCHORED), uint8(DeployableState.getCurrentState(smartObjectId)));
   }
 
@@ -173,7 +183,9 @@ contract DeployableTest is EveTest {
   ) public {
     vm.assume(smartObjectId != 0);
     testAnchor(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    vm.startPrank(deployer);
     deployableSystem.destroyDeployable(smartObjectId);
+    vm.stopPrank();
     assertEq(uint8(State.DESTROYED), uint8(DeployableState.getCurrentState(smartObjectId)));
   }
 

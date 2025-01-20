@@ -38,10 +38,10 @@ abstract contract EveTest is Test {
 
     world = IWorldWithContext(worldAddress);
 
-    _createRoles(world);
+    _createRoles();
   }
 
-  function _createRoles(IWorldWithContext world) internal {
+  function _createRoles() internal {
     bytes32 adminRole = "admin";
 
     vm.startPrank(deployer);
@@ -76,18 +76,32 @@ abstract contract EveTest is Test {
 
     roleManagementSystem.createRole(adminRole, adminRole);
 
-    accessConfigSystem.configureAccess(
-      deployableSystem.toResourceId(),
-      DeployableSystem.createAndAnchorDeployable.selector,
-      adminAccessSystem.toResourceId(),
-      AdminAccessSystem.onlyAdmin.selector
-    );
+    // DeployableSystem
 
-    accessConfigSystem.setAccessEnforcement(
-      deployableSystem.toResourceId(),
+    // array for selectors
+    bytes4[10] memory deployableSignatures = [
       DeployableSystem.createAndAnchorDeployable.selector,
-      true
-    );
+      DeployableSystem.registerDeployable.selector,
+      DeployableSystem.registerDeployableToken.selector,
+      DeployableSystem.destroyDeployable.selector,
+      DeployableSystem.bringOnline.selector,
+      DeployableSystem.bringOffline.selector,
+      DeployableSystem.anchor.selector,
+      DeployableSystem.unanchor.selector,
+      DeployableSystem.globalPause.selector,
+      DeployableSystem.globalResume.selector
+    ];
+
+    for (uint256 i = 0; i < deployableSignatures.length; i++) {
+      accessConfigSystem.configureAccess(
+        deployableSystem.toResourceId(),
+        deployableSignatures[i],
+        adminAccessSystem.toResourceId(),
+        AdminAccessSystem.onlyAdmin.selector
+      );
+
+      accessConfigSystem.setAccessEnforcement(deployableSystem.toResourceId(), deployableSignatures[i], true);
+    }
 
     vm.stopPrank();
   }
