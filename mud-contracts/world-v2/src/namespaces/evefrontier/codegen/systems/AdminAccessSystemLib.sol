@@ -35,7 +35,7 @@ struct RootCallWrapper {
  */
 library AdminAccessSystemLib {
   error AdminAccessSystemLib_CallingFromRootSystem();
-  error AdminAccess_NotAdmin();
+  error AdminAccess_NotAdmin(address caller);
 
   function onlyAdmin(AdminAccessSystemType self, uint256 objectId, bytes memory data) internal view {
     return CallWrapper(self.toResourceId(), address(0)).onlyAdmin(objectId, data);

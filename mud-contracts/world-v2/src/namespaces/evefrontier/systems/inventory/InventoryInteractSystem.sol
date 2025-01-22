@@ -42,12 +42,13 @@ contract InventoryInteractSystem is EveSystem {
    * @param ephInvOwner is the ephemeral inventory owner
    * @param items is the array of items to transfer
    * TODO: get the _initialMsgSender when execution context is implemented
+   * TODO: add scope modifier back to this function. it was not used due to stack too deep compiler error.
    */
   function ephemeralToInventoryTransfer(
     uint256 smartObjectId,
     address ephInvOwner,
     TransferItem[] memory items
-  ) public {
+  ) public context access(smartObjectId) {
     InventoryItem[] memory ephInvOut = new InventoryItem[](items.length);
     InventoryItem[] memory invIn = new InventoryItem[](items.length);
     // address ephInvOwner = _initialMsgSender();
@@ -104,12 +105,13 @@ contract InventoryInteractSystem is EveSystem {
    * @param smartObjectId is the smart object id
    * @param ephemeralInventoryOwner is the ephemeral inventory owner
    * @param items is the array of items to transfer
+   * TODO: add scope modifier back to this function. it was not used due to stack too deep compiler error.
    */
   function inventoryToEphemeralTransfer(
     uint256 smartObjectId,
     address ephemeralInventoryOwner,
     TransferItem[] memory items
-  ) public {
+  ) public context access(smartObjectId) {
     InventoryItem[] memory invOut = new InventoryItem[](items.length);
     InventoryItem[] memory ephInvIn = new InventoryItem[](items.length);
     address objectInvOwner = IERC721(DeployableToken.getErc721Address()).ownerOf(smartObjectId);

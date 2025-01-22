@@ -20,6 +20,9 @@ import { deployableSystem } from "../src/namespaces/evefrontier/codegen/systems/
 import { adminAccessSystem } from "../src/namespaces/evefrontier/codegen/systems/AdminAccessSystemLib.sol";
 import { AdminAccessSystem } from "../src/namespaces/evefrontier/systems/access-systems/AdminAccessSystem.sol";
 
+import { FuelSystem } from "../src/namespaces/evefrontier/systems/fuel/FuelSystem.sol";
+import { fuelSystem } from "../src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
+
 abstract contract EveTest is Test {
   address public worldAddress;
   IWorldWithContext world;
@@ -78,7 +81,6 @@ abstract contract EveTest is Test {
 
     // DeployableSystem
 
-    // array for selectors
     bytes4[10] memory deployableSignatures = [
       DeployableSystem.createAndAnchorDeployable.selector,
       DeployableSystem.registerDeployable.selector,
@@ -102,6 +104,30 @@ abstract contract EveTest is Test {
 
       accessConfigSystem.setAccessEnforcement(deployableSystem.toResourceId(), deployableSignatures[i], true);
     }
+
+    // FuelSystem
+
+    // bytes4[8] memory fuelSignatures = [
+    //   FuelSystem.configureFuelParameters.selector,
+    //   FuelSystem.setFuelUnitVolume.selector,
+    //   FuelSystem.setFuelConsumptionIntervalInSeconds.selector,
+    //   FuelSystem.setFuelMaxCapacity.selector,
+    //   FuelSystem.setFuelAmount.selector,
+    //   FuelSystem.depositFuel.selector,
+    //   FuelSystem.withdrawFuel.selector,
+    //   FuelSystem.updateFuel.selector
+    // ];
+
+    // for (uint256 i = 0; i < fuelSignatures.length; i++) {
+    //   accessConfigSystem.configureAccess(
+    //     fuelSystem.toResourceId(),
+    //     fuelSignatures[i],
+    //     adminAccessSystem.toResourceId(),
+    //     AdminAccessSystem.onlyAdmin.selector
+    //   );
+
+    //   accessConfigSystem.setAccessEnforcement(fuelSystem.toResourceId(), fuelSignatures[i], true);
+    // }
 
     vm.stopPrank();
   }

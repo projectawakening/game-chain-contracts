@@ -9,15 +9,15 @@ import { EntityRecordData } from "../entity-record/types.sol";
 import { SmartObjectData } from "../deployable/types.sol";
 import { WorldPosition } from "../location/types.sol";
 import { SMART_STORAGE_UNIT } from "../constants.sol";
-import { EveSystem } from "../EveSystem.sol";
 import { CreateAndAnchorDeployableParams } from "../deployable/types.sol";
+import { EveSystem } from "../EveSystem.sol";
 
 contract SmartStorageUnitSystem is EveSystem {
   function createAndAnchorSmartStorageUnit(
     CreateAndAnchorDeployableParams memory params,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
-  ) public {
+  ) public context access(params.smartObjectId) {
     params.smartAssemblyType = SMART_STORAGE_UNIT;
     deployableSystem.createAndAnchorDeployable(params);
 

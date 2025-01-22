@@ -56,7 +56,7 @@ contract InventorySystem is EveSystem {
    * @param capacity the capacity of the inventory
    * //TODO : onlyAdmin
    */
-  function setInventoryCapacity(uint256 smartObjectId, uint256 capacity) public {
+  function setInventoryCapacity(uint256 smartObjectId, uint256 capacity) public context access(smartObjectId) {
     if (capacity == 0) {
       revert Inventory_InvalidCapacity("InventorySystem: storage capacity cannot be 0");
     }

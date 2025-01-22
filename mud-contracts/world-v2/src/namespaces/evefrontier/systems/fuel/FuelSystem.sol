@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.24;
 
-import { System } from "@latticexyz/world/src/System.sol";
+import { EveSystem } from "../EveSystem.sol";
 import { Fuel, FuelData } from "../../codegen/index.sol";
 import { DeployableState, GlobalDeployableState, GlobalDeployableStateData } from "../../codegen/index.sol";
 
@@ -13,7 +13,7 @@ import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
  * @author CCP Games
  * FuelSystem: stores the Fuel balance of a Deployable
  */
-contract FuelSystem is System {
+contract FuelSystem is EveSystem {
   error Fuel_NoFuel(uint256 smartObjectId);
   error Fuel_ExceedsMaxCapacity(uint256 smartObjectId, uint256 maxCapacity, uint256 fuelAmount);
   error Fuel_InvalidFuelConsumptionInterval(uint256 smartObjectId);
@@ -33,7 +33,7 @@ contract FuelSystem is System {
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     uint256 fuelAmount
-  ) public {
+  ) public context access(smartObjectId) {
     Fuel.set(
       smartObjectId,
       fuelUnitVolume,
@@ -49,7 +49,7 @@ contract FuelSystem is System {
    * @param smartObjectId on-chain id of the in-game deployable
    * @param fuelUnitVolume the volume of a single unit of fuel
    */
-  function setFuelUnitVolume(uint256 smartObjectId, uint256 fuelUnitVolume) public {
+  function setFuelUnitVolume(uint256 smartObjectId, uint256 fuelUnitVolume) public context access(smartObjectId) {
     Fuel.setFuelUnitVolume(smartObjectId, fuelUnitVolume);
   }
 
@@ -62,7 +62,10 @@ contract FuelSystem is System {
    * @param smartObjectId on-chain id of the in-game deployable
    * @param fuelConsumptionIntervalInSeconds the interval in seconds at which fuel is consumed
    */
-  function setFuelConsumptionIntervalInSeconds(uint256 smartObjectId, uint256 fuelConsumptionIntervalInSeconds) public {
+  function setFuelConsumptionIntervalInSeconds(
+    uint256 smartObjectId,
+    uint256 fuelConsumptionIntervalInSeconds
+  ) public context access(smartObjectId) {
     Fuel.setFuelConsumptionIntervalInSeconds(smartObjectId, fuelConsumptionIntervalInSeconds);
   }
 
@@ -71,7 +74,7 @@ contract FuelSystem is System {
    * @param smartObjectId on-chain id of the in-game deployable
    * @param fuelMaxCapacity the maximum fuel capacity of the object
    */
-  function setFuelMaxCapacity(uint256 smartObjectId, uint256 fuelMaxCapacity) public {
+  function setFuelMaxCapacity(uint256 smartObjectId, uint256 fuelMaxCapacity) public context access(smartObjectId) {
     Fuel.setFuelMaxCapacity(smartObjectId, fuelMaxCapacity);
   }
 
@@ -80,7 +83,7 @@ contract FuelSystem is System {
    * @param smartObjectId on-chain id of the in-game deployable
    * @param fuelAmountInWei the new fuel amount in WEI. This will rest the existing fuel amount
    */
-  function setFuelAmount(uint256 smartObjectId, uint256 fuelAmountInWei) public {
+  function setFuelAmount(uint256 smartObjectId, uint256 fuelAmountInWei) public context access(smartObjectId) {
     _updateFuel(smartObjectId);
     Fuel.setFuelAmount(smartObjectId, fuelAmountInWei);
     Fuel.setLastUpdatedAt(smartObjectId, block.timestamp);
@@ -92,7 +95,7 @@ contract FuelSystem is System {
    * @param fuelAmount of fuel in full units
    * TODO: make this function admin only
    */
-  function depositFuel(uint256 smartObjectId, uint256 fuelAmount) public {
+  function depositFuel(uint256 smartObjectId, uint256 fuelAmount) public context access(smartObjectId) {
     _updateFuel(smartObjectId);
     if (
       (((Fuel.getFuelAmount(smartObjectId) + fuelAmount * ONE_UNIT_IN_WEI) * Fuel.getFuelUnitVolume(smartObjectId))) /
@@ -117,7 +120,7 @@ contract FuelSystem is System {
    * @param fuelAmount of fuel in full units
    * TODO: make this function admin only
    */
-  function withdrawFuel(uint256 smartObjectId, uint256 fuelAmount) public {
+  function withdrawFuel(uint256 smartObjectId, uint256 fuelAmount) public context access(smartObjectId) {
     _updateFuel(smartObjectId);
 
     Fuel.setFuelAmount(
@@ -133,7 +136,7 @@ contract FuelSystem is System {
    * or that compose with it
    * @param smartObjectId on-chain id of the in-game deployable
    */
-  function updateFuel(uint256 smartObjectId) public {
+  function updateFuel(uint256 smartObjectId) public context access(smartObjectId) {
     _updateFuel(smartObjectId);
   }
 

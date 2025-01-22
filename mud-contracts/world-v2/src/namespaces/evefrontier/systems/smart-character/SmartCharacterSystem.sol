@@ -3,7 +3,6 @@
 pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
-import { System } from "@latticexyz/world/src/System.sol";
 import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/FunctionSelectors.sol";
 
 import { Characters, CharacterToken } from "../../codegen/index.sol";
@@ -27,7 +26,7 @@ contract SmartCharacterSystem is EveSystem {
    * @notice Register a new character token
    * @param tokenAddress The address of the token to register
    */
-  function registerCharacterToken(address tokenAddress) public {
+  function registerCharacterToken(address tokenAddress) public context access(0) {
     if (CharacterToken.get() != address(0)) {
       revert SmartCharacter_ERC721AlreadyInitialized();
     }
@@ -47,7 +46,7 @@ contract SmartCharacterSystem is EveSystem {
     uint256 tribeId,
     EntityRecordData memory entityRecord,
     EntityMetadata memory entityRecordMetadata
-  ) public {
+  ) public context access(characterId) {
     uint256 createdAt = block.timestamp;
 
     // enforce one-to-one mapping
@@ -66,7 +65,7 @@ contract SmartCharacterSystem is EveSystem {
     IERC721Mintable(CharacterToken.get()).mint(characterAddress, characterId);
   }
 
-  function updateTribeId(uint256 characterId, uint256 tribeId) public {
+  function updateTribeId(uint256 characterId, uint256 tribeId) public context access(characterId) {
     if (Characters.getTribeId(characterId) == 0) {
       revert SmartCharacterDoesNotExist(characterId);
     }

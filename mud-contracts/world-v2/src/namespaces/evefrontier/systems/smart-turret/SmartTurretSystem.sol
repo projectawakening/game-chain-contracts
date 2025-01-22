@@ -15,9 +15,9 @@ import { WorldPosition } from "../location/types.sol";
 import { LocationData } from "../../codegen/tables/Location.sol";
 import { TargetPriority, Turret, SmartTurretTarget } from "./types.sol";
 import { SMART_TURRET } from "../constants.sol";
-import { EveSystem } from "../EveSystem.sol";
 import { CreateAndAnchorDeployableParams } from "../deployable/types.sol";
 import { AggressionParams } from "./types.sol";
+import { EveSystem } from "../EveSystem.sol";
 
 contract SmartTurretSystem is EveSystem {
   error SmartTurret_NotConfigured(uint256 smartObjectId);
@@ -26,7 +26,9 @@ contract SmartTurretSystem is EveSystem {
    * @notice Create and anchor a Smart Turret
    * @param params CreateAndAnchorDeployableParams
    */
-  function createAndAnchorSmartTurret(CreateAndAnchorDeployableParams memory params) public {
+  function createAndAnchorSmartTurret(
+    CreateAndAnchorDeployableParams memory params
+  ) public context access(params.smartObjectId) {
     params.smartAssemblyType = SMART_TURRET;
     deployableSystem.createAndAnchorDeployable(params);
   }
@@ -37,7 +39,7 @@ contract SmartTurretSystem is EveSystem {
    * @param systemId is the system id of the Smart Turret logic
    * // TODO make it configurable only by owner of the smart turret
    */
-  function configureSmartTurret(uint256 smartObjectId, ResourceId systemId) public {
+  function configureSmartTurret(uint256 smartObjectId, ResourceId systemId) public context access(smartObjectId) {
     SmartTurretConfig.set(smartObjectId, systemId);
   }
 
