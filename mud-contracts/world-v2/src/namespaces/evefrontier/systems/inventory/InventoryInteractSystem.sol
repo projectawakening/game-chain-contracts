@@ -25,6 +25,10 @@ import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../cod
  * @notice This system is responsible for the interaction between the inventory and ephemeral inventory
  * @dev This system is responsible for the interaction between the inventory and ephemeral inventory
  */
+
+// TODO Write functions for object owners to configure access their inventories
+// setInventoryToEphemeralTransferAccess
+// setEphemeralToInventoryTransferAccess
 contract InventoryInteractSystem is EveSystem {
   error Inventory_InvalidTransferItemQuantity(
     string message,

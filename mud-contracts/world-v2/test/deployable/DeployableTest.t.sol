@@ -26,6 +26,7 @@ import { ONE_UNIT_IN_WEI } from "../../src/namespaces/evefrontier/systems/consta
 
 import { IWorldWithContext } from "@eveworld/smart-object-framework-v2/src/IWorldWithContext.sol";
 import { EveTest } from "../EveTest.sol";
+import { AccessSystem } from "../../src/namespaces/evefrontier/systems/access-systems/AccessSystem.sol";
 
 import "forge-std/console.sol";
 
@@ -229,5 +230,40 @@ contract DeployableTest is EveTest {
     assertEq(locationData.y, location.y);
     assertEq(locationData.z, location.z);
     assertEq(uint8(State.ANCHORED), uint8(DeployableState.getCurrentState(smartObjectId)));
+  }
+
+  function testOnlineOfflineAccess(
+    uint256 smartObjectId,
+    uint256 fuelConsumptionIntervalInSeconds,
+    LocationData memory location
+  ) public {
+    vm.assume(smartObjectId != 0);
+    uint256 fuelUnitVolume = 1;
+    uint256 fuelMaxCapacity = 100;
+
+    testAnchor(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+
+    vm.startPrank(deployer);
+    fuelSystem.depositFuel(smartObjectId, fuelMaxCapacity);
+    deployableSystem.bringOnline(smartObjectId);
+    vm.stopPrank();
+
+    vm.startPrank(alice);
+    deployableSystem.bringOffline(smartObjectId);
+    vm.stopPrank();
+
+    vm.startPrank(alice);
+    deployableSystem.bringOnline(smartObjectId);
+    vm.stopPrank();
+
+    vm.startPrank(deployer);
+    deployableSystem.bringOffline(smartObjectId);
+    vm.stopPrank();
+
+    // just some random dude
+    vm.startPrank(bob);
+    vm.expectRevert(abi.encodeWithSelector(AccessSystem.Access_NotAdminOrOwner.selector, bob, smartObjectId));
+    deployableSystem.bringOnline(smartObjectId);
+    vm.stopPrank();
   }
 }
