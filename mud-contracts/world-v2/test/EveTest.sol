@@ -4,8 +4,9 @@ pragma solidity >=0.8.24;
 import { Test } from "forge-std/Test.sol";
 import { StoreSwitch } from "@latticexyz/store/src/StoreSwitch.sol";
 import { IWorldWithContext } from "@eveworld/smart-object-framework-v2/src/IWorldWithContext.sol";
+import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
-import { AccessConfig, HasRole } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/index.sol";
+import { AccessConfig, HasRole, Entity, EntityTagMap, Role } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/index.sol";
 
 import { roleManagementSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/RoleManagementSystemLib.sol";
 import { RoleManagementSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/systems/role-management-system/RoleManagementSystem.sol";
@@ -13,6 +14,12 @@ import { IRoleManagementSystem } from "@eveworld/smart-object-framework-v2/src/n
 
 import { accessConfigSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/AccessConfigSystemLib.sol";
 import { AccessConfigSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/systems/access-config-system/AccessConfigSystem.sol";
+
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { EntitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/systems/entity-system/EntitySystem.sol";
+
+import { tagSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/TagSystemLib.sol";
+import { TagSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/systems/tag-system/TagSystem.sol";
 
 import { DeployableSystem } from "../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
 import { deployableSystem } from "../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
@@ -23,6 +30,8 @@ import { fuelSystem } from "../src/namespaces/evefrontier/codegen/systems/FuelSy
 
 import { inventorySystem } from "../src/namespaces/evefrontier/codegen/systems/InventorySystemLib.sol";
 import { InventorySystem } from "../src/namespaces/evefrontier/systems/inventory/InventorySystem.sol";
+import { ephemeralInventorySystem } from "../src/namespaces/evefrontier/codegen/systems/EphemeralInventorySystemLib.sol";
+import { EphemeralInventorySystem } from "../src/namespaces/evefrontier/systems/inventory/EphemeralInventorySystem.sol";
 import { InventoryInteractSystem } from "../src/namespaces/evefrontier/systems/inventory/InventoryInteractSystem.sol";
 import { inventoryInteractSystem } from "../src/namespaces/evefrontier/codegen/systems/InventoryInteractSystemLib.sol";
 import { EntityRecordSystem } from "../src/namespaces/evefrontier/systems/entity-record/EntityRecordSystem.sol";
@@ -62,6 +71,9 @@ abstract contract EveTest is Test {
     // SmartObjectFrameworkV2 Setup
     AccessConfig.register();
     HasRole.register();
+    Entity.register();
+    EntityTagMap.register();
+    Role.register();
 
     world.registerSystem(roleManagementSystem.toResourceId(), new RoleManagementSystem(), true);
 
@@ -87,12 +99,42 @@ abstract contract EveTest is Test {
     for (uint256 i = 0; i < accessConfigSignatures.length; i++) {
       world.registerFunctionSelector(accessConfigSystem.toResourceId(), accessConfigSignatures[i]);
     }
+
+    world.registerSystem(entitySystem.toResourceId(), new EntitySystem(), true);
+    string[2] memory entitySignatures = ["instantiate(uint256,uint256)", "registerClass(uint256,bytes32,ResourceId[])"];
+    for (uint256 i = 0; i < entitySignatures.length; i++) {
+      world.registerFunctionSelector(entitySystem.toResourceId(), entitySignatures[i]);
+    }
+
+    world.registerSystem(tagSystem.toResourceId(), new TagSystem(), true);
+    string[1] memory tagSignatures = ["setTags(uint256,(bytes32,bytes)[])"];
+    for (uint256 i = 0; i < tagSignatures.length; i++) {
+      world.registerFunctionSelector(tagSystem.toResourceId(), tagSignatures[i]);
+    }
+
     // End SmartObjectFrameworkV2 Setup
 
     // Role Creation
     roleManagementSystem.createRole(adminRole, adminRole);
     // TODO: Grant admin role to address list
+    roleManagementSystem.grantRole(adminRole, deployer);
     // End Role Creation
+
+    // Class Creation
+    uint256 smartStorageUnitClassId = uint256(bytes32("SSU"));
+    ResourceId[] memory systemIds = new ResourceId[](4);
+    systemIds[0] = inventorySystem.toResourceId();
+    systemIds[1] = deployableSystem.toResourceId();
+    systemIds[2] = ephemeralInventorySystem.toResourceId();
+    systemIds[3] = inventoryInteractSystem.toResourceId();
+    entitySystem.registerClass(smartStorageUnitClassId, adminRole, systemIds);
+
+    uint256 smartCharacterClassId = uint256(bytes32("SMART_CHARACTER"));
+    systemIds = new ResourceId[](1);
+    systemIds[0] = entityRecordSystem.toResourceId();
+
+    entitySystem.registerClass(smartCharacterClassId, adminRole, systemIds);
+    // End Class Creation
 
     // DeployableSystem
 
@@ -145,9 +187,21 @@ abstract contract EveTest is Test {
 
     accessConfigSystem.configureAccess(
       entityRecordSystem.toResourceId(),
+      EntityRecordSystem.createEntityRecord.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyAdmin.selector
+    );
+    accessConfigSystem.setAccessEnforcement(
+      entityRecordSystem.toResourceId(),
+      EntityRecordSystem.createEntityRecord.selector,
+      true
+    );
+
+    accessConfigSystem.configureAccess(
+      entityRecordSystem.toResourceId(),
       EntityRecordSystem.createEntityRecordMetadata.selector,
       accessSystem.toResourceId(),
-      AccessSystem.onlyAdminOrOwner.selector
+      AccessSystem.onlyAdmin.selector
     );
     accessConfigSystem.setAccessEnforcement(
       entityRecordSystem.toResourceId(),
@@ -159,7 +213,7 @@ abstract contract EveTest is Test {
       entityRecordSystem.toResourceId(),
       EntityRecordSystem.setName.selector,
       accessSystem.toResourceId(),
-      AccessSystem.onlyAdminOrOwner.selector
+      AccessSystem.onlyAdmin.selector
     );
     accessConfigSystem.setAccessEnforcement(
       entityRecordSystem.toResourceId(),
@@ -171,7 +225,7 @@ abstract contract EveTest is Test {
       entityRecordSystem.toResourceId(),
       EntityRecordSystem.setDappURL.selector,
       accessSystem.toResourceId(),
-      AccessSystem.onlyAdminOrOwner.selector
+      AccessSystem.onlyAdmin.selector
     );
     accessConfigSystem.setAccessEnforcement(
       entityRecordSystem.toResourceId(),
@@ -183,7 +237,7 @@ abstract contract EveTest is Test {
       entityRecordSystem.toResourceId(),
       EntityRecordSystem.setDescription.selector,
       accessSystem.toResourceId(),
-      AccessSystem.onlyAdminOrOwner.selector
+      AccessSystem.onlyAdmin.selector
     );
     accessConfigSystem.setAccessEnforcement(
       entityRecordSystem.toResourceId(),
@@ -213,6 +267,60 @@ abstract contract EveTest is Test {
     );
 
     // InventorySystem
+
+    accessConfigSystem.configureAccess(
+      inventorySystem.toResourceId(),
+      InventoryInteractSystem.setEphemeralToInventoryTransferAccess.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyDeployableOwner.selector
+    );
+
+    accessConfigSystem.setAccessEnforcement(
+      inventorySystem.toResourceId(),
+      InventoryInteractSystem.setEphemeralToInventoryTransferAccess.selector,
+      true
+    );
+
+    accessConfigSystem.configureAccess(
+      inventorySystem.toResourceId(),
+      InventoryInteractSystem.setInventoryToEphemeralTransferAccess.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyDeployableOwner.selector
+    );
+
+    accessConfigSystem.setAccessEnforcement(
+      inventorySystem.toResourceId(),
+      InventoryInteractSystem.setInventoryToEphemeralTransferAccess.selector,
+      true
+    );
+
+    // InventoryInteractSystem
+
+    accessConfigSystem.configureAccess(
+      inventoryInteractSystem.toResourceId(),
+      InventoryInteractSystem.ephemeralToInventoryTransfer.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyOwnerOrCanDepositToInventory.selector
+    );
+
+    accessConfigSystem.setAccessEnforcement(
+      inventoryInteractSystem.toResourceId(),
+      InventoryInteractSystem.ephemeralToInventoryTransfer.selector,
+      true
+    );
+
+    accessConfigSystem.configureAccess(
+      inventoryInteractSystem.toResourceId(),
+      InventoryInteractSystem.inventoryToEphemeralTransfer.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyOwnerOrCanWithdrawFromInventory.selector
+    );
+
+    accessConfigSystem.setAccessEnforcement(
+      inventoryInteractSystem.toResourceId(),
+      InventoryInteractSystem.inventoryToEphemeralTransfer.selector,
+      true
+    );
 
     // FuelSystem
 

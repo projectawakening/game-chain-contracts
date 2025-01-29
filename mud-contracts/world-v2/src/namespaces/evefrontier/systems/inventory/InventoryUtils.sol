@@ -1,29 +1,19 @@
 //SPDX-License-Identifier: MIT
 pragma solidity >=0.8.24;
 
-import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
-import { WorldResourceIdLib } from "@latticexyz/world/src/WorldResourceId.sol";
-import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
-import { ResourceIds } from "@latticexyz/store/src/codegen/tables/ResourceIds.sol";
-
-import { DEPLOYMENT_NAMESPACE } from "./../constants.sol";
-
 /**
- * @title Utils to calculate systemId by namespace and system name
+ * @title Utils used by inventory systems
  */
 library InventoryUtils {
-  function inventorySystemId() public pure returns (ResourceId systemId) {
-    return
-      WorldResourceIdLib.encode({ typeId: RESOURCE_SYSTEM, namespace: DEPLOYMENT_NAMESPACE, name: "InventorySystem" });
+  function getAdminAccessRole(uint256 smartObjectId) public pure returns (bytes32) {
+    return keccak256(abi.encode("INVENTORY_ADMIN_ACCESS", smartObjectId));
   }
 
-  function ephemeralInventorySystemId() public pure returns (ResourceId systemId) {
-    return
-      WorldResourceIdLib.encode({ typeId: RESOURCE_SYSTEM, namespace: DEPLOYMENT_NAMESPACE, name: "EphemeralInvento" });
+  function getEphemeralToInventoryTransferAccessRole(uint256 smartObjectId) public pure returns (bytes32) {
+    return keccak256(abi.encode("INVENTORY_DEPOSIT_ACCESS", smartObjectId));
   }
 
-  function inventoryInteractSystemId() public pure returns (ResourceId systemId) {
-    return
-      WorldResourceIdLib.encode({ typeId: RESOURCE_SYSTEM, namespace: DEPLOYMENT_NAMESPACE, name: "InventoryInterac" });
+  function getInventoryToEphemeralTransferAccessRole(uint256 smartObjectId) public pure returns (bytes32) {
+    return keccak256(abi.encode("INVENTORY_WITHDRAW_ACCESS", smartObjectId));
   }
 }

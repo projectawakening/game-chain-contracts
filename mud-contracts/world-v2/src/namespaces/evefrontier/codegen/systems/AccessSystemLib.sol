@@ -38,6 +38,20 @@ library AccessSystemLib {
   error Access_NotAdmin(address caller);
   error Access_NotOwner(address caller, uint256 objectId);
   error Access_NotAdminOrOwner(address caller, uint256 objectId);
+  error Access_NotOwnerOrCanWithdrawFromInventory(address caller, uint256 objectId);
+  error Access_NotOwnerOrCanDepositToInventory(address caller, uint256 objectId);
+
+  function onlyOwnerOrCanWithdrawFromInventory(
+    AccessSystemType self,
+    uint256 objectId,
+    bytes memory data
+  ) internal view {
+    return CallWrapper(self.toResourceId(), address(0)).onlyOwnerOrCanWithdrawFromInventory(objectId, data);
+  }
+
+  function onlyOwnerOrCanDepositToInventory(AccessSystemType self, uint256 objectId, bytes memory data) internal view {
+    return CallWrapper(self.toResourceId(), address(0)).onlyOwnerOrCanDepositToInventory(objectId, data);
+  }
 
   function onlyDeployableOwner(AccessSystemType self, uint256 objectId, bytes memory data) internal view {
     return CallWrapper(self.toResourceId(), address(0)).onlyDeployableOwner(objectId, data);
@@ -57,6 +71,62 @@ library AccessSystemLib {
 
   function isOwner(AccessSystemType self, address caller, uint256 objectId) internal view returns (bool) {
     return CallWrapper(self.toResourceId(), address(0)).isOwner(caller, objectId);
+  }
+
+  function canWithdrawFromInventory(
+    AccessSystemType self,
+    uint256 smartObjectId,
+    address caller
+  ) internal view returns (bool) {
+    return CallWrapper(self.toResourceId(), address(0)).canWithdrawFromInventory(smartObjectId, caller);
+  }
+
+  function canDepositToInventory(
+    AccessSystemType self,
+    uint256 smartObjectId,
+    address caller
+  ) internal view returns (bool) {
+    return CallWrapper(self.toResourceId(), address(0)).canDepositToInventory(smartObjectId, caller);
+  }
+
+  function onlyOwnerOrCanWithdrawFromInventory(
+    CallWrapper memory self,
+    uint256 objectId,
+    bytes memory data
+  ) internal view {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert AccessSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _onlyOwnerOrCanWithdrawFromInventory_uint256_bytes.onlyOwnerOrCanWithdrawFromInventory,
+      (objectId, data)
+    );
+    bytes memory worldCall = self.from == address(0)
+      ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
+      : abi.encodeCall(IWorldCall.callFrom, (self.from, self.systemId, systemCall));
+    (bool success, bytes memory returnData) = address(_world()).staticcall(worldCall);
+    if (!success) revertWithBytes(returnData);
+    abi.decode(returnData, (bytes));
+  }
+
+  function onlyOwnerOrCanDepositToInventory(
+    CallWrapper memory self,
+    uint256 objectId,
+    bytes memory data
+  ) internal view {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert AccessSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _onlyOwnerOrCanDepositToInventory_uint256_bytes.onlyOwnerOrCanDepositToInventory,
+      (objectId, data)
+    );
+    bytes memory worldCall = self.from == address(0)
+      ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
+      : abi.encodeCall(IWorldCall.callFrom, (self.from, self.systemId, systemCall));
+    (bool success, bytes memory returnData) = address(_world()).staticcall(worldCall);
+    if (!success) revertWithBytes(returnData);
+    abi.decode(returnData, (bytes));
   }
 
   function onlyDeployableOwner(CallWrapper memory self, uint256 objectId, bytes memory data) internal view {
@@ -131,6 +201,74 @@ library AccessSystemLib {
     return abi.decode(result, (bool));
   }
 
+  function canWithdrawFromInventory(
+    CallWrapper memory self,
+    uint256 smartObjectId,
+    address caller
+  ) internal view returns (bool) {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert AccessSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _canWithdrawFromInventory_uint256_address.canWithdrawFromInventory,
+      (smartObjectId, caller)
+    );
+    bytes memory worldCall = self.from == address(0)
+      ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
+      : abi.encodeCall(IWorldCall.callFrom, (self.from, self.systemId, systemCall));
+    (bool success, bytes memory returnData) = address(_world()).staticcall(worldCall);
+    if (!success) revertWithBytes(returnData);
+
+    bytes memory result = abi.decode(returnData, (bytes));
+    return abi.decode(result, (bool));
+  }
+
+  function canDepositToInventory(
+    CallWrapper memory self,
+    uint256 smartObjectId,
+    address caller
+  ) internal view returns (bool) {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert AccessSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _canDepositToInventory_uint256_address.canDepositToInventory,
+      (smartObjectId, caller)
+    );
+    bytes memory worldCall = self.from == address(0)
+      ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
+      : abi.encodeCall(IWorldCall.callFrom, (self.from, self.systemId, systemCall));
+    (bool success, bytes memory returnData) = address(_world()).staticcall(worldCall);
+    if (!success) revertWithBytes(returnData);
+
+    bytes memory result = abi.decode(returnData, (bytes));
+    return abi.decode(result, (bool));
+  }
+
+  function onlyOwnerOrCanWithdrawFromInventory(
+    RootCallWrapper memory self,
+    uint256 objectId,
+    bytes memory data
+  ) internal view {
+    bytes memory systemCall = abi.encodeCall(
+      _onlyOwnerOrCanWithdrawFromInventory_uint256_bytes.onlyOwnerOrCanWithdrawFromInventory,
+      (objectId, data)
+    );
+    SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
+  }
+
+  function onlyOwnerOrCanDepositToInventory(
+    RootCallWrapper memory self,
+    uint256 objectId,
+    bytes memory data
+  ) internal view {
+    bytes memory systemCall = abi.encodeCall(
+      _onlyOwnerOrCanDepositToInventory_uint256_bytes.onlyOwnerOrCanDepositToInventory,
+      (objectId, data)
+    );
+    SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
+  }
+
   function onlyDeployableOwner(RootCallWrapper memory self, uint256 objectId, bytes memory data) internal view {
     bytes memory systemCall = abi.encodeCall(_onlyDeployableOwner_uint256_bytes.onlyDeployableOwner, (objectId, data));
     SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
@@ -158,6 +296,34 @@ library AccessSystemLib {
 
   function isOwner(RootCallWrapper memory self, address caller, uint256 objectId) internal view returns (bool) {
     bytes memory systemCall = abi.encodeCall(_isOwner_address_uint256.isOwner, (caller, objectId));
+
+    bytes memory result = SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
+    return abi.decode(result, (bool));
+  }
+
+  function canWithdrawFromInventory(
+    RootCallWrapper memory self,
+    uint256 smartObjectId,
+    address caller
+  ) internal view returns (bool) {
+    bytes memory systemCall = abi.encodeCall(
+      _canWithdrawFromInventory_uint256_address.canWithdrawFromInventory,
+      (smartObjectId, caller)
+    );
+
+    bytes memory result = SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
+    return abi.decode(result, (bool));
+  }
+
+  function canDepositToInventory(
+    RootCallWrapper memory self,
+    uint256 smartObjectId,
+    address caller
+  ) internal view returns (bool) {
+    bytes memory systemCall = abi.encodeCall(
+      _canDepositToInventory_uint256_address.canDepositToInventory,
+      (smartObjectId, caller)
+    );
 
     bytes memory result = SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
     return abi.decode(result, (bool));
@@ -201,6 +367,14 @@ library AccessSystemLib {
  * Each interface is uniquely named based on the function name and parameters to prevent collisions.
  */
 
+interface _onlyOwnerOrCanWithdrawFromInventory_uint256_bytes {
+  function onlyOwnerOrCanWithdrawFromInventory(uint256 objectId, bytes memory data) external;
+}
+
+interface _onlyOwnerOrCanDepositToInventory_uint256_bytes {
+  function onlyOwnerOrCanDepositToInventory(uint256 objectId, bytes memory data) external;
+}
+
 interface _onlyDeployableOwner_uint256_bytes {
   function onlyDeployableOwner(uint256 objectId, bytes memory data) external;
 }
@@ -219,6 +393,14 @@ interface _isAdmin_address {
 
 interface _isOwner_address_uint256 {
   function isOwner(address caller, uint256 objectId) external;
+}
+
+interface _canWithdrawFromInventory_uint256_address {
+  function canWithdrawFromInventory(uint256 smartObjectId, address caller) external;
+}
+
+interface _canDepositToInventory_uint256_address {
+  function canDepositToInventory(uint256 smartObjectId, address caller) external;
 }
 
 using AccessSystemLib for AccessSystemType global;

@@ -17,10 +17,7 @@ contract EntityRecordSystem is EveSystem {
    * @param smartObjectId the id of a in game entity referred as smart object id
    * @param entityRecord is the EnityRecordData struct with all the data needed to create a new entity record
    */
-  function createEntityRecord(
-    uint256 smartObjectId,
-    EntityRecordData memory entityRecord
-  ) public context access(smartObjectId) {
+  function createEntityRecord(uint256 smartObjectId, EntityRecordData memory entityRecord) public context {
     EntityRecord.set(smartObjectId, entityRecord.itemId, entityRecord.typeId, entityRecord.volume, true);
   }
 
@@ -32,7 +29,7 @@ contract EntityRecordSystem is EveSystem {
   function createEntityRecordMetadata(
     uint256 smartObjectId,
     EntityMetadata memory entityRecordMetadata
-  ) public context access(smartObjectId) {
+  ) public context {
     EntityRecordMetadata.set(
       smartObjectId,
       entityRecordMetadata.name,

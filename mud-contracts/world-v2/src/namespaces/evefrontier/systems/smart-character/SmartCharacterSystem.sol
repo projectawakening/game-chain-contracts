@@ -14,6 +14,7 @@ import { EveSystem } from "../EveSystem.sol";
 
 import { EntityRecordUtils } from "../entity-record/EntityRecordUtils.sol";
 import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
 contract SmartCharacterSystem is EveSystem {
   using EntityRecordUtils for bytes14;
@@ -53,6 +54,9 @@ contract SmartCharacterSystem is EveSystem {
     if (CharactersByAddress.get(characterAddress) != 0) {
       revert SmartCharacter_AlreadyCreated(characterAddress, characterId);
     }
+
+    uint256 smartCharacterClassId = uint256(bytes32("SMART_CHARACTER"));
+    entitySystem.instantiate(smartCharacterClassId, characterId);
 
     Characters.set(characterId, characterAddress, tribeId, createdAt);
     CharactersByAddress.set(characterAddress, characterId);
