@@ -19,11 +19,21 @@ import { FuelSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/system
 import { FuelUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
 import { EntityRecordData, EntityMetadata } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/entity-record/types.sol";
 
+import { smartGateSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartGateSystemLib.sol";
+import { deployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
+import { fuelSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
+
+import { CreateAndAnchorDeployableParams } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/types.sol";
+
+import { fuelSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
+import { smartGateSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartGateSystemLib.sol";
+import { deployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
+import { SMART_GATE } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/constants.sol";
+import { LocationData } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/Location.sol";
+
 contract ConfigureSmartGate is Script {
   using WorldResourceIdInstance for ResourceId;
-  ResourceId smartGateSystemId = SmartGateUtils.smartGateSystemId();
-  ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
-  ResourceId fuelSystemId = FuelUtils.fuelSystemId();
+
   IBaseWorld world;
   address player;
 
@@ -56,23 +66,12 @@ contract ConfigureSmartGate is Script {
     //register the function selector
     world.registerFunctionSelector(smartGateTestSystemId, "canJump(uint256, uint256, uint256)");
 
-    world.call(
-      smartGateSystemId,
-      abi.encodeCall(SmartGateSystem.configureSmartGate, (sourceGateId, smartGateTestSystemId))
-    );
-
-    // Link the smart gates
-    world.call(smartGateSystemId, abi.encodeCall(SmartGateSystem.linkSmartGates, (sourceGateId, destinationGateId)));
+    smartGateSystem.configureSmartGate(sourceGateId, smartGateTestSystemId);
+    smartGateSystem.linkSmartGates(sourceGateId, destinationGateId);
 
     uint256 characterId = 12513;
 
-    bytes memory returnData = world.call(
-      smartGateSystemId,
-      abi.encodeCall(SmartGateSystem.canJump, (characterId, sourceGateId, destinationGateId))
-    );
-
-    bool possibleToJump = abi.decode(returnData, (bool));
-
+    bool possibleToJump = smartGateSystem.canJump(characterId, sourceGateId, destinationGateId);
     console.logBool(possibleToJump); //false
 
     vm.stopBroadcast();
@@ -81,23 +80,26 @@ contract ConfigureSmartGate is Script {
   function anchorFuelAndOnline(uint256 smartObjectId) public {
     // check global state and resume if needed
     if (GlobalDeployableState.getIsPaused() == false) {
-      world.call(deployableSystemId, abi.encodeCall(DeployableSystem.globalResume, ()));
+      deployableSystem.globalResume();
     }
     EntityRecordData memory entityRecord = EntityRecordData({ typeId: 123, itemId: 234, volume: 100 });
     SmartObjectData memory smartObjectData = SmartObjectData({ owner: player, tokenURI: "test" });
-    Coord memory position = Coord({ x: 1, y: 1, z: 1 });
-    WorldPosition memory worldPosition = WorldPosition({ solarSystemId: 1, position: position });
+    LocationData memory locationData = LocationData({ solarSystemId: 1, x: 1, y: 1, z: 1 });
 
-    world.call(
-      smartGateSystemId,
-      abi.encodeCall(
-        SmartGateSystem.createAndAnchorSmartGate,
-        (smartObjectId, entityRecord, smartObjectData, worldPosition, 10, 3600, 1000000000, 100010000 * 1e18)
-      )
-    );
+    CreateAndAnchorDeployableParams memory params = CreateAndAnchorDeployableParams({
+      smartObjectId: smartObjectId,
+      smartAssemblyType: SMART_GATE,
+      entityRecordData: entityRecord,
+      smartObjectData: smartObjectData,
+      fuelUnitVolume: 10,
+      fuelConsumptionIntervalInSeconds: 3600,
+      fuelMaxCapacity: 1000000000,
+      locationData: locationData
+    });
 
-    world.call(fuelSystemId, abi.encodeCall(FuelSystem.depositFuel, (smartObjectId, 200010)));
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOnline, (smartObjectId)));
+    smartGateSystem.createAndAnchorSmartGate(params, 100010000 * 1e18);
+    fuelSystem.depositFuel(smartObjectId, 200010);
+    deployableSystem.bringOnline(smartObjectId);
   }
 }
 

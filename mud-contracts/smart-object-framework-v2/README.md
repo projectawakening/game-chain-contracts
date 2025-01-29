@@ -8,9 +8,9 @@ The Smart Object Framework (SOF) is a comprehensive abstraction layer built on t
 ### Design Goals
 
 - Expose call context variable tracking across the entire execution call stack for the lifetime of a transaction
-- Structured on-chain entity management through Classes and Objects
-- Enabling complex extensible and composable entity interactions through a flexible system association model
-- Defining clear object functionality boundaries and expected behavior through system association scoping and enforcement
+- Structured on-chain entity management through Property tagging of Classes and Objects and Entity Relation Tagging
+- Enabling complex extensible and composable entity interactions through a flexible system association model via Resource Relation Tagging
+- Defining clear object functionality boundaries and expected behavior through system association scoping and enforcement of Resource Relations
 - Define granular, flexible, and clear access boundaries through role management and access control configurations
 
 ### Core Components
@@ -24,11 +24,11 @@ The Smart Object Framework (SOF) is a comprehensive abstraction layer built on t
 
 #### Entity Management
 
-- Classes define templated Object "types" and and can be configured  to allow MUD system access to operate on those Objects via system tagging
-- Objects instantiate Classes and inherit system associations
-- System Tags create explicit access relationships between systems, Classes and Objects
+- Entities are tagged with either Class or Object property tags 
+- Objects instantiate Classes and inherit system associations via an Entity Relation Tag which defines an Object's parent classId
+- Resource relation Tags create explicit access relationships between systems, Classes and Objects
 
-#### Entity System Scoping
+#### Entity Resource Scoping
 
 - Enforces System-to-Entity relationships
 - Validates Entity centric execution boundaries
@@ -125,7 +125,7 @@ contract MySystem is SmartObjectFramework {
 		uint256 selectedCallValue = _callMsgValue(1);
 		
 		// Get previous full call context
-		((ResourceId selectedCallSystemId, bytes4 selectedCallSelector, selectedCallSender, selectedCallValue) = world.getWorldCallContext(1);
+		(ResourceId selectedCallSystemId, bytes4 selectedCallSelector, selectedCallSender, selectedCallValue) = world.getWorldCallContext(1);
     }
 }
 ```
@@ -136,23 +136,53 @@ contract MySystem is SmartObjectFramework {
 
 ## Entites, System Tags, and Scoping
 
-[EntitySystem.sol](src/namespaces/evefrontier/systems/entity-system/EntitySystem.sol) provides a robust framework for creating and managing Classes and Objects with unique [Id](src/libs/Id.sol)s, as well as the ability to manage Class associated system tags via [TagSystem.sol](src/namespaces/evefrontier/systems/tag-system/TagSystem.sol). This structure allows for granular and composable configuration of entity functionality and behavior through system access enforcement and entity relationships.
+[EntitySystem.sol](src/namespaces/evefrontier/systems/entity-system/EntitySystem.sol) provides a robust framework for creating and managing Classes (entities tagged with the CLASS property) and Objects (entities tagged with the OBJECT property) with unique `uint256` IDs, as well as the ability to manage additional Property, Entity Relation, and Resource tags via [TagSystem.sol](src/namespaces/evefrontier/systems/tag-system/TagSystem.sol). This structure allows for granular and composable configuration of entity functionality and behavior through system (resource) access enforcement and entity relationships.
 
-In conjunction to system-to-class tagging, the `scope` modifier implements a powerful permission model that connects MUD Systems to Classes and Objects through this tagging mechanism. The `scope` modifier ensures systems can only operate on entities (Classes/Objects) which they are explicitly tagged to handle, thereby clearly defining the boundaries of functionality, properties, and behavior for any Object or Class.
+In conjunction to system-to-entity Resource Relation tagging, the `scope` modifier implements a powerful permission model that connects MUD Systems to Classes and Objects through this tagging mechanism. The `scope` modifier ensures systems can only operate on entities (Classes/Objects) which they are explicitly tagged to interact with, thereby clearly defining the boundaries of functionality, properties, and behavior for any Object or Class.
 
-This scoping model provides a robust and efficient way to manage system permissions (with regards to entities) and enables functional composability across Classes and Objects while maintaining clear relationships and inheritance patterns.
+This scoping model provides a robust and efficient way to manage system (MUD resource) permissions (with regards to entities) and enables functional composability across Classes and Objects while maintaining clear relationships and inheritance patterns.
 
 
 ![Class Object Diagram](class_object_system.jpg)
 
 ### Entity Types
 
-- Classes: Template "type" entities that are associated with a specific "scope" of associated MUD systems.
-- Objects: Instances of Classes that inherit any System Tag associations
+- Classes: Template "type" entities that are associated with a specific "scope" of associated MUD systems. Defined by tagging a class entity with the CLASS property tag.
+- Objects: Instances of Classes that inherit any System Resource Tag associations, Defined by tagging an object entity with the OBJECT property tag.
 
 ### Tag Types
 
-- SystemTags: Representative tags that connect systems to Classes for adding and enforcing composable system functionality and properties
+- Property Tags: Tags that represent a specific property of an entity. For the purposes of the SOF base framework, Property Tags are used to define the properties of a Class or Object as well as the Entity Count of a Class (i.e., the number of Objects instantiated from that Class).
+- Entity Relation Tags: Tags that represent a specific relationship between two entities. For the purposes of the SOF base framework, Entity Relation Tags are used to define the relationship between Objects and Classes. Specifically, every Object will have a Class value associated with it via a Resource Relation Tag.
+- Resource Relation Tags: Representative tags that connect World registered systems (or tables/namespaces) to Classes for adding and enforcing composable system functionality and properties. Resource relation Tags have a specific value structure  that can be found here. 
+
+### Tag Ids
+
+Tag Ids are very similar in structure to the MUD [ResourceId](https://github.com/latticexyz/mud/blob/main/packages/world/src/WorldResourceId.sol) `bytes32` user type. However, they define thier own [types](src/namespaces/evefrontier/systems/tag-system/types.sol) (PROPERTY, ENTITY_RELATION, RESOURCE_RELATION), and thier identity `bytes` are defined differently based on the tag type. In the SOF base framework, the TagId value is defined as follows:
+- Property Tags: `TagId.encode(TAG_TYPE_PROPERTY, bytes30("UNIQUE_PROPERTY_STRING"))`
+- Entity Relation Tags: `TagId.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(entityId)))`
+- Resource Relation Tags: `TagId.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(resourceId)))`
+
+This TagId schema allows for us to store and lookup tag information by using the TagIds as an additional keys for [Tables which link the tag information to Entities](src/namespaces/evefrontier/codegen/tables/EntityTagMap.sol).
+
+**IMPORTANT NOTE:** due to the nature of the Resource Relation TagId setting, MUD World resources integrated with the SOF should ensure that they have a unique first 14 bytes (instead of 16 bytes) in thier [name value](https://github.com/latticexyz/mud/blob/653f378403c7e4f234f87dec20c9dfe523f0def0/packages/world/src/WorldResourceId.sol#L87). This is due to the fact that the Resource Relation Tag ID uses its own `bytes2` type value, and the assigned identifier is the first  `bytes30` of the original ResourceId, thereby excluding the last 2 bytes of the original identifier.
+
+### Tag Values
+
+Any tag can have a value associated with it when it is assigned to an Entity. This value can be any type of data that can be represented as a `bytes` value. Implementation of this is open to the developer, however, for the purposes of the SOF base framework, the following values are used:
+- Property Tags: CLASS, OBJECT -> `bytes("")`, ENTITY_COUNT -> `abi.encode(uint256)`
+- Entity Relation Tags: [`abi.encode(EntityRelationValue(string, uint256))`](src/namespaces/evefrontier/systems/tag-system/types.sol)
+- Resource Relation Tags: [`abi.encode(ResourceRelationValue(string, bytes2, bytes30))`](src/namespaces/evefrontier/systems/tag-system/types.sol)
+
+Value information can be looked up in the [EntityTagMap](src/namespaces/evefrontier/codegen/tables/EntityTagMap.sol) table.
+
+```solidity
+  EntityRelationValue memory classEntityRelationTagValue = abi.decode(EntityTagMap.getValue(classId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId)))), (EntityRelationValue));
+```
+
+```solidity
+  ResourceRelationValue memory classResourceRelationTagValue = abi.decode(EntityTagMap.getValue(classId, resourceRelationTagId), (ResourceRelationValue));
+```
 
 ### The `scope` modifier
 
@@ -162,7 +192,7 @@ This scoping model provides a robust and efficient way to manage system permissi
 
 #### System to Class composability
 
-- Explicit system-to-class relationship setting to configure unique  and encaptulated groupings of functionality in a composable manner 
+- Explicit system-to-class relationship setting to configure unique and encaptulated groupings of functionality in a composable manner 
 - Any associated (tagged) system has access to operate on a Class (and any of its derived Objects) via the `scope `modifier
 
 #### System to Entity access control (via the `scope` modifier)
@@ -185,17 +215,17 @@ This scoping model provides a robust and efficient way to manage system permissi
 
 1. Tag Assignment (configuring system-to-entity associations)
 
-	- Systems are tagged to Classes
-	- Classes maintain list of thier tagged Systems
-	- For each SystemTag a list of tagged Classes is maintained
-	- SystemTag to Class relation data is stored in a mapping table
+	- Systems are tagged to Entities as a `"COMPOSITION"` sub-type of Resource Relation Tag
+	- Entities maintain list of thier tagged Systems (Resource Relations) `Entity.resourceRelationTags`
+	- Tag to Class relation data is stored in a mapping table [EntityTagMap](src/namespaces/evefrontier/codegen/tables/EntityTagMap.sol)
 
 2. Scope Validation (the `scope` modifier)
 
-	- Checks entity type (Class/Object)
-		- For Classes: Verifies the Class is tagged to the system being called
+	- Checks entity type (check for Class or Object property tag)
+		- For Classes: Verifies the Class is tagged to the system being called via a Resource Relation Tag
 		- For Objects: Verifies the Object's parent Class is tagged to the system being called
 		- Reverts if a called system is not tagged appropriately
+    - If this a system-to-system call, then also reverts if the previous system is not tagged appropriately
 	- Inheritance
 		- Objects inherit all system associations from their Class
 		- Changing Class tags affects all Objects of that Class
@@ -216,55 +246,57 @@ IWorldKernel world = IWorldKernel(worldAddress);
 StoreSwitch.setStoreAddress(worldAddress); // required for IdLib usage
 
 // Define a unique (non-registered) classId
-Id myClassId = IdLib.encode(ENTITY_CLASS, bytes30("MY_UNIQUE_CLASS_ID");
+uint256 myClassId = uint256(bytes32("MY_UNIQUE_CLASS_ID"));
 
 // Define system tags for a Class based on existing MUD Systems registered on the World
 // In this example our Class will have access to inventory and trade system functionalities
-Id[] memory systemTags = new Id[](2);
-systemTags[0] = IdLib.encode(TAG_SYSTEM, inventorySystemId.getResourceName());
-systemTags[1] = IdLib.encode(TAG_SYSTEM, tradeSystemId.getResourceName());
+ResourceId[] memory systemIds = new ResourceId[](2);
+systemTags[0] = inventorySystemId;
+systemTags[1] = tradeSystemId;
 
 // Register the class with initial system tags
 world.call(
 	entitySystemId,
-	abi.encodeCall(IEntitySystem.registerClass, (myClassId, systemTags)
+	abi.encodeCall(IEntitySystem.registerClass, (myClassId, systemids))
 );
 // the World entry point call msg.sender will be set as the Class owner
 ```
 
-##### Ad hoc Class Tag Management
+##### Ad hoc Resource Relation Tag Management
 
 ```solidity
 // Set the basic World call interface
 IWorldKernel world = IWorldKernel(worldAddress);
 StoreSwitch.setStoreAddress(worldAddress); // required for IdLib usage
 
-Id myClassId = IdLib.encode(ENTITY_CLASS, bytes30("MY_UNIQUE_CLASS_ID");
+uint256 myClassId = uint256(bytes32("MY_UNIQUE_CLASS_ID"));
 
-Id newSystemTagId = IdLib.encode(TAG_SYSTEM, newSystemId.getResourceName());
+TagId newSystemResourceTagId = TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(newSystemId)));
+
+ResourceRelationValue memory newResourceRelationValue = ResourceRelationValue("COMPOSITION", RESOURCE_SYSTEM, newSystemId.getResourceName());
 
 // Add single system tag
 world.call(
 	tagSystemId,
-	abi.encodeCall(ITagSystem.setSystemTag, (myClassId, newSystemTagId)
+	abi.encodeCall(ITagSystem.setTag, (newSystemResourceTagId, abi.encode(newResourceRelationValue)))
 );
 
-Id[] memory additionalSystemTags = new Id[](2);
-systemTags[0] = IdLib.encode(TAG_SYSTEM, additionalSystemId.getResourceName());
-systemTags[1] = IdLib.encode(TAG_SYSTEM, additionalSystemId2.getResourceName());
+TagParams[] memory additionalSystemTags = new TagParams[](2);
+additionalSystemTags[0] = TagParams(system1ResourceRelationTagId, abi.encode(system1ResourceRelationValue));
+additionalSystemTags[1] = TagParams(system2ResourceRelationTagId, abi.encode(system2ResourceRelationValue));
 
 // Add multiple system tags
 world.call(
 	tagSystemId,
-	abi.encodeCall(ITagSystem.setSystemTags, (myClassId, additionalSystemTags)
+	abi.encodeCall(ITagSystem.setTags, (myClassId, additionalSystemTags))
 );
 
-Id oldSystemTagId = IdLib.encode(TAG_SYSTEM, oldSystemId.getResourceName());
+TagId oldSystemTagId = TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(oldSystemId)));
 
 // Remove system tag
 world.call(
 	tagSystemId,
-	abi.encodeCall(ITagSystem.removeSystemTag, (myClassId, oldSystemTagId)
+	abi.encodeCall(ITagSystem.removeTag, (myClassId, oldSystemTagId))
 );
 
 ```
@@ -276,17 +308,15 @@ world.call(
 IWorldKernel world = IWorldKernel(worldAddress);
 StoreSwitch.setStoreAddress(worldAddress); // required for IdLib usage
 
-Id myClassId = IdLib.encode(ENTITY_CLASS, bytes30("MY_UNIQUE_CLASS_ID");
+uint256 myClassId = uint256(bytes32("MY_UNIQUE_CLASS_ID"));
 
 // Define a unique objectId
-Id myObjectId = IdLib.encode(ENTITY_OBJECT, bytes30("MY_UNIQUE_OBJECT_ID");
-
-);
+uint256 myObjectId = uint256(bytes32("MY_UNIQUE_OBJECT_ID"));
 
 // Instantiate object from class
 world.call(
     entitySystemId,
-    abi.encodeCall(IEntitySystem.instantiate, (myClassId, mtObjectId)
+    abi.encodeCall(IEntitySystem.instantiate, (myClassId, mtObjectId))
 );
 ```
 
@@ -295,10 +325,10 @@ world.call(
 ```solidity
 contract MySystem is SmartObjectFramework {
     // Enforces that the current system must be tagged to entity
-    function operateOnEntity(Id entityId) public context scope(entityId) {
+    function operateOnEntity(uint256 entityId) public context scope(entityId) {
         // Function can only execute if MySystem is tagged to:
-        // - a Class (if entityId is a Class)
-        // - an Object's Class (if entityId is an Object)
+        // - a Class (if entityId has a Class proprty tag)
+        // - an Object's Class (if entityId has an Object property tag)
     }
 }
 ```
@@ -434,17 +464,17 @@ With the above available data, complex and bespoke access rules can be built for
 ### How Access Configuration Works
 
 1. Implementing the `access` modifier on the target function:
-  - the `access` modifier accepts an `entityId` (can be a `classId`, `objectId`, or `Id.wrap(bytes32(0))`
+  - the `access` modifier accepts an `entityId` (can be a `classId`, `objectId`, or `uint256(0)`
   - `classId` to be used for Class level access rules. e.g., when a Class "owner" (or similalry approved account) should be checked for access, or when a specific set of System addresses are allowed for Class level access (beyond the normal `scope` rules)
   - `objectId` to be used for Object level access rules (or rules that are set for the parent Class of the Object). e.g., when an Object "owner" (or similalry approved account) should be checked for access, or Object specific System access (beyond the normal `scope` rules) Or in cases where access needs to be checked against th Object's parent Class.
-  - `Id.wrap(bytes32(0))` to be used when Class/Object considerations are not relevant. This kind of configuration treats the `access` modifier as a "normal" access rule. e.g. when there is no `objectId`/`classId` in the target function call, or when you want access rules to trigger uniformly regardless of the Object/Class involved.
+  - `uint256(0)` to be used when Class/Object considerations are not relevant. This kind of configuration treats the `access` modifier as a "normal" access rule. e.g. when there is no `objectId`/`classId` in the target function call, or when you want access rules to trigger uniformly regardless of the Object/Class involved.
 
 2. Access Rule Building
 
   - Access rules are built and deployed in seprate MUD Systems.
   - Access rule functions can ONLY be implemented as `view`/`pure` (staticcall) functions.
   - Access rule functions must be `public` and accept the following parameters:
-  - `Id entityId` - the `entityId` passed into the `access` modifier from the target function call
+  - `uint256 entityId` - the `entityId` passed into the `access` modifier from the target function call
   - `bytes memory targetCallData` - the `calldata` containing the parameter values of the target function call
   - Access rule functions MUST NOT return any values and SHOULD revert when an access rule fails.
 
@@ -461,7 +491,7 @@ With the above available data, complex and bespoke access rules can be built for
 
 ```solidity
 contract MySystem {
-  function myFunction(Id objectId, uint256 param2) access(objectId) public {
+  function myFunction(uint256 objectId, uint256 param2) access(objectId) public {
     // do object access restricted stuff here
     MyObjectTable.setParam2(objectId, param2);
   }
@@ -472,12 +502,12 @@ contract MySystem {
 
 ```solidity
 contract MyAccessSystem {
-	function myAccessFunction(Id objectId, bytes memory myFunctionParamData) public view {
-		if(objectId != ERC721.owner(objectId) {
+	function myAccessFunction(uint256 objectId, bytes memory myFunctionParamData) public view {
+		if (objectId != ERC721.owner(objectId)) {
 			revert MyAccess_NotTokenOwner();
 		}
-		(,uint256 param2) = abi.decode(myFunctionParamData, (Id, uint256));
-		if(param2 != 2) {
+		(,uint256 param2) = abi.decode(myFunctionParamData, (uint256, uint256));
+		if (param2 != 2) {
 			revert MyAccess_Param2RequirementNotMet();
 		}
 	}

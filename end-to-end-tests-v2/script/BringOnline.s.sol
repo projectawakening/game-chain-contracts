@@ -9,6 +9,8 @@ import { GlobalDeployableState } from "@eveworld/world-v2/src/namespaces/evefron
 import { DeployableUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
 import { DeployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
 
+import { deployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
+
 contract BringOnline is Script {
   // assumes CreateAndAnchor.s.sol and Deposit fuel has been run
 
@@ -26,10 +28,10 @@ contract BringOnline is Script {
 
     // check global state and resume if needed
     if (GlobalDeployableState.getIsPaused() == false) {
-      world.call(deployableSystemId, abi.encodeCall(DeployableSystem.globalResume, ()));
+      deployableSystem.globalResume();
     }
 
-    world.call(deployableSystemId, abi.encodeCall(DeployableSystem.bringOnline, (smartObjectId))); // needs to have some fuel in it to work, else it will just let the state to offline
+    deployableSystem.bringOnline(smartObjectId); // needs to have some fuel in it to work, else it will just let the state to offline
 
     vm.stopBroadcast();
   }

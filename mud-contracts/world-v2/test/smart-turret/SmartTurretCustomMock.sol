@@ -4,6 +4,7 @@ pragma solidity >=0.8.24;
 import { System } from "@latticexyz/world/src/System.sol";
 import { TargetPriority, Turret, SmartTurretTarget } from "../../src/namespaces/evefrontier/systems/smart-turret/types.sol";
 import { Characters, CharactersData } from "../../src/namespaces/evefrontier/codegen/tables/Characters.sol";
+import { AggressionParams } from "../../src/namespaces/evefrontier/systems/smart-turret/types.sol";
 
 contract SmartTurretCustomMock is System {
   function inProximity(
@@ -22,14 +23,7 @@ contract SmartTurretCustomMock is System {
     return updatedPriorityQueue;
   }
 
-  function aggression(
-    uint256 smartTurretId,
-    uint256 characterId,
-    TargetPriority[] memory priorityQueue,
-    Turret memory turret,
-    SmartTurretTarget memory aggressor,
-    SmartTurretTarget memory victim
-  ) public returns (TargetPriority[] memory updatedPriorityQueue) {
-    return priorityQueue;
+  function aggression(AggressionParams memory params) public returns (TargetPriority[] memory updatedPriorityQueue) {
+    return params.priorityQueue;
   }
 }

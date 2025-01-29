@@ -24,11 +24,13 @@ import { Utils as SmartCharacterUtils } from "../../src/modules/smart-character/
 import { SmartCharacterLib } from "../../src/modules/smart-character/SmartCharacterLib.sol";
 import { EntityRecordData as EntityRecordCharacter } from "../../src/modules/smart-character/types.sol";
 import { Utils as SmartDeployableUtils } from "../../src/modules/smart-deployable/Utils.sol";
+import { IAccessSystemErrors } from "../../src/modules/access/interfaces/IAccessSystemErrors.sol";
 
 import { SmartGateConfigTable } from "../../src/codegen/tables/SmartGateConfigTable.sol";
 import { EntityRecordOffchainTableData } from "../../src/codegen/tables/EntityRecordOffchainTable.sol";
 import { SmartAssemblyTable } from "../../src/codegen/tables/SmartAssemblyTable.sol";
-import { DeployableState } from "../../src/codegen/tables/DeployableState.sol";
+import { DeployableState, DeployableStateData } from "../../src/codegen/tables/DeployableState.sol";
+import { SmartGateLinkTable, SmartGateLinkTableData } from "../../src/codegen/tables/SmartGateLinkTable.sol";
 
 import { IERC721 } from "../../src/modules/eve-erc721-puppet/IERC721.sol";
 import { ERC721Registry } from "../../src/codegen/tables/ERC721Registry.sol";
@@ -160,7 +162,7 @@ contract SmartGateTest is MudTest {
       100000000 * 1e18 // maxDistance
     );
 
-    smartDeployable.depositFuel(smartObjectId, 1);
+    smartDeployable.depositFuel(smartObjectId, 100000);
     smartDeployable.bringOnline(smartObjectId);
 
     assertEq(uint256(SmartAssemblyTable.get(smartObjectId)), uint256(SmartAssemblyType.SMART_GATE));
@@ -171,18 +173,18 @@ contract SmartGateTest is MudTest {
   }
 
   function testLinkSmartGates() public {
+    testAnchorSmartGate(sourceGateId);
+    testAnchorSmartGate(destinationGateId);
     smartGate.linkSmartGates(sourceGateId, destinationGateId);
     assert(smartGate.isGateLinked(sourceGateId, destinationGateId));
     assert(smartGate.isGateLinked(destinationGateId, sourceGateId));
   }
 
-  function tesReverttLinkSmartGates() public {
+  function testRevertLinkSmartGates() public {
+    testAnchorSmartGate(sourceGateId);
+    testAnchorSmartGate(destinationGateId);
     vm.expectRevert(
-      abi.encodeWithSelector(
-        SmartGateSystem.SmartGate_SameSourceAndDestination.selector,
-        sourceGateId,
-        destinationGateId
-      )
+      abi.encodeWithSelector(SmartGateSystem.SmartGate_SameSourceAndDestination.selector, sourceGateId, sourceGateId)
     );
     smartGate.linkSmartGates(sourceGateId, sourceGateId);
   }
@@ -194,8 +196,128 @@ contract SmartGateTest is MudTest {
     assert(!smartGate.isGateLinked(sourceGateId, destinationGateId));
   }
 
+  function testLinkUnLinkMultipleSmartGates() public {
+    uint256 smartGateA = 123;
+    uint256 smartGateB = 124;
+    uint256 smartGateC = 125;
+    uint256 smartGateD = 126;
+
+    testAnchorSmartGate(smartGateA);
+    testAnchorSmartGate(smartGateB);
+    testAnchorSmartGate(smartGateC);
+    testAnchorSmartGate(smartGateD);
+
+    //link AB
+    smartGate.linkSmartGates(smartGateA, smartGateB);
+    SmartGateLinkTableData memory linkDataAB = SmartGateLinkTable.get(smartGateA);
+    assertEq(linkDataAB.destinationGateId, smartGateB);
+    assertTrue(linkDataAB.isLinked);
+
+    SmartGateLinkTableData memory linkDataBA = SmartGateLinkTable.get(smartGateB);
+    assertEq(linkDataBA.destinationGateId, smartGateA);
+    assertTrue(linkDataBA.isLinked);
+
+    //revert when linking BA because B and A its already linked
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartGateSystem.SmartGate_GateAlreadyLinked.selector, smartGateB, smartGateA)
+    );
+    smartGate.linkSmartGates(smartGateB, smartGateA);
+
+    //revert when link BC because B its already linked
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartGateSystem.SmartGate_GateAlreadyLinked.selector, smartGateB, smartGateC)
+    );
+    smartGate.linkSmartGates(smartGateB, smartGateC);
+
+    //link CD
+    smartGate.linkSmartGates(smartGateC, smartGateD);
+    SmartGateLinkTableData memory linkDataCD = SmartGateLinkTable.get(smartGateC);
+    assertEq(linkDataCD.destinationGateId, smartGateD);
+    assertTrue(linkDataCD.isLinked);
+
+    //revert when link AD because A and D its already linked
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartGateSystem.SmartGate_GateAlreadyLinked.selector, smartGateA, smartGateD)
+    );
+    smartGate.linkSmartGates(smartGateA, smartGateD);
+
+    //revert when unlink AD because A its not linked to D
+    vm.expectRevert(abi.encodeWithSelector(SmartGateSystem.SmartGate_GateNotLinked.selector, smartGateA, smartGateD));
+    smartGate.unlinkSmartGates(smartGateA, smartGateD);
+
+    //revert when link DA because D and A its already linked
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartGateSystem.SmartGate_GateAlreadyLinked.selector, smartGateD, smartGateA)
+    );
+    smartGate.linkSmartGates(smartGateD, smartGateA);
+
+    //unlink CD
+    smartGate.unlinkSmartGates(smartGateC, smartGateD);
+    SmartGateLinkTableData memory linkDataCDUnlinked = SmartGateLinkTable.get(smartGateC);
+    assertFalse(linkDataCDUnlinked.isLinked);
+
+    SmartGateLinkTableData memory linkDataDCUnlinked = SmartGateLinkTable.get(smartGateD);
+    assertFalse(linkDataDCUnlinked.isLinked);
+
+    //link DC
+    smartGate.linkSmartGates(smartGateD, smartGateC);
+    SmartGateLinkTableData memory linkDataDC = SmartGateLinkTable.get(smartGateD);
+    assertEq(linkDataDC.destinationGateId, smartGateC);
+    assertTrue(linkDataDC.isLinked);
+  }
+
+  function testLinkFromSourceAndUnlinkFromDest() public {
+    uint256 smartGateA = 123;
+    uint256 smartGateB = 124;
+    uint256 smartGateC = 125;
+
+    testAnchorSmartGate(smartGateA);
+    testAnchorSmartGate(smartGateB);
+    testAnchorSmartGate(smartGateC);
+
+    //link AB
+    smartGate.linkSmartGates(smartGateA, smartGateB);
+    SmartGateLinkTableData memory linkDataAB = SmartGateLinkTable.get(smartGateA);
+    assertTrue(linkDataAB.isLinked);
+
+    SmartGateLinkTableData memory linkDataBA = SmartGateLinkTable.get(smartGateB);
+    assertTrue(linkDataBA.isLinked);
+
+    //unlink BA
+    smartGate.unlinkSmartGates(smartGateB, smartGateA);
+    linkDataBA = SmartGateLinkTable.get(smartGateB);
+    assertFalse(linkDataBA.isLinked);
+
+    linkDataAB = SmartGateLinkTable.get(smartGateA);
+    assertFalse(linkDataAB.isLinked);
+
+    //link BC
+    smartGate.linkSmartGates(smartGateB, smartGateC);
+    SmartGateLinkTableData memory linkDataBC = SmartGateLinkTable.get(smartGateB);
+    assert(linkDataBC.isLinked);
+
+    SmartGateLinkTableData memory linkDataCB = SmartGateLinkTable.get(smartGateC);
+    assert(linkDataCB.isLinked);
+
+    //BA link should be replaced with BC
+    linkDataBA = SmartGateLinkTable.get(smartGateB);
+    assertFalse(linkDataBA.destinationGateId == smartGateA);
+    assert(linkDataBA.destinationGateId == smartGateC);
+
+    //AB link record should not exists
+    linkDataAB = SmartGateLinkTable.get(smartGateA);
+    assert(linkDataAB.destinationGateId == 0);
+  }
+
   function testRevertExistingLink() public {
-    testLinkSmartGates();
+    testAnchorSmartGate(sourceGateId);
+    testAnchorSmartGate(destinationGateId);
+    smartGate.linkSmartGates(sourceGateId, destinationGateId);
+
+    SmartGateLinkTableData memory linkData = SmartGateLinkTable.get(sourceGateId);
+    assertEq(linkData.destinationGateId, destinationGateId);
+    assertTrue(linkData.isLinked);
+
     vm.expectRevert(
       abi.encodeWithSelector(SmartGateSystem.SmartGate_GateAlreadyLinked.selector, sourceGateId, destinationGateId)
     );
@@ -232,7 +354,7 @@ contract SmartGateTest is MudTest {
       1 // maxDistance
     );
 
-    smartDeployable.depositFuel(smartObjectIdA, 1);
+    smartDeployable.depositFuel(smartObjectIdA, 100000);
     smartDeployable.bringOnline(smartObjectIdA);
 
     smartGate.createAndAnchorSmartGate(
@@ -246,7 +368,7 @@ contract SmartGateTest is MudTest {
       1 // maxDistance
     );
 
-    smartDeployable.depositFuel(smartObjectIdB, 1);
+    smartDeployable.depositFuel(smartObjectIdB, 100000);
     smartDeployable.bringOnline(smartObjectIdB);
 
     vm.expectRevert(
@@ -271,24 +393,17 @@ contract SmartGateTest is MudTest {
   }
 
   function testCanJump() public {
-    testAnchorSmartGate(sourceGateId);
-    testAnchorSmartGate(destinationGateId);
     testLinkSmartGates();
     assert(smartGate.canJump(characterId, sourceGateId, destinationGateId));
   }
 
   function testCanJumpFalse() public {
     testConfigureSmartGate();
-
-    testAnchorSmartGate(sourceGateId);
-    testAnchorSmartGate(destinationGateId);
     testLinkSmartGates();
     assert(!smartGate.canJump(characterId, sourceGateId, destinationGateId));
   }
 
   function testCanJump2way() public {
-    testAnchorSmartGate(sourceGateId);
-    testAnchorSmartGate(destinationGateId);
     testLinkSmartGates();
     assert(smartGate.canJump(characterId, destinationGateId, sourceGateId));
   }

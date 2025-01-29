@@ -7,22 +7,16 @@ import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.
 import { World } from "@latticexyz/world/src/World.sol";
 import { getKeysWithValue } from "@latticexyz/world-modules/src/modules/keyswithvalue/getKeysWithValue.sol";
 import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/FunctionSelectors.sol";
-import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
 import { IWorld } from "../../src/codegen/world/IWorld.sol";
 import { EntityRecord } from "../../src/namespaces/evefrontier/codegen/index.sol";
-import { EntityRecordSystem } from "../../src/namespaces/evefrontier/systems/entity-record/EntityRecordSystem.sol";
+import { EntityRecordSystemLib, entityRecordSystem } from "../../src/namespaces/evefrontier/codegen/systems/EntityRecordSystemLib.sol";
 import { EntityRecord, EntityRecordData } from "../../src/namespaces/evefrontier/codegen/tables/EntityRecord.sol";
 import { EntityRecordMetadata, EntityRecordMetadataData } from "../../src/namespaces/evefrontier/codegen/tables/EntityRecordMetadata.sol";
 import { EntityRecordData as EntityRecordInput, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
 
-import { EntityRecordUtils } from "../../src/namespaces/evefrontier/systems/entity-record/EntityRecordUtils.sol";
-
 contract EntityRecordTest is MudTest {
   IBaseWorld world;
-  using EntityRecordUtils for bytes14;
-
-  ResourceId systemId = EntityRecordUtils.entityRecordSystemId();
 
   function setUp() public virtual override {
     super.setUp();
@@ -43,7 +37,7 @@ contract EntityRecordTest is MudTest {
 
     EntityRecordInput memory entityRecordInput = EntityRecordInput({ typeId: typeId, itemId: itemId, volume: volume });
 
-    world.call(systemId, abi.encodeCall(EntityRecordSystem.createEntityRecord, (smartObjectId, entityRecordInput)));
+    entityRecordSystem.createEntityRecord(smartObjectId, entityRecordInput);
     EntityRecordData memory entityRecord = EntityRecord.get(smartObjectId);
 
     assertEq(itemId, entityRecord.itemId);
@@ -59,10 +53,8 @@ contract EntityRecordTest is MudTest {
   ) public {
     vm.assume(smartObjectId != 0);
     EntityMetadata memory entityMetadata = EntityMetadata({ name: name, dappURL: dappURL, description: description });
-    world.call(
-      systemId,
-      abi.encodeCall(EntityRecordSystem.createEntityRecordMetadata, (smartObjectId, entityMetadata))
-    );
+
+    entityRecordSystem.createEntityRecordMetadata(smartObjectId, entityMetadata);
 
     EntityRecordMetadataData memory entityRecordMetaData = EntityRecordMetadata.get(smartObjectId);
 
@@ -73,7 +65,7 @@ contract EntityRecordTest is MudTest {
 
   function testSetName(uint256 smartObjectId, string memory name) public {
     vm.assume(smartObjectId != 0);
-    world.call(systemId, abi.encodeCall(EntityRecordSystem.setName, (smartObjectId, name)));
+    entityRecordSystem.setName(smartObjectId, name);
 
     EntityRecordMetadataData memory entityRecordMetaData = EntityRecordMetadata.get(smartObjectId);
 

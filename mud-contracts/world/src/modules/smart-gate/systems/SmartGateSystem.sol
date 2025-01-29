@@ -63,6 +63,16 @@ contract SmartGateSystem is EveSystem, AccessModified {
     _;
   }
 
+  modifier onlyOnline(uint256 smartObjectId) {
+    if (DeployableState.getCurrentState(smartObjectId) != State.ONLINE) {
+      revert SmartDeployableErrors.SmartDeployable_IncorrectState(
+        smartObjectId,
+        DeployableState.getCurrentState(smartObjectId)
+      );
+    }
+    _;
+  }
+
   /**
     * @notice Create and anchor a Smart Gate
     * @param smartObjectId is smart object id of the Smart Gate
@@ -120,8 +130,18 @@ contract SmartGateSystem is EveSystem, AccessModified {
    * @param sourceGateId is the smartObjectId of the source gate
    * @param destinationGateId is the smartObjectId of the destination gate
    */
-  function linkSmartGates(uint256 sourceGateId, uint256 destinationGateId) public onlyAdminOrObjectOwner(sourceGateId) {
-    if (isGateLinked(sourceGateId, destinationGateId)) {
+  function linkSmartGates(
+    uint256 sourceGateId,
+    uint256 destinationGateId
+  )
+    public
+    onlyAdminOrObjectOwner(sourceGateId)
+    onlyAdminOrObjectOwner(destinationGateId)
+    onlyOnline(sourceGateId)
+    onlyOnline(destinationGateId)
+    onlyActive
+  {
+    if (isAnyGateLinked(sourceGateId, destinationGateId)) {
       revert SmartGate_GateAlreadyLinked(sourceGateId, destinationGateId);
     }
 
@@ -133,6 +153,11 @@ contract SmartGateSystem is EveSystem, AccessModified {
     if (isWithinRange(sourceGateId, destinationGateId) == false) {
       revert SmartGate_NotWithtinRange(sourceGateId, destinationGateId);
     }
+
+    //Delete the existing records for the source and destination gate before creating a new link to avoid replacing the record
+    //The invalid records are not deleted during unlink because the external services are subscribed to the unlink events. If the record is deleted then the external services will not be able to notify the game
+    _deleteExistingLink(sourceGateId);
+    _deleteExistingLink(destinationGateId);
 
     //Create a 2 way link between the gates
     SmartGateLinkTable.set(sourceGateId, destinationGateId, true);
@@ -147,7 +172,7 @@ contract SmartGateSystem is EveSystem, AccessModified {
   function unlinkSmartGates(
     uint256 sourceGateId,
     uint256 destinationGateId
-  ) public onlyAdminOrObjectOwner(sourceGateId) {
+  ) public onlyAdminOrObjectOwner(sourceGateId) onlyAdminOrObjectOwner(destinationGateId) {
     //Check if the gates are linked
     if (!isGateLinked(sourceGateId, destinationGateId)) {
       revert SmartGate_GateNotLinked(sourceGateId, destinationGateId);
@@ -204,6 +229,12 @@ contract SmartGateSystem is EveSystem, AccessModified {
     return true;
   }
 
+  /**
+   * @notice view function to check if the source gate is linked to the destination gate
+   * @param sourceGateId is the smartObjectId of the source gate
+   * @param destinationGateId is the smartObjectId of the destination gate
+   * @return true if the source gate is linked to the destination gate
+   */
   function isGateLinked(uint256 sourceGateId, uint256 destinationGateId) public view returns (bool) {
     SmartGateLinkTableData memory smartGateLinkTableData = SmartGateLinkTable.get(sourceGateId);
     bool isLinked = smartGateLinkTableData.isLinked && smartGateLinkTableData.destinationGateId == destinationGateId;
@@ -211,6 +242,28 @@ contract SmartGateSystem is EveSystem, AccessModified {
     return isLinked;
   }
 
+  /**
+   * @notice view function to check if any gate is linked previously
+   * @param sourceGateId is the smartObjectId of the source gate
+   * @param destinationGateId is the smartObjectId of the destination gate
+   * @return true if any gate is linked previously
+   */
+  function isAnyGateLinked(uint256 sourceGateId, uint256 destinationGateId) public view returns (bool) {
+    SmartGateLinkTableData memory smartGateLinkTableData = SmartGateLinkTable.get(sourceGateId);
+    bool isSourceAlreadyLinked = smartGateLinkTableData.isLinked;
+
+    smartGateLinkTableData = SmartGateLinkTable.get(destinationGateId);
+    bool isDestinationAlreadyLinked = smartGateLinkTableData.isLinked;
+
+    return (isSourceAlreadyLinked || isDestinationAlreadyLinked);
+  }
+
+  /**
+   * @notice view function to check if the source gate and destination gate are within range
+   * @param sourceGateId is the smartObjectId of the source gate
+   * @param destinationGateId is the smartObjectId of the destination gate
+   * @return true if the source gate and destination gate are within range
+   */
   function isWithinRange(uint256 sourceGateId, uint256 destinationGateId) public view returns (bool) {
     //Get the location of the source gate and destination gate
     LocationTableData memory sourceGateLocation = LocationTable.get(sourceGateId);
@@ -232,6 +285,22 @@ contract SmartGateSystem is EveSystem, AccessModified {
     // Sum of squares (distance squared in meters)
     uint256 distanceSquaredMeters = (dx * dx) + (dy * dy) + (dz * dz);
     return distanceSquaredMeters <= (maxDistance * maxDistance);
+  }
+
+  /**
+   * @notice delete the existing record if there exists a link for either source or destination gates
+   * @param sourceGateId is the smartObjectId of the source gate
+   */
+  function _deleteExistingLink(uint256 sourceGateId) internal {
+    uint256 destinationGateId;
+    //delete the source gate record
+    SmartGateLinkTableData memory linkData = SmartGateLinkTable.get(sourceGateId);
+    if (!linkData.isLinked) {
+      destinationGateId = SmartGateLinkTable.get(sourceGateId).destinationGateId;
+
+      SmartGateLinkTable.deleteRecord(sourceGateId);
+      SmartGateLinkTable.deleteRecord(destinationGateId);
+    }
   }
 
   function _entityRecordLib() internal view returns (EntityRecordLib.World memory) {

@@ -17,9 +17,6 @@ import { Utils as AccessConfigSystemUtils } from "../src/namespaces/evefrontier/
 
 import "../src/namespaces/evefrontier/codegen/index.sol";
 
-import { Id, IdLib } from "../src/libs/Id.sol";
-import { ENTITY_CLASS, ENTITY_OBJECT } from "../src/types/entityTypes.sol";
-
 import { SystemMock } from "./mocks/SystemMock.sol";
 import { AccessSystemMock } from "./mocks/AccessSystemMock.sol";
 

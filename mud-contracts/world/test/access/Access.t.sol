@@ -1789,6 +1789,11 @@ contract AccessTest is MudTest {
 
     vm.startPrank(alice, bob);
     // OWNER success
+    smartDeployable.depositFuel(56789, 100000);
+    smartDeployable.depositFuel(156789, 100000);
+    smartDeployable.bringOnline(56789);
+    smartDeployable.bringOnline(156789);
+
     smartGate.configureSmartGate(56789, ResourceId.wrap(bytes32(uint256(123455667))));
     smartGate.linkSmartGates(56789, 156789);
     smartGate.unlinkSmartGates(56789, 156789);

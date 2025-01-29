@@ -10,6 +10,7 @@ import { InventoryItem } from "@eveworld/world-v2/src/namespaces/evefrontier/sys
 import { InventoryUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
 import { InventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/InventorySystem.sol";
 import { InventoryItemData, InventoryItem as InventoryItemTable } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/InventoryItem.sol";
+import { inventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/InventorySystemLib.sol";
 
 contract WithdrawFromInventory is Script {
   function run(address worldAddress) public {
@@ -43,7 +44,7 @@ contract WithdrawFromInventory is Script {
       quantity: 10
     });
 
-    world.call(inventorySystemId, abi.encodeCall(InventorySystem.withdrawFromInventory, (smartObjectId, items)));
+    inventorySystem.withdrawFromInventory(smartObjectId, items);
 
     InventoryItemData memory inventoryItem1 = InventoryItemTable.get(smartObjectId, items[0].inventoryItemId);
     InventoryItemData memory inventoryItem2 = InventoryItemTable.get(smartObjectId, items[1].inventoryItemId);

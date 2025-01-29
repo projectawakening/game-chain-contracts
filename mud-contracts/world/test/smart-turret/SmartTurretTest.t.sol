@@ -152,7 +152,7 @@ contract SmartTurretTest is MudTest {
       1000000 * 1e18 // fuelMaxCapacity,
     );
 
-    smartDeployable.depositFuel(smartObjectId, 1);
+    smartDeployable.depositFuel(smartObjectId, 100000);
     smartDeployable.bringOnline(smartObjectId);
 
     assertEq(uint256(SmartAssemblyTable.get(smartObjectId)), uint256(SmartAssemblyType.SMART_TURRET));
