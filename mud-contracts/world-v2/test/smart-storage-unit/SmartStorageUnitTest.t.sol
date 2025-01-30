@@ -34,18 +34,9 @@ import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespa
 import { CreateAndAnchorDeployableParams } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
 import { SMART_STORAGE_UNIT } from "../../src/namespaces/evefrontier/systems/constants.sol";
 
-contract SmartStorageUnitTest is MudTest {
-  IBaseWorld world;
-  string mnemonic = "test test test test test test test test test test test junk";
-  uint256 deployerPK = vm.deriveKey(mnemonic, 0);
-  uint256 alicePK = vm.deriveKey(mnemonic, 2);
-  uint256 bobPK = vm.deriveKey(mnemonic, 3);
-
-  address deployer = vm.addr(deployerPK); // ADMIN
+contract SmartStorageUnitTest is EveTest {
   uint256 characterId = 123;
   uint256 diffCharacterId = 9999;
-  address alice = vm.addr(alicePK);
-  address bob = vm.addr(bobPK); // Ephemeral Inventory Owner
   uint256 tribeId = 100;
   SmartObjectData smartObjectData;
   WorldPosition worldPosition;
@@ -54,8 +45,6 @@ contract SmartStorageUnitTest is MudTest {
 
   function setUp() public virtual override {
     super.setUp();
-    world = IBaseWorld(worldAddress);
-
     deployableSystem.globalResume();
 
     entityRecord = EntityRecordData({ typeId: 123, itemId: 234, volume: 100 });
@@ -71,7 +60,6 @@ contract SmartStorageUnitTest is MudTest {
     worldPosition = WorldPosition({ solarSystemId: 1, position: position });
 
     smartCharacterSystem.createCharacter(characterId, alice, tribeId, entityRecord, entityRecordMetadata);
-
     smartCharacterSystem.createCharacter(diffCharacterId, bob, tribeId, entityRecord, entityRecordMetadata);
   }
 

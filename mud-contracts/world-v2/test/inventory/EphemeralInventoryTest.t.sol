@@ -27,20 +27,17 @@ import { InventoryItem } from "../../src/namespaces/evefrontier/systems/inventor
 import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../src/namespaces/evefrontier/codegen/systems/EphemeralInventorySystemLib.sol";
 import { DeployableSystemLib, deployableSystem } from "../../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
 import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
+import { EveTest } from "../EveTest.sol";
 
 contract EphemeralInventoryTest is EveTest {
-  IBaseWorld world;
   EntityRecordData charEntityRecordData;
   EntityRecordData ephCharEntityRecordData;
   EntityMetadata characterMetadata;
   string tokenCID;
 
-  string mnemonic = "test test test test test test test test test test test junk";
-  uint256 deployerPK = vm.deriveKey(mnemonic, 0);
   uint256 ownerPK = vm.deriveKey(mnemonic, 2);
   uint256 diffOwnerPK = vm.deriveKey(mnemonic, 3);
 
-  address deployer = vm.addr(deployerPK); // ADMIN
   address owner = vm.addr(ownerPK); // Ephemeral Owner smart character account
   address differentOwner = vm.addr(diffOwnerPK); // another different Ephemeral Owner
 
@@ -51,7 +48,6 @@ contract EphemeralInventoryTest is EveTest {
   function setUp() public virtual override {
     vm.startPrank(deployer);
     super.setUp();
-    world = IBaseWorld(worldAddress);
 
     charEntityRecordData = EntityRecordData({ typeId: 2345, itemId: 1234, volume: 0 });
     ephCharEntityRecordData = EntityRecordData({ typeId: 2345, itemId: 1234, volume: 0 });

@@ -489,15 +489,15 @@ abstract contract EveTest is Test {
       FuelSystem.setFuelMaxCapacity.selector,
       FuelSystem.setFuelAmount.selector,
       FuelSystem.depositFuel.selector,
-      FuelSystem.withdrawFuel.selector,
+      FuelSystem.withdrawFuel.selector
     ];
 
     for (uint256 i = 0; i < fuelSignatures.length; i++) {
       accessConfigSystem.configureAccess(
         fuelSystem.toResourceId(),
         fuelSignatures[i],
-        adminAccessSystem.toResourceId(),
-        AdminAccessSystem.onlyAdmin.selector
+        accessSystem.toResourceId(),
+        AccessSystem.onlyAdmin.selector
       );
 
       accessConfigSystem.setAccessEnforcement(fuelSystem.toResourceId(), fuelSignatures[i], true);

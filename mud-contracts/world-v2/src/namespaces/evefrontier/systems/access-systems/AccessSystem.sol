@@ -7,10 +7,11 @@ import { HasRole } from "@eveworld/smart-object-framework-v2/src/namespaces/evef
 import { DeployableToken } from "../../codegen/index.sol";
 import { IERC721 } from "../eve-erc721-puppet/IERC721.sol";
 import { InventoryUtils } from "../inventory/InventoryUtils.sol";
+import { inventoryInteractSystem } from "../../codegen/systems/InventoryInteractSystemLib.sol";
 
 contract AccessSystem is SmartObjectFramework {
   error Access_NotAdmin(address caller);
-  error Access_NotOwner(address caller, uint256 objectId);
+  error Access_NotDeployableOwner(address caller, uint256 objectId);
   error Access_NotAdminOrOwner(address caller, uint256 objectId);
 
   error Access_NotOwnerOrCanWithdrawFromInventory(address caller, uint256 objectId);
@@ -32,7 +33,7 @@ contract AccessSystem is SmartObjectFramework {
 
   function onlyDeployableOwner(uint256 objectId, bytes memory data) public view {
     if (!isOwner(_callMsgSender(1), objectId)) {
-      revert Access_NotOwner(_callMsgSender(1), objectId);
+      revert Access_NotDeployableOwner(_callMsgSender(1), objectId);
     }
   }
 
@@ -45,12 +46,6 @@ contract AccessSystem is SmartObjectFramework {
   function onlyAdminOrDeployableOwner(uint256 objectId, bytes memory data) public view {
     if (!isAdmin(_callMsgSender(1)) && !isOwner(_callMsgSender(1), objectId)) {
       revert Access_NotAdminOrOwner(_callMsgSender(1), objectId);
-    }
-  }
-
-  function onlyDeployableOwner(uint256 objectId, bytes memory data) public view {
-    if (!isOwner(_callMsgSender(1), objectId)) {
-      revert Access_NotDeployableOwner(_callMsgSender(1), objectId);
     }
   }
 
@@ -87,7 +82,7 @@ contract AccessSystem is SmartObjectFramework {
   }
 
   function isInventoryInteractSystem(address caller) public view returns (bool) {
-    return caller == address(inventoryInteractSystem);
+    return caller == inventoryInteractSystem.getAddress();
   }
 
   function isInventoryAdmin(uint256 smartObjectId, address caller) public view returns (bool) {
