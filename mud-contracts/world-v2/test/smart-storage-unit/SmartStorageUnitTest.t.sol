@@ -33,6 +33,7 @@ import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../src
 import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
 import { CreateAndAnchorDeployableParams } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
 import { SMART_STORAGE_UNIT } from "../../src/namespaces/evefrontier/systems/constants.sol";
+import { EveTest } from "../EveTest.sol";
 
 contract SmartStorageUnitTest is EveTest {
   uint256 characterId = 123;
