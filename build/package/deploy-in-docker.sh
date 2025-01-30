@@ -183,10 +183,11 @@ show_progress 6 8
 
 #7 Setup access control
 echo " - Setting up access control"
-pnpm nx access-config:configure-all @eveworld/world
+pnpm nx access-config:configure-all @eveworld/world > /dev/null 2>&1
 
 wait
 show_progress 7 8
+echo " - Access controlled applied"
 
 echo " - Collecting ABIs"
 mkdir -p abis
