@@ -33,7 +33,7 @@ contract FuelSystem is EveSystem {
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     uint256 fuelAmount
-  ) public context access(smartObjectId) {
+  ) public context access(smartObjectId) scope(smartObjectId) {
     Fuel.set(
       smartObjectId,
       fuelUnitVolume,
@@ -49,7 +49,10 @@ contract FuelSystem is EveSystem {
    * @param smartObjectId on-chain id of the in-game deployable
    * @param fuelUnitVolume the volume of a single unit of fuel
    */
-  function setFuelUnitVolume(uint256 smartObjectId, uint256 fuelUnitVolume) public context access(smartObjectId) {
+  function setFuelUnitVolume(
+    uint256 smartObjectId,
+    uint256 fuelUnitVolume
+  ) public context access(smartObjectId) scope(smartObjectId) {
     Fuel.setFuelUnitVolume(smartObjectId, fuelUnitVolume);
   }
 
@@ -65,7 +68,7 @@ contract FuelSystem is EveSystem {
   function setFuelConsumptionIntervalInSeconds(
     uint256 smartObjectId,
     uint256 fuelConsumptionIntervalInSeconds
-  ) public context access(smartObjectId) {
+  ) public context access(smartObjectId) scope(smartObjectId) {
     Fuel.setFuelConsumptionIntervalInSeconds(smartObjectId, fuelConsumptionIntervalInSeconds);
   }
 
@@ -74,7 +77,10 @@ contract FuelSystem is EveSystem {
    * @param smartObjectId on-chain id of the in-game deployable
    * @param fuelMaxCapacity the maximum fuel capacity of the object
    */
-  function setFuelMaxCapacity(uint256 smartObjectId, uint256 fuelMaxCapacity) public context access(smartObjectId) {
+  function setFuelMaxCapacity(
+    uint256 smartObjectId,
+    uint256 fuelMaxCapacity
+  ) public context access(smartObjectId) scope(smartObjectId) {
     Fuel.setFuelMaxCapacity(smartObjectId, fuelMaxCapacity);
   }
 
@@ -83,7 +89,10 @@ contract FuelSystem is EveSystem {
    * @param smartObjectId on-chain id of the in-game deployable
    * @param fuelAmountInWei the new fuel amount in WEI. This will rest the existing fuel amount
    */
-  function setFuelAmount(uint256 smartObjectId, uint256 fuelAmountInWei) public context access(smartObjectId) {
+  function setFuelAmount(
+    uint256 smartObjectId,
+    uint256 fuelAmountInWei
+  ) public context access(smartObjectId) scope(smartObjectId) {
     _updateFuel(smartObjectId);
     Fuel.setFuelAmount(smartObjectId, fuelAmountInWei);
     Fuel.setLastUpdatedAt(smartObjectId, block.timestamp);
@@ -95,7 +104,10 @@ contract FuelSystem is EveSystem {
    * @param fuelAmount of fuel in full units
    * TODO: make this function admin only
    */
-  function depositFuel(uint256 smartObjectId, uint256 fuelAmount) public context access(smartObjectId) {
+  function depositFuel(
+    uint256 smartObjectId,
+    uint256 fuelAmount
+  ) public context access(smartObjectId) scope(smartObjectId) {
     _updateFuel(smartObjectId);
     if (
       (((Fuel.getFuelAmount(smartObjectId) + fuelAmount * ONE_UNIT_IN_WEI) * Fuel.getFuelUnitVolume(smartObjectId))) /
@@ -120,7 +132,10 @@ contract FuelSystem is EveSystem {
    * @param fuelAmount of fuel in full units
    * TODO: make this function admin only
    */
-  function withdrawFuel(uint256 smartObjectId, uint256 fuelAmount) public context access(smartObjectId) {
+  function withdrawFuel(
+    uint256 smartObjectId,
+    uint256 fuelAmount
+  ) public context access(smartObjectId) scope(smartObjectId) {
     _updateFuel(smartObjectId);
 
     Fuel.setFuelAmount(
@@ -136,7 +151,7 @@ contract FuelSystem is EveSystem {
    * or that compose with it
    * @param smartObjectId on-chain id of the in-game deployable
    */
-  function updateFuel(uint256 smartObjectId) public context access(smartObjectId) {
+  function updateFuel(uint256 smartObjectId) public context access(smartObjectId) scope(smartObjectId) {
     _updateFuel(smartObjectId);
   }
 

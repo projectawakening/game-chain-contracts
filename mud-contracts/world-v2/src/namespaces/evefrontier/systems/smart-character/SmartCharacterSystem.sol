@@ -27,7 +27,7 @@ contract SmartCharacterSystem is EveSystem {
    * @notice Register a new character token
    * @param tokenAddress The address of the token to register
    */
-  function registerCharacterToken(address tokenAddress) public context access(0) {
+  function registerCharacterToken(address tokenAddress) public context access(0) scope(0) {
     if (CharacterToken.get() != address(0)) {
       revert SmartCharacter_ERC721AlreadyInitialized();
     }
@@ -47,7 +47,7 @@ contract SmartCharacterSystem is EveSystem {
     uint256 tribeId,
     EntityRecordData memory entityRecord,
     EntityMetadata memory entityRecordMetadata
-  ) public context access(characterId) {
+  ) public context access(characterId) scope(characterId) {
     uint256 createdAt = block.timestamp;
 
     // enforce one-to-one mapping
@@ -69,7 +69,7 @@ contract SmartCharacterSystem is EveSystem {
     IERC721Mintable(CharacterToken.get()).mint(characterAddress, characterId);
   }
 
-  function updateTribeId(uint256 characterId, uint256 tribeId) public context access(characterId) {
+  function updateTribeId(uint256 characterId, uint256 tribeId) public context access(characterId) scope(characterId) {
     if (Characters.getTribeId(characterId) == 0) {
       revert SmartCharacterDoesNotExist(characterId);
     }

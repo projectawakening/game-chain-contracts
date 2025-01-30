@@ -15,6 +15,8 @@ contract AccessSystem is SmartObjectFramework {
 
   error Access_NotOwnerOrCanWithdrawFromInventory(address caller, uint256 objectId);
   error Access_NotOwnerOrCanDepositToInventory(address caller, uint256 objectId);
+  error Access_NotDeployableOwnerOrInventoryInteractSystem(address caller, uint256 objectId);
+  error Access_NotInventoryAdmin(address caller, uint256 smartObjectId);
 
   function onlyOwnerOrCanWithdrawFromInventory(uint256 objectId, bytes memory data) public view {
     if (!isOwner(_callMsgSender(1), objectId) && !canWithdrawFromInventory(objectId, _callMsgSender(1))) {
@@ -46,6 +48,24 @@ contract AccessSystem is SmartObjectFramework {
     }
   }
 
+  function onlyDeployableOwner(uint256 objectId, bytes memory data) public view {
+    if (!isOwner(_callMsgSender(1), objectId)) {
+      revert Access_NotDeployableOwner(_callMsgSender(1), objectId);
+    }
+  }
+
+  function onlyDeployableOwnerOrInventoryInteractSystem(uint256 objectId, bytes memory data) public view {
+    if (!isOwner(_callMsgSender(1), objectId) && !isInventoryInteractSystem(_callMsgSender(1))) {
+      revert Access_NotDeployableOwnerOrInventoryInteractSystem(_callMsgSender(1), objectId);
+    }
+  }
+
+  function onlyInventoryAdmin(uint256 smartObjectId, bytes memory data) public view {
+    if (!isInventoryAdmin(smartObjectId, _callMsgSender(1))) {
+      revert Access_NotInventoryAdmin(_callMsgSender(1), smartObjectId);
+    }
+  }
+
   function isAdmin(address caller) public view returns (bool) {
     return HasRole.getHasRole("admin", caller);
   }
@@ -64,5 +84,14 @@ contract AccessSystem is SmartObjectFramework {
   function canDepositToInventory(uint256 smartObjectId, address caller) public view returns (bool) {
     bytes32 accessRole = InventoryUtils.getEphemeralToInventoryTransferAccessRole(smartObjectId);
     return HasRole.getHasRole(accessRole, caller);
+  }
+
+  function isInventoryInteractSystem(address caller) public view returns (bool) {
+    return caller == address(inventoryInteractSystem);
+  }
+
+  function isInventoryAdmin(uint256 smartObjectId, address caller) public view returns (bool) {
+    bytes32 adminAccessRole = InventoryUtils.getAdminAccessRole(smartObjectId);
+    return HasRole.getHasRole(adminAccessRole, caller);
   }
 }

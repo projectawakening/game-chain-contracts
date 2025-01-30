@@ -28,7 +28,7 @@ import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../src
 import { DeployableSystemLib, deployableSystem } from "../../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
 import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
 
-contract EphemeralInventoryTest is MudTest {
+contract EphemeralInventoryTest is EveTest {
   IBaseWorld world;
   EntityRecordData charEntityRecordData;
   EntityRecordData ephCharEntityRecordData;

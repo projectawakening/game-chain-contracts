@@ -17,7 +17,10 @@ contract EntityRecordSystem is EveSystem {
    * @param smartObjectId the id of a in game entity referred as smart object id
    * @param entityRecord is the EnityRecordData struct with all the data needed to create a new entity record
    */
-  function createEntityRecord(uint256 smartObjectId, EntityRecordData memory entityRecord) public context {
+  function createEntityRecord(
+    uint256 smartObjectId,
+    EntityRecordData memory entityRecord
+  ) public context access(smartObjectId) scope(smartObjectId) {
     EntityRecord.set(smartObjectId, entityRecord.itemId, entityRecord.typeId, entityRecord.volume, true);
   }
 
@@ -29,7 +32,7 @@ contract EntityRecordSystem is EveSystem {
   function createEntityRecordMetadata(
     uint256 smartObjectId,
     EntityMetadata memory entityRecordMetadata
-  ) public context {
+  ) public context access(smartObjectId) scope(smartObjectId) {
     EntityRecordMetadata.set(
       smartObjectId,
       entityRecordMetadata.name,
@@ -43,7 +46,10 @@ contract EntityRecordSystem is EveSystem {
    * @param smartObjectId the id of a in game entity referred as smart object id
    * @param name the name of the entity
    */
-  function setName(uint256 smartObjectId, string memory name) public context access(smartObjectId) {
+  function setName(
+    uint256 smartObjectId,
+    string memory name
+  ) public context access(smartObjectId) scope(smartObjectId) {
     EntityRecordMetadata.setName(smartObjectId, name);
   }
 
@@ -52,7 +58,10 @@ contract EntityRecordSystem is EveSystem {
    * @param smartObjectId the id of a in game entity referred as smart object id
    * @param dappURL the dappURL of the entity
    */
-  function setDappURL(uint256 smartObjectId, string memory dappURL) public context access(smartObjectId) {
+  function setDappURL(
+    uint256 smartObjectId,
+    string memory dappURL
+  ) public context access(smartObjectId) scope(smartObjectId) {
     EntityRecordMetadata.setDappURL(smartObjectId, dappURL);
   }
 
@@ -61,7 +70,10 @@ contract EntityRecordSystem is EveSystem {
    * @param smartObjectId the id of a in game entity referred as smart object id
    * @param description the description of the entity
    */
-  function setDescription(uint256 smartObjectId, string memory description) public context access(smartObjectId) {
+  function setDescription(
+    uint256 smartObjectId,
+    string memory description
+  ) public context access(smartObjectId) scope(smartObjectId) {
     EntityRecordMetadata.setDescription(smartObjectId, description);
   }
 }

@@ -36,7 +36,7 @@ contract RoleManagementSystem is IRoleManagementSystem, SmartObjectFramework {
    * @param role The identifier for the new role
    * @param admin The identifier for the admin role
    */
-  function createRole(bytes32 role, bytes32 admin) external context enforceCallCount(1) {
+  function createRole(bytes32 role, bytes32 admin) external context {
     if (role == bytes32(0) || admin == bytes32(0)) {
       revert RoleManagement_InvalidRole();
     }
@@ -73,10 +73,7 @@ contract RoleManagementSystem is IRoleManagementSystem, SmartObjectFramework {
    * @param role The role to grant membership for
    * @param account The account to grant as a member.
    */
-  function grantRole(
-    bytes32 role,
-    address account
-  ) external context enforceCallCount(1) onlyRole(Role.getAdmin(role), _callMsgSender(1)) {
+  function grantRole(bytes32 role, address account) external context onlyRole(Role.getAdmin(role), _callMsgSender(1)) {
     _grantRole(role, account);
   }
 
