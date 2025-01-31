@@ -6,7 +6,7 @@ LOG_FILE="./logfile.log"
 mkdir -p logs
 
 # Ensure the log file is copied to the logs folder on exit
-trap 'cp $LOG_FILE "logs/logfile-$(date +%Y%m%d_%H%M%S).log"' EXIT
+trap 'cp $LOG_FILE "logs/$(date +%Y%m%d_%H%M%S)-deploy-in-docker.log"' EXIT
 
 bar_size=40
 bar_char_done="#"
