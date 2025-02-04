@@ -21,6 +21,7 @@ import { EveSystem } from "../EveSystem.sol";
 import { roleManagementSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/RoleManagementSystemLib.sol";
 import { Role } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/index.sol";
 import { InventoryUtils } from "./InventoryUtils.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
 /**
  * @title InventorySystem
@@ -94,7 +95,10 @@ contract InventorySystem is EveSystem {
    * @dev Create and deposit items to the inventory by smart object
    * //TODO Only admin can use this function
    */
-  function createAndDepositItemsToInventory(uint256 smartObjectId, InventoryItem[] memory items) public onlyActive {
+  function createAndDepositItemsToInventory(
+    uint256 smartObjectId,
+    InventoryItem[] memory items
+  ) public onlyActive access(smartObjectId) scope(smartObjectId) {
     for (uint256 i = 0; i < items.length; i++) {
       EntityRecordStruct memory entityRecord = EntityRecordStruct({
         typeId: items[i].typeId,
@@ -102,6 +106,7 @@ contract InventorySystem is EveSystem {
         volume: items[i].volume
       });
 
+      entitySystem.instantiate(uint256(bytes32("INVENTORY_ITEM")), items[i].inventoryItemId);
       entityRecordSystem.createEntityRecord(items[i].inventoryItemId, entityRecord);
     }
 

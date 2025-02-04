@@ -42,6 +42,11 @@ import { LocationSystem } from "../src/namespaces/evefrontier/systems/location/L
 import { locationSystem } from "../src/namespaces/evefrontier/codegen/systems/LocationSystemLib.sol";
 import { SmartCharacterSystem } from "../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
 import { smartCharacterSystem } from "../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
+import { SmartStorageUnitSystem } from "../src/namespaces/evefrontier/systems/smart-storage-unit/SmartStorageUnitSystem.sol";
+import { smartStorageUnitSystem } from "../src/namespaces/evefrontier/codegen/systems/SmartStorageUnitSystemLib.sol";
+import { smartAssemblySystem } from "../src/namespaces/evefrontier/codegen/systems/SmartAssemblySystemLib.sol";
+import { fuelSystem } from "../src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
+import { locationSystem } from "../src/namespaces/evefrontier/codegen/systems/LocationSystemLib.sol";
 
 abstract contract EveTest is Test {
   address public worldAddress;
@@ -125,19 +130,29 @@ abstract contract EveTest is Test {
     // End Role Creation
 
     // Class Creation
-    uint256 smartStorageUnitClassId = uint256(bytes32("SSU"));
-    ResourceId[] memory systemIds = new ResourceId[](5);
+    ResourceId[] memory systemIds = new ResourceId[](9);
     systemIds[0] = inventorySystem.toResourceId();
     systemIds[1] = deployableSystem.toResourceId();
     systemIds[2] = ephemeralInventorySystem.toResourceId();
     systemIds[3] = inventoryInteractSystem.toResourceId();
     systemIds[4] = entityRecordSystem.toResourceId();
-    entitySystem.registerClass(smartStorageUnitClassId, adminRole, systemIds);
+    systemIds[5] = smartStorageUnitSystem.toResourceId();
+    systemIds[6] = smartAssemblySystem.toResourceId();
+    systemIds[7] = fuelSystem.toResourceId();
+    systemIds[8] = locationSystem.toResourceId();
+    entitySystem.registerClass(smartStorageUnitSystem.getClassId(), adminRole, systemIds);
+
+    uint256 inventoryItemClassId = uint256(bytes32("INVENTORY_ITEM"));
+    systemIds = new ResourceId[](3);
+    systemIds[0] = inventorySystem.toResourceId();
+    systemIds[1] = entityRecordSystem.toResourceId();
+    systemIds[2] = ephemeralInventorySystem.toResourceId();
+    entitySystem.registerClass(inventoryItemClassId, adminRole, systemIds);
 
     uint256 smartCharacterClassId = uint256(bytes32("SMART_CHARACTER"));
-    systemIds = new ResourceId[](1);
+    systemIds = new ResourceId[](2);
     systemIds[0] = entityRecordSystem.toResourceId();
-
+    systemIds[1] = smartCharacterSystem.toResourceId();
     entitySystem.registerClass(smartCharacterClassId, adminRole, systemIds);
     // End Class Creation
 

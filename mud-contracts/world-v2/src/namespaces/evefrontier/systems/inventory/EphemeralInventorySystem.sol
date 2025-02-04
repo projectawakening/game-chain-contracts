@@ -20,6 +20,7 @@ import { InventoryItem } from "./types.sol";
 import { InventorySystem } from "./InventorySystem.sol";
 import { State, SmartObjectData } from "../deployable/types.sol";
 import { EveSystem } from "../EveSystem.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
 /**
  * @title EphemeralInventorySystem
@@ -79,6 +80,7 @@ contract EphemeralInventorySystem is EveSystem {
         itemId: items[i].itemId,
         volume: items[i].volume
       });
+      entitySystem.instantiate(uint256(bytes32("INVENTORY_ITEM")), items[i].inventoryItemId);
       entityRecordSystem.createEntityRecord(items[i].inventoryItemId, entityRecord);
     }
 

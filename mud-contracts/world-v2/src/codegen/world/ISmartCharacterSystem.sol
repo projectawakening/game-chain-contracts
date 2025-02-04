@@ -26,4 +26,6 @@ interface ISmartCharacterSystem {
   ) external;
 
   function evefrontier__updateTribeId(uint256 characterId, uint256 tribeId) external;
+
+  function evefrontier__getSmartCharacterClassId() external pure returns (uint256);
 }

@@ -18,9 +18,8 @@ contract SmartStorageUnitSystem is EveSystem {
     CreateAndAnchorDeployableParams memory params,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
-  ) public context access(params.smartObjectId) scope(params.smartObjectId) {
-    uint256 smartStorageUnitClassId = uint256(bytes32("SSU"));
-    entitySystem.instantiate(smartStorageUnitClassId, params.smartObjectId);
+  ) public context access(params.smartObjectId) scope(getClassId()) {
+    entitySystem.instantiate(getClassId(), params.smartObjectId);
 
     params.smartAssemblyType = SMART_STORAGE_UNIT;
     deployableSystem.createAndAnchorDeployable(params);
@@ -28,5 +27,9 @@ contract SmartStorageUnitSystem is EveSystem {
     inventorySystem.setInventoryCapacity(params.smartObjectId, storageCapacity);
 
     ephemeralInventorySystem.setEphemeralInventoryCapacity(params.smartObjectId, ephemeralStorageCapacity);
+  }
+
+  function getClassId() public pure returns (uint256) {
+    return uint256(bytes32("SSU"));
   }
 }

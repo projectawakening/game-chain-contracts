@@ -47,7 +47,7 @@ contract SmartCharacterSystem is EveSystem {
     uint256 tribeId,
     EntityRecordData memory entityRecord,
     EntityMetadata memory entityRecordMetadata
-  ) public context access(characterId) scope(characterId) {
+  ) public context access(characterId) scope(getSmartCharacterClassId()) {
     uint256 createdAt = block.timestamp;
 
     // enforce one-to-one mapping
@@ -55,8 +55,7 @@ contract SmartCharacterSystem is EveSystem {
       revert SmartCharacter_AlreadyCreated(characterAddress, characterId);
     }
 
-    uint256 smartCharacterClassId = uint256(bytes32("SMART_CHARACTER"));
-    entitySystem.instantiate(smartCharacterClassId, characterId);
+    entitySystem.instantiate(getSmartCharacterClassId(), characterId);
 
     Characters.set(characterId, characterAddress, tribeId, createdAt);
     CharactersByAddress.set(characterAddress, characterId);
@@ -74,5 +73,9 @@ contract SmartCharacterSystem is EveSystem {
       revert SmartCharacterDoesNotExist(characterId);
     }
     Characters.setTribeId(characterId, tribeId);
+  }
+
+  function getSmartCharacterClassId() public pure returns (uint256) {
+    return uint256(bytes32("SMART_CHARACTER"));
   }
 }

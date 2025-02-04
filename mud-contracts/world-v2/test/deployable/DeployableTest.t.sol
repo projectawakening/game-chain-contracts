@@ -27,6 +27,8 @@ import { ONE_UNIT_IN_WEI } from "../../src/namespaces/evefrontier/systems/consta
 import { IWorldWithContext } from "@eveworld/smart-object-framework-v2/src/IWorldWithContext.sol";
 import { EveTest } from "../EveTest.sol";
 import { AccessSystem } from "../../src/namespaces/evefrontier/systems/access-systems/AccessSystem.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { entityRecordSystem } from "../../src/namespaces/evefrontier/codegen/systems/EntityRecordSystemLib.sol";
 
 import "forge-std/console.sol";
 
@@ -49,7 +51,20 @@ contract DeployableTest is EveTest {
 
     smartObjectData = SmartObjectData({ owner: alice, tokenURI: "test" });
 
+    vm.startPrank(deployer);
+
+    ResourceId[] memory systemIds = new ResourceId[](2);
+    systemIds[0] = smartCharacterSystem.toResourceId();
+    systemIds[1] = entityRecordSystem.toResourceId();
+
+    uint256 testClassId = uint256(bytes32("TEST"));
+    entitySystem.registerClass(testClassId, "admin", systemIds);
+
+    console.log("Creating character");
     smartCharacterSystem.createCharacter(characterId, alice, tribeId, entityRecord, entityRecordMetadata);
+    console.log("Created character");
+
+    vm.stopPrank();
   }
 
   function testWorldExists() public {
@@ -94,6 +109,9 @@ contract DeployableTest is EveTest {
     );
 
     vm.stopPrank();
+
+    uint256 testClassId = uint256(bytes32("TEST"));
+    entitySystem.instantiate(testClassId, smartObjectId);
 
     DeployableStateData memory tableData = DeployableState.get(smartObjectId);
 
