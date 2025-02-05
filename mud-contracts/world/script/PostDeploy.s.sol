@@ -13,6 +13,10 @@ import { IModule } from "@latticexyz/world/src/IModule.sol";
 import { NamespaceOwner } from "@latticexyz/world/src/codegen/tables/NamespaceOwner.sol";
 
 import { PuppetModule } from "@latticexyz/world-modules/src/modules/puppet/PuppetModule.sol";
+import { IERC20Mintable } from "@latticexyz/world-modules/src/modules/erc20-puppet/IERC20Mintable.sol";
+import { ERC20MetadataData } from "@latticexyz/world-modules/src/modules/erc20-puppet/tables/ERC20Metadata.sol";
+import { registerERC20 } from "@latticexyz/world-modules/src/modules/erc20-puppet/registerERC20.sol";
+
 import { registerERC721 } from "../src/modules/eve-erc721-puppet/registerERC721.sol";
 import { StaticDataGlobalTableData } from "../src/codegen/tables/StaticDataGlobalTable.sol";
 import { IERC721Mintable } from "../src/modules/eve-erc721-puppet/IERC721Mintable.sol";
@@ -100,6 +104,7 @@ contract PostDeploy is Script {
     _initERC721(world, baseURI);
 
     _configureEntitiesAndClasses(world);
+    _createEVEToken(world);
     vm.stopBroadcast();
   }
 
@@ -184,6 +189,35 @@ contract PostDeploy is Script {
       .globalResume();
   }
 
+  //Create ERC20 Token
+  function _createEVEToken(IBaseWorld world) internal {
+    string memory namespace = vm.envString("EVE_TOKEN_NAMESPACE");
+    string memory name = vm.envString("ERC20_TOKEN_NAME");
+    string memory symbol = vm.envString("ERC20_TOKEN_SYMBOL");
+
+    uint8 decimals = uint8(18);
+    uint256 amount = vm.envUint("ERC20_INITIAL_SUPPLY");
+    address to = vm.envAddress("EVE_TOKEN_ADMIN");
+
+    // ERC20 TOKEN DEPLOYMENT
+    IERC20Mintable erc20Token;
+    erc20Token = registerERC20(
+      world,
+      stringToBytes14(namespace),
+      ERC20MetadataData({ decimals: decimals, name: name, symbol: symbol })
+    );
+
+    console.log("Deploying ERC20 token with address: ", address(erc20Token));
+
+    address erc20Address = address(erc20Token);
+
+    IERC20Mintable erc20 = IERC20Mintable(erc20Address);
+    erc20.mint(to, amount * 1 ether);
+
+    console.log("minting to: ", address(to));
+    console.log("amount: ", amount * 1 ether);
+  }
+
   //Configure Entities and Classes
   function _configureEntitiesAndClasses(IBaseWorld world) internal {
     uint256 smartCharacterClassId = uint256(keccak256("SmartCharacterClass"));
@@ -213,5 +247,21 @@ contract PostDeploy is Script {
 
     // set ssu classId in the config
     smartStorageUnit.setSSUClassId(ssuClassId);
+  }
+
+  function stringToBytes14(string memory str) public pure returns (bytes14) {
+    bytes memory tempBytes = bytes(str);
+
+    // Ensure the bytes array is not longer than 14 bytes.
+    // If it is, this will truncate the array to the first 14 bytes.
+    // If it's shorter, it will be padded with zeros.
+    require(tempBytes.length <= 14, "String too long");
+
+    bytes14 converted;
+    for (uint i = 0; i < tempBytes.length; i++) {
+      converted |= bytes14(tempBytes[i] & 0xFF) >> (i * 8);
+    }
+
+    return converted;
   }
 }
