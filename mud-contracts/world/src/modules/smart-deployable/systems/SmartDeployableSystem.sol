@@ -150,10 +150,10 @@ contract SmartDeployableSystem is AccessModified, EveSystem, SmartDeployableErro
     }
     _updateFuel(entityId);
     uint256 currentFuel = DeployableFuelBalance.getFuelAmount(entityId);
-    if (currentFuel < 1) revert SmartDeployable_NoFuel(entityId);
+    if (currentFuel < ONE_UNIT_IN_WEI) revert SmartDeployable_NoFuel(entityId);
     DeployableFuelBalance.setFuelAmount(entityId, currentFuel - ONE_UNIT_IN_WEI); //forces it to tick
     _setDeployableState(entityId, previousState, State.ONLINE);
-    DeployableFuelBalance.setLastUpdatedAt(entityId, block.timestamp);
+    _updateFuel(entityId);
   }
 
   /**
