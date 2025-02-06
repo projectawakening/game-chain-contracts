@@ -34,6 +34,7 @@ import { InventoryInteractSystemLib, inventoryInteractSystem } from "../../src/n
 import { EveTest } from "../EveTest.sol";
 import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 import { AccessSystem } from "../../src/namespaces/evefrontier/systems/access-systems/AccessSystem.sol";
+import { FuelSystemLib, fuelSystem } from "../../src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
 
 contract InventoryInteractTest is EveTest {
   VendingMachineMock vendingMachineMock;
@@ -110,11 +111,12 @@ contract InventoryInteractTest is EveTest {
     uint256 fuelConsumptionIntervalInSeconds = 1;
     uint256 fuelMaxCapacity = 10000;
 
-    ResourceId[] memory systemIds = new ResourceId[](4);
+    ResourceId[] memory systemIds = new ResourceId[](5);
     systemIds[0] = inventorySystem.toResourceId();
     systemIds[1] = deployableSystem.toResourceId();
     systemIds[2] = ephemeralInventorySystem.toResourceId();
     systemIds[3] = inventoryInteractSystem.toResourceId();
+    systemIds[4] = fuelSystem.toResourceId();
     entitySystem.registerClass(vendingMachineClassId, "admin", systemIds);
 
     entitySystem.instantiate(vendingMachineClassId, smartObjectId);
@@ -140,11 +142,12 @@ contract InventoryInteractTest is EveTest {
     );
     inventorySystem.setInventoryCapacity(smartObjectId, storageCapacity);
     ephemeralInventorySystem.setEphemeralInventoryCapacity(smartObjectId, ephemeralStorageCapacity);
+    vm.stopPrank();
 
+    vm.startPrank(alice);
     inventorySystem.depositToInventory(smartObjectId, invItems);
     ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, bob, ephInvItems);
-    ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, alice, ephInvItems);
-
+    // ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, alice, ephInvItems);
     vm.stopPrank();
   }
 
@@ -161,7 +164,7 @@ contract InventoryInteractTest is EveTest {
     TransferItem[] memory transferItems = new TransferItem[](1);
     transferItems[0] = TransferItem(itemObjectId2, bob, quantity);
 
-    vm.startPrank(bob);
+    vm.startPrank(alice);
     inventoryInteractSystem.ephemeralToInventoryTransfer(smartObjectId, bob, transferItems);
     vm.stopPrank();
 
@@ -191,7 +194,9 @@ contract InventoryInteractTest is EveTest {
       )
     );
 
+    vm.startPrank(alice);
     inventoryInteractSystem.ephemeralToInventoryTransfer(smartObjectId, bob, transferItems);
+    vm.stopPrank();
 
     vm.expectRevert(
       abi.encodeWithSelector(
@@ -204,7 +209,10 @@ contract InventoryInteractTest is EveTest {
         quantity
       )
     );
+
+    vm.startPrank(alice);
     inventoryInteractSystem.ephemeralToInventoryTransfer(smartObjectId, bob, transferItems);
+    vm.stopPrank();
   }
 
   function testInventoryToEphemeralTransfer() public {
@@ -252,12 +260,7 @@ contract InventoryInteractTest is EveTest {
     TransferItem[] memory transferItems = new TransferItem[](1);
     transferItems[0] = TransferItem(itemObjectId1, bob, quantity);
 
-    // this would normally happen when alice deploys the smart object
     vm.startPrank(deployer);
-    inventoryInteractSystem.setInventoryAdminAccess(smartObjectId, alice, true);
-    vm.stopPrank();
-
-    vm.startPrank(alice);
     inventoryInteractSystem.setInventoryToEphemeralTransferAccess(smartObjectId, bob, true);
     vm.stopPrank();
 

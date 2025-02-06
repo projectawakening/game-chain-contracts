@@ -354,7 +354,7 @@ abstract contract EveTest is Test {
       inventoryInteractSystem.toResourceId(),
       InventoryInteractSystem.setEphemeralToInventoryTransferAccess.selector,
       accessSystem.toResourceId(),
-      AccessSystem.onlyDeployableOwner.selector
+      AccessSystem.onlyInventoryAdmin.selector
     );
     accessConfigSystem.setAccessEnforcement(
       inventoryInteractSystem.toResourceId(),
@@ -366,7 +366,7 @@ abstract contract EveTest is Test {
       inventoryInteractSystem.toResourceId(),
       InventoryInteractSystem.setInventoryToEphemeralTransferAccess.selector,
       accessSystem.toResourceId(),
-      AccessSystem.onlyDeployableOwner.selector
+      AccessSystem.onlyInventoryAdmin.selector
     );
     accessConfigSystem.setAccessEnforcement(
       inventoryInteractSystem.toResourceId(),

@@ -20,45 +20,75 @@ contract AccessSystem is SmartObjectFramework {
   error Access_NotInventoryAdmin(address caller, uint256 smartObjectId);
 
   function onlyOwnerOrCanWithdrawFromInventory(uint256 objectId, bytes memory data) public view {
-    if (!isOwner(_callMsgSender(1), objectId) && !canWithdrawFromInventory(objectId, _callMsgSender(1))) {
-      revert Access_NotOwnerOrCanWithdrawFromInventory(_callMsgSender(1), objectId);
+    if (isOwner(_callMsgSender(1), objectId)) {
+      return;
     }
+
+    if (canWithdrawFromInventory(objectId, _callMsgSender(1))) {
+      return;
+    }
+
+    revert Access_NotOwnerOrCanWithdrawFromInventory(_callMsgSender(1), objectId);
   }
 
   function onlyOwnerOrCanDepositToInventory(uint256 objectId, bytes memory data) public view {
-    if (!isOwner(_callMsgSender(1), objectId) && !canDepositToInventory(objectId, _callMsgSender(1))) {
-      revert Access_NotOwnerOrCanDepositToInventory(_callMsgSender(1), objectId);
+    if (isOwner(_callMsgSender(1), objectId)) {
+      return;
     }
+
+    if (canDepositToInventory(objectId, _callMsgSender(1))) {
+      return;
+    }
+
+    revert Access_NotOwnerOrCanDepositToInventory(_callMsgSender(1), objectId);
   }
 
   function onlyDeployableOwner(uint256 objectId, bytes memory data) public view {
-    if (!isOwner(_callMsgSender(1), objectId)) {
-      revert Access_NotDeployableOwner(_callMsgSender(1), objectId);
+    if (isOwner(_callMsgSender(1), objectId)) {
+      return;
     }
+
+    revert Access_NotDeployableOwner(_callMsgSender(1), objectId);
   }
 
   function onlyAdmin(uint256 objectId, bytes memory data) public view {
-    if (!isAdmin(_callMsgSender(1))) {
-      revert Access_NotAdmin(_callMsgSender(1));
+    if (isAdmin(_callMsgSender(1))) {
+      return;
     }
+
+    revert Access_NotAdmin(_callMsgSender(1));
   }
 
   function onlyAdminOrDeployableOwner(uint256 objectId, bytes memory data) public view {
-    if (!isAdmin(_callMsgSender(1)) && !isOwner(_callMsgSender(1), objectId)) {
-      revert Access_NotAdminOrOwner(_callMsgSender(1), objectId);
+    if (isAdmin(_callMsgSender(1))) {
+      return;
     }
+
+    if (isOwner(_callMsgSender(1), objectId)) {
+      return;
+    }
+
+    revert Access_NotAdminOrOwner(_callMsgSender(1), objectId);
   }
 
   function onlyDeployableOwnerOrInventoryInteractSystem(uint256 objectId, bytes memory data) public view {
-    if (!isOwner(_callMsgSender(1), objectId) && !isInventoryInteractSystem(_callMsgSender(1))) {
-      revert Access_NotDeployableOwnerOrInventoryInteractSystem(_callMsgSender(1), objectId);
+    if (isOwner(_callMsgSender(1), objectId)) {
+      return;
     }
+
+    if (isInventoryInteractSystem(_callMsgSender())) {
+      return;
+    }
+
+    revert Access_NotDeployableOwnerOrInventoryInteractSystem(_callMsgSender(1), objectId);
   }
 
   function onlyInventoryAdmin(uint256 smartObjectId, bytes memory data) public view {
-    if (!isInventoryAdmin(smartObjectId, _callMsgSender(1))) {
-      revert Access_NotInventoryAdmin(_callMsgSender(1), smartObjectId);
+    if (isInventoryAdmin(smartObjectId, _callMsgSender(1))) {
+      return;
     }
+
+    revert Access_NotInventoryAdmin(_callMsgSender(1), smartObjectId);
   }
 
   function isAdmin(address caller) public view returns (bool) {
