@@ -9,15 +9,21 @@ pragma solidity >=0.8.24;
  * @dev This interface is automatically generated from the corresponding system contract. Do not edit manually.
  */
 interface ISOFAccessSystem {
-  function sofaccess__allowClassAccessRole(uint256 classId, bytes memory targetCallData) external view;
+  function sofaccess__allowAccessRole(uint256 entityId, bytes memory targetCallData) external view;
+
+  function sofaccess__allowClassScopedSystem(uint256 entityId, bytes memory targetCallData) external view;
+
+  function sofaccess__allowDirectClassAccessRole(uint256 entityId, bytes memory targetCallData) external view;
+
+  function sofaccess__allowDirectAccessRole(uint256 entityId, bytes memory targetCallData) external view;
 
   function sofaccess__allowClassScopedSystemOrDirectClassAccessRole(
     uint256 entityId,
     bytes memory targetCallData
   ) external view;
 
-  function sofaccess__allowClassScopedSystemOrDirectObjectAccessRole(
-    uint256 objectId,
+  function sofaccess__allowClassScopedSystemOrDirectAccessRole(
+    uint256 entityId,
     bytes memory targetCallData
   ) external view;
 

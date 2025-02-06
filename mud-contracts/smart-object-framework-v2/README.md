@@ -342,7 +342,9 @@ contract MySystem is SmartObjectFramework {
 
 The Role Management system provides hierarchical role-based access control through the [RoleManagementSystem.sol](src/namespaces/evefrontier/systems/role-management-system/RoleManagementSystem.sol) contract. It enables granular permission management for Classes and Objects through role membership and administration.
 
-**NOTE:** the `RoleAccessManagement` functionality is a standalone MUD System which can be used for other on-chain role/membership patterns (for example, it could be used for EVE Frontier Tribe membership tracking, DAO role management, and many other use cases). However, we are using it in conjunction with the `access` modifier and the `AccessConfigSystem` logic, to manage access control roles.
+**NOTE:** the basic `RoleManagementSystem` functionality is a standalone MUD System which can be used for other on-chain role/membership patterns (for example, it could be used for EVE Frontier Tribe membership tracking, DAO role management, and many other use cases). However, we are using it in conjunction with the `access` modifier and the `AccessConfigSystem` logic, to manage access control roles.
+
+However, the `scoped` functionality in `RoleManagementSystem` can be used in close conjunction with other SOF enabled System to interact in a system-to-system manner.
 
 ### Key Features
 
@@ -378,6 +380,12 @@ The Role Management system provides hierarchical role-based access control throu
 
 ![Role Management Diagram 2](role_management_diagram_2.jpg)
 
+### How `scoped` Role Management Works
+The `scoped` modifier in the `RoleManagementSystem` allows for safe system-to-system interaction, enabling the following:
+1. Safe System-to-System Interaction
+   - A system can safely interact with the `RoleManagementSystem` by calling the `scoped` version of a function with an additional `entityId` parameter. Scope will check that the execution chain up to this point has remained within the appropriate scope for a given entity, thereby ensuring that we can trust that `_callMsgSender(1)` only origniated from well defined system calls, and at no point has the execution passed through untrusted code
+   - Direct calls to `scoped` functions are not allowed, they must be interacted with via a system-to-system call
+
 ### Usage
 
 ##### Creating a Role
@@ -394,7 +402,15 @@ world.call( // caller MUST be a member of adminRole
     roleManagementSystemId,
     abi.encodeCall(IRoleManagementSystem.createRole, (newRole, adminRole))
 );
+
+// Called from an existing entityId COMPOSITION resource tagged system
+world.call( // initial entry point caller MUST still be a member of adminRole
+    roleManagementSystemId,
+    abi.encodeCall(IRoleManagementSystem.scopedCreateRole, (entityId, newRole, adminRole))
+);
 ```
+
+
 
 ##### Managing Role Membership
 
@@ -416,6 +432,12 @@ world.call( // caller address must match callerConfirmation
     roleManagementSystemId,
     abi.encodeCall(IRoleManagementSystem.renounceRole, (role, callerConfirmation))
 );
+
+// Called from an existing entityId COMPOSITION resource tagged system
+world.call( // initial entry point caller address must still match callerConfirmation
+    roleManagementSystemId,
+    abi.encodeCall(IRoleManagementSystem.scopedRenounceRole, (entityId, role, callerConfirmation))
+);
 ```
 
 ##### Managing Admin Transfer
@@ -425,6 +447,12 @@ world.call( // caller address must match callerConfirmation
 world.call( // caller must be a member of the current admin role
     roleManagementSystemId,
     abi.encodeCall(IRoleManagementSystem.transferRoleAdmin, (role, newAdminRole))
+);
+
+// Called from an existing entityId COMPOSITION resource tagged system
+world.call( // initial entry point caller must be a member of the current admin role
+    roleManagementSystemId,
+    abi.encodeCall(IRoleManagementSystem.scopedTransferRoleAdmin, (role, newAdminRole))
 );
 ```
 

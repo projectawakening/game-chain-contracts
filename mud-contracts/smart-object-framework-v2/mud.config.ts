@@ -61,6 +61,7 @@ export default defineWorld({
             role: "bytes32",
             exists: "bool",
             admin: "bytes32",
+            members: "address[]",
           },
           key: ["role"],
         },
@@ -68,7 +69,8 @@ export default defineWorld({
           schema: {
             role: "bytes32",
             account: "address",
-            hasRole: "bool",
+            isMember: "bool",
+            index: "uint256",
           },
           key: ["role", "account"],
         },
