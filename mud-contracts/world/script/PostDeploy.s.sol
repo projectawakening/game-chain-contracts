@@ -196,7 +196,7 @@ contract PostDeploy is Script {
     string memory symbol = vm.envString("ERC20_TOKEN_SYMBOL");
 
     uint8 decimals = uint8(18);
-    uint256 amount = vm.envUint("ERC20_INITIAL_SUPPLY");
+    uint256 amount = uint256(vm.envUint("ERC20_INITIAL_SUPPLY"));
     address to = vm.envAddress("EVE_TOKEN_ADMIN");
 
     // ERC20 TOKEN DEPLOYMENT
