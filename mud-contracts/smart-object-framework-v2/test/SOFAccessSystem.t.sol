@@ -871,224 +871,222 @@ contract SOFAccessSystemTest is MudTest {
     world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteClass, (classId)));
   }
 
-  // NOTE: The following is if we want to further restrict the role management system to only be called by the class scoped system
+  function test_RoleManagermentSystem_scopedCreateRole() public {
+    ResourceId[] memory scopedSystemIds = new ResourceId[](2);
+    scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
+    scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
+    // setup class and object to test against
+    vm.prank(deployer);
+    world.call(
+      ENTITY_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
+    vm.prank(deployer);
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
 
-  // function test_RoleManagermentSystem_scopedCreateRole() public {
-  //   ResourceId[] memory scopedSystemIds = new ResourceId[](2);
-  //   scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
-  //   scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
-  //   // setup class and object to test against
-  //   vm.prank(deployer);
-  //   world.call(
-  //     ENTITY_SYSTEM_ID,
-  //     abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-  //   );
-  //   vm.prank(deployer);
-  //   world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    // revert, if direct calling
+    vm.expectRevert(
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector)
+    );
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedCreateRole, (objectId, adminRole, adminRole)));
 
-  //   // revert, if direct calling
-  //   vm.expectRevert(
-  //     abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector)
-  //   );
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedCreateRole, (objectId, adminRole, adminRole)));
+    // revert, if calling system is not class scoped
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
+    );
+    world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedCreateRole, (objectId, adminRole, adminRole)));
 
-  //   // revert, if calling system is not class scoped
-  //   vm.expectRevert(
-  //     abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
-  //   );
-  //   world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedCreateRole, (objectId, adminRole, adminRole)));
+    // success, via the class scoped system call
+    world.call(
+      CLASS_SCOPED_SYSTEM_ID,
+      abi.encodeCall(ClassScopedMock.callScopedCreateRole, (objectId, adminRole, adminRole))
+    );
+  }
 
-  //   // success, via the class scoped system call
-  //   world.call(
-  //     CLASS_SCOPED_SYSTEM_ID,
-  //     abi.encodeCall(ClassScopedMock.callScopedCreateRole, (objectId, adminRole, adminRole))
-  //   );
-  // }
+  function test_RoleManagermentSystem_scopedTransferRoleAdmin() public {
+    ResourceId[] memory scopedSystemIds = new ResourceId[](2);
+    scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
+    scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
+    // setup class and object to test against
+    vm.prank(deployer);
+    world.call(
+      ENTITY_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
+    vm.prank(deployer);
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
 
-  // function test_RoleManagermentSystem_scopedTransferRoleAdmin() public {
-  //   ResourceId[] memory scopedSystemIds = new ResourceId[](2);
-  //   scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
-  //   scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
-  //   // setup class and object to test against
-  //   vm.prank(deployer);
-  //   world.call(
-  //     ENTITY_SYSTEM_ID,
-  //     abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-  //   );
-  //   vm.prank(deployer);
-  //   world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    // create two roles which have themselves as admin
+    vm.prank(deployer);
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (testRole, testRole)));
+    vm.prank(deployer);
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
 
-  //   // create two roles which have themselves as admin
-  //   vm.prank(deployer);
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (testRole, testRole)));
-  //   vm.prank(deployer);
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
+    // revert, if direct calling
+    vm.expectRevert(
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector)
+    );
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedTransferRoleAdmin, (objectId, testRole, adminRole)));
 
-  //   // revert, if direct calling
-  //   vm.expectRevert(
-  //     abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector)
-  //   );
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedTransferRoleAdmin, (objectId, testRole, adminRole)));
+    // revert, if calling system is not class scoped
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
+    );
+    world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedTransferRoleAdmin, (objectId, testRole, adminRole)));
 
-  //   // revert, if calling system is not class scoped
-  //   vm.expectRevert(
-  //     abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
-  //   );
-  //   world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedTransferRoleAdmin, (objectId, testRole, adminRole)));
+    // success, via the class scoped system call
+    vm.prank(deployer);
+    world.call(
+      CLASS_SCOPED_SYSTEM_ID,
+      abi.encodeCall(ClassScopedMock.callScopedTransferRoleAdmin, (objectId, testRole, adminRole))
+    );
+  }
 
-  //   // success, via the class scoped system call
-  //   vm.prank(deployer);
-  //   world.call(
-  //     CLASS_SCOPED_SYSTEM_ID,
-  //     abi.encodeCall(ClassScopedMock.callScopedTransferRoleAdmin, (objectId, testRole, adminRole))
-  //   );
-  // }
+  function test_RoleManagermentSystem_scopedGrantRole() public {
+    ResourceId[] memory scopedSystemIds = new ResourceId[](2);
+    scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
+    scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
+    // setup class and object to test against
+    vm.prank(deployer);
+    world.call(
+      ENTITY_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
+    vm.prank(deployer);
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
 
-  // function test_RoleManagermentSystem_scopedGrantRole() public {
-  //   ResourceId[] memory scopedSystemIds = new ResourceId[](2);
-  //   scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
-  //   scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
-  //   // setup class and object to test against
-  //   vm.prank(deployer);
-  //   world.call(
-  //     ENTITY_SYSTEM_ID,
-  //     abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-  //   );
-  //   vm.prank(deployer);
-  //   world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    vm.prank(deployer);
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
 
-  //   vm.prank(deployer);
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
+    // revert, if direct calling
+    vm.expectRevert(
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector)
+    );
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedGrantRole, (objectId, adminRole, alice)));
 
-  //   // revert, if direct calling
-  //   vm.expectRevert(
-  //     abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector)
-  //   );
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedGrantRole, (objectId, adminRole, alice)));
+    // revert, if calling system is not class scoped
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
+    );
+    world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedGrantRole, (objectId, adminRole, alice)));
 
-  //   // revert, if calling system is not class scoped
-  //   vm.expectRevert(
-  //     abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
-  //   );
-  //   world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedGrantRole, (objectId, adminRole, alice)));
+    // success, via the class scoped system call
+    vm.prank(deployer);
+    world.call(
+      CLASS_SCOPED_SYSTEM_ID,
+      abi.encodeCall(ClassScopedMock.callScopedGrantRole, (objectId, adminRole, alice))
+    );
+  }
 
-  //   // success, via the class scoped system call
-  //   vm.prank(deployer);
-  //   world.call(
-  //     CLASS_SCOPED_SYSTEM_ID,
-  //     abi.encodeCall(ClassScopedMock.callScopedGrantRole, (objectId, adminRole, alice))
-  //   );
-  // }
+  function test_RoleManagermentSystem_scopedRevokeRole() public {
+    ResourceId[] memory scopedSystemIds = new ResourceId[](2);
+    scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
+    scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
+    // setup class and object to test against
+    vm.prank(deployer);
+    world.call(
+      ENTITY_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
+    vm.prank(deployer);
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
 
-  // function test_RoleManagermentSystem_scopedRevokeRole() public {
-  //   ResourceId[] memory scopedSystemIds = new ResourceId[](2);
-  //   scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
-  //   scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
-  //   // setup class and object to test against
-  //   vm.prank(deployer);
-  //   world.call(
-  //     ENTITY_SYSTEM_ID,
-  //     abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-  //   );
-  //   vm.prank(deployer);
-  //   world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    vm.prank(deployer);
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
+    vm.prank(deployer);
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.grantRole, (adminRole, alice)));
 
-  //   vm.prank(deployer);
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
-  //   vm.prank(deployer);
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.grantRole, (adminRole, alice)));
+    // revert, if direct calling
+    vm.expectRevert(
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector)
+    );
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedRevokeRole, (objectId, adminRole, alice)));
 
-  //   // revert, if direct calling
-  //   vm.expectRevert(
-  //     abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector)
-  //   );
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedRevokeRole, (objectId, adminRole, alice)));
+    // revert, if calling system is not class scoped
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
+    );
+    world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedRevokeRole, (objectId, adminRole, alice)));
 
-  //   // revert, if calling system is not class scoped
-  //   vm.expectRevert(
-  //     abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
-  //   );
-  //   world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedRevokeRole, (objectId, adminRole, alice)));
+    // success, via the class scoped system call
+    vm.prank(deployer);
+    world.call(
+      CLASS_SCOPED_SYSTEM_ID,
+      abi.encodeCall(ClassScopedMock.callScopedRevokeRole, (objectId, adminRole, alice))
+    );
+  }
 
-  //   // success, via the class scoped system call
-  //   vm.prank(deployer);
-  //   world.call(
-  //     CLASS_SCOPED_SYSTEM_ID,
-  //     abi.encodeCall(ClassScopedMock.callScopedRevokeRole, (objectId, adminRole, alice))
-  //   );
-  // }
+  function test_RoleManagermentSystem_scopedRenounceRole() public {
+    ResourceId[] memory scopedSystemIds = new ResourceId[](2);
+    scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
+    scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
+    // setup class and object to test against
+    vm.prank(deployer);
+    world.call(
+      ENTITY_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
+    vm.prank(deployer);
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
 
-  // function test_RoleManagermentSystem_scopedRenounceRole() public {
-  //   ResourceId[] memory scopedSystemIds = new ResourceId[](2);
-  //   scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
-  //   scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
-  //   // setup class and object to test against
-  //   vm.prank(deployer);
-  //   world.call(
-  //     ENTITY_SYSTEM_ID,
-  //     abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-  //   );
-  //   vm.prank(deployer);
-  //   world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    vm.prank(deployer);
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
 
-  //   vm.prank(deployer);
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
+    // revert, if direct calling
+    vm.expectRevert(
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector)
+    );
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedRenounceRole, (objectId, adminRole, deployer)));
 
-  //   // revert, if direct calling
-  //   vm.expectRevert(
-  //     abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector)
-  //   );
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedRenounceRole, (objectId, adminRole, deployer)));
+    // revert, if calling system is not class scoped
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
+    );
+    world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedRenounceRole, (objectId, adminRole, deployer)));
 
-  //   // revert, if calling system is not class scoped
-  //   vm.expectRevert(
-  //     abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
-  //   );
-  //   world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedRenounceRole, (objectId, adminRole, deployer)));
+    // success, via the class scoped system call
+    vm.prank(deployer);
+    world.call(
+      CLASS_SCOPED_SYSTEM_ID,
+      abi.encodeCall(ClassScopedMock.callScopedRenounceRole, (objectId, adminRole, deployer))
+    );
+  }
 
-  //   // success, via the class scoped system call
-  //   vm.prank(deployer);
-  //   world.call(
-  //     CLASS_SCOPED_SYSTEM_ID,
-  //     abi.encodeCall(ClassScopedMock.callScopedRenounceRole, (objectId, adminRole, deployer))
-  //   );
-  // }
+  function test_RoleManagermentSystem_scopedRevokeAll() public {
+    ResourceId[] memory scopedSystemIds = new ResourceId[](2);
+    scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
+    scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
+    // setup class and object to test against
+    vm.prank(deployer);
+    world.call(
+      ENTITY_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
+    );
+    vm.prank(deployer);
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
 
-  // function test_RoleManagermentSystem_scopedRevokeAll() public {
-  //   ResourceId[] memory scopedSystemIds = new ResourceId[](2);
-  //   scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
-  //   scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
-  //   // setup class and object to test against
-  //   vm.prank(deployer);
-  //   world.call(
-  //     ENTITY_SYSTEM_ID,
-  //     abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-  //   );
-  //   vm.prank(deployer);
-  //   world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    vm.prank(deployer);
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
+    vm.prank(deployer);
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.grantRole, (adminRole, alice)));
 
-  //   vm.prank(deployer);
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
-  //   vm.prank(deployer);
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.grantRole, (adminRole, alice)));
+    // revert, if direct calling
+    vm.expectRevert(
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector)
+    );
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedRevokeAll, (objectId, adminRole)));
 
-  //   // revert, if direct calling
-  //   vm.expectRevert(
-  //     abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector)
-  //   );
-  //   world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedRevokeAll, (objectId, adminRole)));
+    // revert, if calling system is not class scoped
+    vm.expectRevert(
+      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
+    );
+    world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedRevokeAll, (objectId, adminRole)));
 
-  //   // revert, if calling system is not class scoped
-  //   vm.expectRevert(
-  //     abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
-  //   );
-  //   world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedRevokeAll, (objectId, adminRole)));
-
-  //   // success, via the class scoped system call
-  //   vm.prank(deployer);
-  //   world.call(
-  //     CLASS_SCOPED_SYSTEM_ID,
-  //     abi.encodeCall(ClassScopedMock.callScopedRevokeAll, (objectId, adminRole))
-  //   );
-  // }
+    // success, via the class scoped system call
+    vm.prank(deployer);
+    world.call(
+      CLASS_SCOPED_SYSTEM_ID,
+      abi.encodeCall(ClassScopedMock.callScopedRevokeAll, (objectId, adminRole))
+    );
+  }
 }

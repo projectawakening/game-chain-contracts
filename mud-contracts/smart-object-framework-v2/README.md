@@ -385,6 +385,8 @@ The `scoped` modifier in the `RoleManagementSystem` allows for safe system-to-sy
 1. Safe System-to-System Interaction
    - A system can safely interact with the `RoleManagementSystem` by calling the `scoped` version of a function with an additional `entityId` parameter. Scope will check that the execution chain up to this point has remained within the appropriate scope for a given entity, thereby ensuring that we can trust that `_callMsgSender(1)` only origniated from well defined system calls, and at no point has the execution passed through untrusted code
    - Direct calls to `scoped` functions are not allowed, they must be interacted with via a system-to-system call
+2. Additional Access Control
+   - We additionally restrict the calling function scope to that of a CLASS scoped system. This prevents any possible malicious code created (and attached to an object) by the owner of an OBJECT to hijack a caller's permissions
 
 ### Usage
 
