@@ -16,6 +16,7 @@ interface IAccessSystem {
   error Access_NotOwnerOrCanDepositToInventory(address caller, uint256 objectId);
   error Access_NotDeployableOwnerOrInventoryInteractSystem(address caller, uint256 objectId);
   error Access_NotInventoryAdmin(address caller, uint256 smartObjectId);
+  error Access_NotAdminOrDeployableSystem(address caller, uint256 objectId);
 
   function evefrontier__onlyOwnerOrCanWithdrawFromInventory(uint256 objectId, bytes memory data) external view;
 
@@ -31,6 +32,8 @@ interface IAccessSystem {
 
   function evefrontier__onlyInventoryAdmin(uint256 smartObjectId, bytes memory data) external view;
 
+  function evefrontier__onlyAdminOrDeployableSystem(uint256 objectId, bytes memory data) external view;
+
   function evefrontier__isAdmin(address caller) external view returns (bool);
 
   function evefrontier__isOwner(address caller, uint256 objectId) external view returns (bool);
@@ -42,4 +45,6 @@ interface IAccessSystem {
   function evefrontier__isInventoryInteractSystem(address caller) external view returns (bool);
 
   function evefrontier__isInventoryAdmin(uint256 smartObjectId, address caller) external view returns (bool);
+
+  function evefrontier__isDeployableSystem(address caller) external view returns (bool);
 }

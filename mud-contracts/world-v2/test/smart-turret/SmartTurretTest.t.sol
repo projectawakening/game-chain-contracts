@@ -26,6 +26,7 @@ import { FuelSystemLib, fuelSystem } from "../../src/namespaces/evefrontier/code
 import { LocationData } from "../../src/namespaces/evefrontier/codegen/tables/Location.sol";
 import { CreateAndAnchorDeployableParams } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
 import { AggressionParams } from "../../src/namespaces/evefrontier/systems/smart-turret/types.sol";
+import { EveTest } from "../EveTest.sol";
 
 contract SmartTurretTest is MudTest {
   IBaseWorld world;

@@ -29,19 +29,22 @@ import { EveTest } from "../EveTest.sol";
 import { AccessSystem } from "../../src/namespaces/evefrontier/systems/access-systems/AccessSystem.sol";
 import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 import { entityRecordSystem } from "../../src/namespaces/evefrontier/codegen/systems/EntityRecordSystemLib.sol";
-
-import "forge-std/console.sol";
+import { fuelSystem } from "../../src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
+import { locationSystem } from "../../src/namespaces/evefrontier/codegen/systems/LocationSystemLib.sol";
+import { smartAssemblySystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartAssemblySystemLib.sol";
 
 contract DeployableTest is EveTest {
+  uint256 smartObjectId = 999;
   uint256 characterId = 123;
-
+  uint256 testClassId = uint256(bytes32("TEST"));
+  uint256 itemId = 234;
   uint256 tribeId = 100;
   SmartObjectData smartObjectData;
 
   function setUp() public virtual override {
     super.setUp();
 
-    EntityRecordData memory entityRecord = EntityRecordData({ typeId: 123, itemId: 234, volume: 100 });
+    EntityRecordData memory entityRecord = EntityRecordData({ typeId: 123, itemId: itemId, volume: 100 });
 
     EntityMetadata memory entityRecordMetadata = EntityMetadata({
       name: "name",
@@ -53,16 +56,16 @@ contract DeployableTest is EveTest {
 
     vm.startPrank(deployer);
 
-    ResourceId[] memory systemIds = new ResourceId[](2);
+    ResourceId[] memory systemIds = new ResourceId[](6);
     systemIds[0] = smartCharacterSystem.toResourceId();
     systemIds[1] = entityRecordSystem.toResourceId();
-
-    uint256 testClassId = uint256(bytes32("TEST"));
+    systemIds[2] = deployableSystem.toResourceId();
+    systemIds[3] = fuelSystem.toResourceId();
+    systemIds[4] = locationSystem.toResourceId();
+    systemIds[5] = smartAssemblySystem.toResourceId();
     entitySystem.registerClass(testClassId, "admin", systemIds);
 
-    console.log("Creating character");
     smartCharacterSystem.createCharacter(characterId, alice, tribeId, entityRecord, entityRecordMetadata);
-    console.log("Created character");
 
     vm.stopPrank();
   }
@@ -77,17 +80,16 @@ contract DeployableTest is EveTest {
   }
 
   function testRegisterDeployable(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity
   ) public {
-    vm.assume(smartObjectId != 0);
     vm.assume(fuelUnitVolume != 0);
     vm.assume(fuelConsumptionIntervalInSeconds >= 1);
     vm.assume(fuelMaxCapacity != 0);
 
     vm.startPrank(deployer);
+    entitySystem.instantiate(testClassId, smartObjectId);
     deployableSystem.globalResume();
 
     DeployableStateData memory data = DeployableStateData({
@@ -110,9 +112,6 @@ contract DeployableTest is EveTest {
 
     vm.stopPrank();
 
-    uint256 testClassId = uint256(bytes32("TEST"));
-    entitySystem.instantiate(testClassId, smartObjectId);
-
     DeployableStateData memory tableData = DeployableState.get(smartObjectId);
 
     assertEq(data.createdAt, tableData.createdAt);
@@ -121,14 +120,12 @@ contract DeployableTest is EveTest {
   }
 
   function testAnchor(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     LocationData memory location
   ) public {
-    vm.assume(smartObjectId != 0);
-    testRegisterDeployable(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity);
+    testRegisterDeployable(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity);
 
     vm.startPrank(deployer);
     deployableSystem.anchor(smartObjectId, location);
@@ -144,15 +141,12 @@ contract DeployableTest is EveTest {
   }
 
   function testBringOnline(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     LocationData memory location
   ) public {
-    vm.assume(smartObjectId != 0);
-
-    testAnchor(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
     vm.assume(fuelUnitVolume < type(uint64).max / 2);
     vm.assume(fuelUnitVolume < fuelMaxCapacity);
 
@@ -164,14 +158,12 @@ contract DeployableTest is EveTest {
   }
 
   function testBringOffline(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     LocationData memory location
   ) public {
-    vm.assume(smartObjectId != 0);
-    testBringOnline(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    testBringOnline(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
     vm.startPrank(deployer);
     deployableSystem.bringOffline(smartObjectId);
     vm.stopPrank();
@@ -179,14 +171,12 @@ contract DeployableTest is EveTest {
   }
 
   function testUnanchor(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     LocationData memory location
   ) public {
-    vm.assume(smartObjectId != 0);
-    testAnchor(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
     vm.startPrank(deployer);
     deployableSystem.unanchor(smartObjectId);
     vm.stopPrank();
@@ -194,14 +184,12 @@ contract DeployableTest is EveTest {
   }
 
   function testDestroyDeployable(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     LocationData memory location
   ) public {
-    vm.assume(smartObjectId != 0);
-    testAnchor(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
     vm.startPrank(deployer);
     deployableSystem.destroyDeployable(smartObjectId);
     vm.stopPrank();
@@ -209,7 +197,6 @@ contract DeployableTest is EveTest {
   }
 
   function testCreateAndAnchorDeployable(
-    uint256 smartObjectId,
     string memory smartAssemblyType,
     EntityRecordData memory entityRecordData,
     uint256 fuelUnitVolume,
@@ -217,13 +204,13 @@ contract DeployableTest is EveTest {
     uint256 fuelMaxCapacity,
     LocationData memory locationData
   ) public {
-    vm.assume(smartObjectId != 0);
     vm.assume(fuelUnitVolume != 0);
     vm.assume(fuelConsumptionIntervalInSeconds >= 1);
     vm.assume(fuelMaxCapacity != 0);
     vm.assume((keccak256(abi.encodePacked(smartAssemblyType)) != keccak256(abi.encodePacked(""))));
 
     vm.startPrank(deployer);
+    entitySystem.instantiate(testClassId, smartObjectId);
 
     deployableSystem.globalResume();
     deployableSystem.createAndAnchorDeployable(
@@ -250,16 +237,11 @@ contract DeployableTest is EveTest {
     assertEq(uint8(State.ANCHORED), uint8(DeployableState.getCurrentState(smartObjectId)));
   }
 
-  function testOnlineOfflineAccess(
-    uint256 smartObjectId,
-    uint256 fuelConsumptionIntervalInSeconds,
-    LocationData memory location
-  ) public {
-    vm.assume(smartObjectId != 0);
+  function testOnlineOfflineAccess(uint256 fuelConsumptionIntervalInSeconds, LocationData memory location) public {
     uint256 fuelUnitVolume = 1;
     uint256 fuelMaxCapacity = 100;
 
-    testAnchor(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
 
     vm.startPrank(deployer);
     fuelSystem.depositFuel(smartObjectId, fuelMaxCapacity);
@@ -268,9 +250,6 @@ contract DeployableTest is EveTest {
 
     vm.startPrank(alice);
     deployableSystem.bringOffline(smartObjectId);
-    vm.stopPrank();
-
-    vm.startPrank(alice);
     deployableSystem.bringOnline(smartObjectId);
     vm.stopPrank();
 

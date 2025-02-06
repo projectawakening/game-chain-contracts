@@ -8,16 +8,17 @@ import { DeployableToken } from "../../codegen/index.sol";
 import { IERC721 } from "../eve-erc721-puppet/IERC721.sol";
 import { InventoryUtils } from "../inventory/InventoryUtils.sol";
 import { inventoryInteractSystem } from "../../codegen/systems/InventoryInteractSystemLib.sol";
+import { deployableSystem } from "../../codegen/systems/DeployableSystemLib.sol";
 
 contract AccessSystem is SmartObjectFramework {
   error Access_NotAdmin(address caller);
   error Access_NotDeployableOwner(address caller, uint256 objectId);
   error Access_NotAdminOrOwner(address caller, uint256 objectId);
-
   error Access_NotOwnerOrCanWithdrawFromInventory(address caller, uint256 objectId);
   error Access_NotOwnerOrCanDepositToInventory(address caller, uint256 objectId);
   error Access_NotDeployableOwnerOrInventoryInteractSystem(address caller, uint256 objectId);
   error Access_NotInventoryAdmin(address caller, uint256 smartObjectId);
+  error Access_NotAdminOrDeployableSystem(address caller, uint256 objectId);
 
   function onlyOwnerOrCanWithdrawFromInventory(uint256 objectId, bytes memory data) public view {
     if (isOwner(_callMsgSender(1), objectId)) {
@@ -91,6 +92,18 @@ contract AccessSystem is SmartObjectFramework {
     revert Access_NotInventoryAdmin(_callMsgSender(1), smartObjectId);
   }
 
+  function onlyAdminOrDeployableSystem(uint256 objectId, bytes memory data) public view {
+    if (isAdmin(_callMsgSender(1))) {
+      return;
+    }
+
+    if (isDeployableSystem(_callMsgSender())) {
+      return;
+    }
+
+    revert Access_NotAdminOrDeployableSystem(_callMsgSender(1), objectId);
+  }
+
   function isAdmin(address caller) public view returns (bool) {
     return HasRole.getHasRole("admin", caller);
   }
@@ -118,5 +131,9 @@ contract AccessSystem is SmartObjectFramework {
   function isInventoryAdmin(uint256 smartObjectId, address caller) public view returns (bool) {
     bytes32 adminAccessRole = InventoryUtils.getAdminAccessRole(smartObjectId);
     return HasRole.getHasRole(adminAccessRole, caller);
+  }
+
+  function isDeployableSystem(address caller) public view returns (bool) {
+    return caller == deployableSystem.getAddress();
   }
 }

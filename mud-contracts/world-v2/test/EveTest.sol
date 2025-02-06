@@ -446,63 +446,13 @@ abstract contract EveTest is Test {
       true
     );
 
-    // TODO: come back to permission for createCharacter and updateTribeId
-
-    // DeployableSystem
-
-    bytes4[8] memory adminOnlySignatures = [
-      DeployableSystem.createAndAnchorDeployable.selector,
-      DeployableSystem.registerDeployableToken.selector,
-      DeployableSystem.registerDeployable.selector,
-      DeployableSystem.destroyDeployable.selector,
-      DeployableSystem.anchor.selector,
-      DeployableSystem.unanchor.selector,
-      DeployableSystem.globalPause.selector,
-      DeployableSystem.globalResume.selector
-    ];
-    for (uint256 i = 0; i < adminOnlySignatures.length; i++) {
-      accessConfigSystem.configureAccess(
-        deployableSystem.toResourceId(),
-        adminOnlySignatures[i],
-        accessSystem.toResourceId(),
-        AccessSystem.onlyAdmin.selector
-      );
-
-      accessConfigSystem.setAccessEnforcement(deployableSystem.toResourceId(), adminOnlySignatures[i], true);
-    }
-
-    accessConfigSystem.configureAccess(
-      deployableSystem.toResourceId(),
-      DeployableSystem.bringOnline.selector,
-      accessSystem.toResourceId(),
-      AccessSystem.onlyAdminOrDeployableOwner.selector
-    );
-    accessConfigSystem.setAccessEnforcement(
-      deployableSystem.toResourceId(),
-      DeployableSystem.bringOnline.selector,
-      true
-    );
-
-    accessConfigSystem.configureAccess(
-      deployableSystem.toResourceId(),
-      DeployableSystem.bringOffline.selector,
-      accessSystem.toResourceId(),
-      AccessSystem.onlyAdminOrDeployableOwner.selector
-    );
-    accessConfigSystem.setAccessEnforcement(
-      deployableSystem.toResourceId(),
-      DeployableSystem.bringOffline.selector,
-      true
-    );
-
     // FuelSystem
 
-    bytes4[7] memory fuelSignatures = [
+    bytes4[6] memory fuelSignatures = [
       FuelSystem.configureFuelParameters.selector,
       FuelSystem.setFuelUnitVolume.selector,
       FuelSystem.setFuelConsumptionIntervalInSeconds.selector,
       FuelSystem.setFuelMaxCapacity.selector,
-      FuelSystem.setFuelAmount.selector,
       FuelSystem.depositFuel.selector,
       FuelSystem.withdrawFuel.selector
     ];
@@ -517,6 +467,14 @@ abstract contract EveTest is Test {
 
       accessConfigSystem.setAccessEnforcement(fuelSystem.toResourceId(), fuelSignatures[i], true);
     }
+
+    accessConfigSystem.configureAccess(
+      fuelSystem.toResourceId(),
+      FuelSystem.setFuelAmount.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyAdminOrDeployableSystem.selector
+    );
+    accessConfigSystem.setAccessEnforcement(fuelSystem.toResourceId(), FuelSystem.setFuelAmount.selector, true);
 
     vm.stopPrank();
   }
