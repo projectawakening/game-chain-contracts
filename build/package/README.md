@@ -18,7 +18,7 @@ Pull the image from our docker registry (URL TBD).
 and run it with the command: 
 
 ```bash
- docker run --name world-deployer -it deployer-image  --rpc-url http://host.docker.internal:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+ docker run --env-file .env --name world-deployer -it deployer-image  --rpc-url http://host.docker.internal:8545 --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 
 ```
 

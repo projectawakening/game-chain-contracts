@@ -114,7 +114,7 @@ echo "==================== Smart object framework deployed ===================="
 
 
 echo "==================== Deploying world modules ===================="
-pnpm nx deploy @eveworld/world-v2 --worldAddress '${WORLD_ADDRESS}'
+pnpm nx deploy @eveworld/world --worldAddress '${WORLD_ADDRESS}'
 
 
 echo "==================== Delegate access to Forwarder Contract ===================="
