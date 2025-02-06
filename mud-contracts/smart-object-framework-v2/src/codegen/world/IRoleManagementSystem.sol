@@ -18,4 +18,18 @@ interface IRoleManagementSystem {
   function evefrontier__revokeRole(bytes32 role, address account) external;
 
   function evefrontier__renounceRole(bytes32 role, address callerConfirmation) external;
+
+  function evefrontier__revokeAll(bytes32 role) external;
+
+  function evefrontier__scopedCreateRole(uint256 entityId, bytes32 role, bytes32 admin) external;
+
+  function evefrontier__scopedTransferRoleAdmin(uint256 entityId, bytes32 role, bytes32 newAdmin) external;
+
+  function evefrontier__scopedGrantRole(uint256 entityId, bytes32 role, address account) external;
+
+  function evefrontier__scopedRevokeRole(uint256 entityId, bytes32 role, address account) external;
+
+  function evefrontier__scopedRenounceRole(uint256 entityId, bytes32 role, address callerConfirmation) external;
+
+  function evefrontier__scopedRevokeAll(uint256 entityId, bytes32 role) external;
 }

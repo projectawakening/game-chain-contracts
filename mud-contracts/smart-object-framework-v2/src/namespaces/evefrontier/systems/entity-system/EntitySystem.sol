@@ -55,7 +55,7 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
       revert Entity_EntityAlreadyExists(classId);
     }
 
-    if (!HasRole.get(accessRole, _callMsgSender(1))) {
+    if (!HasRole.getIsMember(accessRole, _callMsgSender(1))) {
       revert Entity_RoleAccessDenied(accessRole, _callMsgSender(1));
     }
 
