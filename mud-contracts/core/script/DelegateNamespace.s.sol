@@ -20,24 +20,38 @@ contract DelegateNamespace is Script {
     StoreSwitch.setStoreAddress(worldAddress);
     uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
     address delegatee = vm.envAddress("FORWARDER_ADDRESS");
+    bytes14 erc20Namespace = vm.envString("EVE_TOKEN_NAMESPACE"); //TODO add this to the common constancts npm package and import it similar to DEPLOYMENT_NAMESPACE
 
-    ResourceId NAMESPACE_ID = ResourceId.wrap(bytes32(abi.encodePacked(RESOURCE_NAMESPACE, DEPLOYMENT_NAMESPACE)));
+    ResourceId WORLD_NAMESPACE_ID = ResourceId.wrap(
+      bytes32(abi.encodePacked(RESOURCE_NAMESPACE, DEPLOYMENT_NAMESPACE))
+    );
+    ResourceId ERC20_NAMESPACE_ID = ResourceId.wrap(bytes32(abi.encodePacked(RESOURCE_NAMESPACE, erc20Namespace)));
 
     vm.startBroadcast(deployerPrivateKey);
-    requireNamespace(NAMESPACE_ID);
-    console.log(NamespaceOwner.get(NAMESPACE_ID));
+    requireNamespace(WORLD_NAMESPACE_ID);
+    requireNamespace(ERC20_NAMESPACE_ID);
+    console.log(NamespaceOwner.get(WORLD_NAMESPACE_ID));
+    console.log(NamespaceOwner.get(ERC20_NAMESPACE_ID));
 
     DelegationControlSystem delegationControl = new DelegationControlSystem();
     ResourceId delegationControlId = delegationControlSystemId();
 
     IWorld(worldAddress).registerSystem(delegationControlId, delegationControl, true);
 
+    //Delegate the World namespace to the delegatee (Forwarder contract)
     IWorld(worldAddress).registerNamespaceDelegation(
-      NAMESPACE_ID,
+      WORLD_NAMESPACE_ID,
       delegationControlId,
-      abi.encodeWithSelector(delegationControl.initDelegation.selector, NAMESPACE_ID, delegatee)
+      abi.encodeWithSelector(delegationControl.initDelegation.selector, WORLD_NAMESPACE_ID, delegatee)
     );
-    console.log(AccessControl.hasAccess(NAMESPACE_ID, delegatee));
+    console.log(AccessControl.hasAccess(WORLD_NAMESPACE_ID, delegatee));
+
+    //Delegate the ERC20 namespace to the delegatee (Forwarder contract)
+    IWorld(worldAddress).registerNamespaceDelegation(
+      ERC20_NAMESPACE_ID,
+      delegationControlId,
+      abi.encodeWithSelector(delegationControl.initDelegation.selector, ERC20_NAMESPACE_ID, delegatee)
+    );
 
     vm.stopBroadcast();
   }
