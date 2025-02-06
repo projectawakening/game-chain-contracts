@@ -20,7 +20,8 @@ contract DelegateNamespace is Script {
     StoreSwitch.setStoreAddress(worldAddress);
     uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
     address delegatee = vm.envAddress("FORWARDER_ADDRESS");
-    bytes14 erc20Namespace = vm.envString("EVE_TOKEN_NAMESPACE"); //TODO add this to the common constancts npm package and import it similar to DEPLOYMENT_NAMESPACE
+    string memory erc20NamespaceString = vm.envString("EVE_TOKEN_NAMESPACE"); //TODO add this to the common constancts npm package and import it similar to DEPLOYMENT_NAMESPACE
+    bytes14 erc20Namespace = stringToBytes14(erc20NamespaceString);
 
     ResourceId WORLD_NAMESPACE_ID = ResourceId.wrap(
       bytes32(abi.encodePacked(RESOURCE_NAMESPACE, DEPLOYMENT_NAMESPACE))
@@ -59,5 +60,21 @@ contract DelegateNamespace is Script {
   function delegationControlSystemId() internal pure returns (ResourceId) {
     return
       WorldResourceIdLib.encode({ typeId: RESOURCE_SYSTEM, namespace: DEPLOYMENT_NAMESPACE, name: "DelegationContr" });
+  }
+
+  function stringToBytes14(string memory str) public pure returns (bytes14) {
+    bytes memory tempBytes = bytes(str);
+
+    // Ensure the bytes array is not longer than 14 bytes.
+    // If it is, this will truncate the array to the first 14 bytes.
+    // If it's shorter, it will be padded with zeros.
+    require(tempBytes.length <= 14, "String too long");
+
+    bytes14 converted;
+    for (uint i = 0; i < tempBytes.length; i++) {
+      converted |= bytes14(tempBytes[i] & 0xFF) >> (i * 8);
+    }
+
+    return converted;
   }
 }
