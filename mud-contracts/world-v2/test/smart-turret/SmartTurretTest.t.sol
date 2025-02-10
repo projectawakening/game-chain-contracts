@@ -27,7 +27,7 @@ import { LocationData } from "../../src/namespaces/evefrontier/codegen/tables/Lo
 import { CreateAndAnchorDeployableParams } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
 import { AggressionParams } from "../../src/namespaces/evefrontier/systems/smart-turret/types.sol";
 import { EveTest } from "../EveTest.sol";
-
+import { AccessSystem } from "../../src/namespaces/evefrontier/systems/access-systems/AccessSystem.sol";
 contract SmartTurretTest is EveTest {
   SmartTurretCustomMock smartTurretCustomMock;
   bytes14 constant CUSTOM_NAMESPACE = "custom-namespa";
@@ -329,5 +329,14 @@ contract SmartTurretTest is EveTest {
     );
 
     smartTurretSystem.inProximity(smartObjectId, characterId, priorityQueue, turret, turretTarget);
+  }
+
+  function testAdminCannotConfigureSmartTurret() public {
+    testAnchorSmartTurret();
+
+    vm.startPrank(deployer);
+    vm.expectRevert(abi.encodeWithSelector(AccessSystem.Access_NotDeployableOwner.selector, deployer, smartObjectId));
+    smartTurretSystem.configureSmartTurret(smartObjectId, SMART_TURRET_CUSTOM_MOCK_SYSTEM_ID);
+    vm.stopPrank();
   }
 }
