@@ -36,6 +36,7 @@ import { SMART_STORAGE_UNIT } from "../../src/namespaces/evefrontier/systems/con
 import { EveTest } from "../EveTest.sol";
 
 contract SmartStorageUnitTest is EveTest {
+  uint256 smartObjectId = 6666666;
   uint256 characterId = 123;
   uint256 diffCharacterId = 9999;
   uint256 tribeId = 100;
@@ -73,19 +74,11 @@ contract SmartStorageUnitTest is EveTest {
   }
 
   function testcreateAndAnchorSmartStorageUnit(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != characterId);
-    vm.assume(smartObjectId != diffCharacterId);
-    vm.assume(smartObjectId != inventoryItemId);
-    vm.assume(smartObjectId != diffInventoryItemId);
-    vm.assume(smartObjectId != ephemeralInventoryItemId);
-    vm.assume(smartObjectId != diffEphemeralInventoryItemId);
-    vm.assume(smartObjectId != 0);
     vm.assume(storageCapacity > 0);
     vm.assume(ephemeralStorageCapacity > 0);
     vm.assume(fuelConsumptionIntervalInSeconds > 1);
@@ -113,8 +106,7 @@ contract SmartStorageUnitTest is EveTest {
     vm.stopPrank();
   }
 
-  function testSetDeployableStateToValid(uint256 smartObjectId) public {
-    vm.assume(smartObjectId != 0);
+  function testSetDeployableStateToValid() public {
     vm.startPrank(deployer);
     DeployableState.set(
       smartObjectId,
@@ -132,32 +124,23 @@ contract SmartStorageUnitTest is EveTest {
   }
 
   function testCreateAndDepositItemsToInventory(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != characterId);
-    vm.assume(smartObjectId != diffCharacterId);
-    vm.assume(smartObjectId != inventoryItemId);
-    vm.assume(smartObjectId != diffInventoryItemId);
-    vm.assume(smartObjectId != ephemeralInventoryItemId);
-    vm.assume(smartObjectId != diffEphemeralInventoryItemId);
-    vm.assume(smartObjectId != 0);
     vm.assume(fuelConsumptionIntervalInSeconds > 1);
     vm.assume(storageCapacity > 500);
     vm.assume(ephemeralStorageCapacity > 1000);
 
     testcreateAndAnchorSmartStorageUnit(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
       ephemeralStorageCapacity
     );
 
-    testSetDeployableStateToValid(smartObjectId);
+    testSetDeployableStateToValid();
 
     InventoryItem[] memory items = new InventoryItem[](1);
     items[0] = InventoryItem({
@@ -186,32 +169,23 @@ contract SmartStorageUnitTest is EveTest {
   }
 
   function testCreateAndDepositItemsToEphemeralInventory(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != characterId);
-    vm.assume(smartObjectId != diffCharacterId);
-    vm.assume(smartObjectId != inventoryItemId);
-    vm.assume(smartObjectId != diffInventoryItemId);
-    vm.assume(smartObjectId != ephemeralInventoryItemId);
-    vm.assume(smartObjectId != diffEphemeralInventoryItemId);
-    vm.assume(smartObjectId != 0);
     vm.assume(storageCapacity > 0);
     vm.assume(fuelConsumptionIntervalInSeconds > 1);
     vm.assume(storageCapacity > 500);
     vm.assume(ephemeralStorageCapacity > 1000);
 
     testcreateAndAnchorSmartStorageUnit(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
       ephemeralStorageCapacity
     );
-    testSetDeployableStateToValid(smartObjectId);
+    testSetDeployableStateToValid();
 
     InventoryItem[] memory items = new InventoryItem[](1);
     items[0] = InventoryItem({
@@ -244,19 +218,11 @@ contract SmartStorageUnitTest is EveTest {
   }
 
   function testUnanchorAndreAnchor(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != characterId);
-    vm.assume(smartObjectId != diffCharacterId);
-    vm.assume(smartObjectId != inventoryItemId);
-    vm.assume(smartObjectId != diffInventoryItemId);
-    vm.assume(smartObjectId != ephemeralInventoryItemId);
-    vm.assume(smartObjectId != diffEphemeralInventoryItemId);
-    vm.assume(smartObjectId != 0);
     vm.assume(storageCapacity > 0);
     vm.assume(ephemeralStorageCapacity > 0);
     vm.assume(fuelConsumptionIntervalInSeconds > 1);
@@ -282,7 +248,6 @@ contract SmartStorageUnitTest is EveTest {
     });
 
     testCreateAndDepositItemsToInventory(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
@@ -320,7 +285,7 @@ contract SmartStorageUnitTest is EveTest {
 
     vm.warp(block.timestamp + 10);
 
-    testSetDeployableStateToValid(smartObjectId);
+    testSetDeployableStateToValid();
 
     items = new InventoryItem[](1);
     items[0] = InventoryItem({
@@ -365,19 +330,11 @@ contract SmartStorageUnitTest is EveTest {
   }
 
   function testUnanchorDepositRevert(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != characterId);
-    vm.assume(smartObjectId != diffCharacterId);
-    vm.assume(smartObjectId != inventoryItemId);
-    vm.assume(smartObjectId != diffInventoryItemId);
-    vm.assume(smartObjectId != ephemeralInventoryItemId);
-    vm.assume(smartObjectId != diffEphemeralInventoryItemId);
-    vm.assume(smartObjectId != 0);
     vm.assume(fuelConsumptionIntervalInSeconds > 1);
     vm.assume(storageCapacity > 500);
     vm.assume(ephemeralStorageCapacity > 1000);
@@ -403,13 +360,12 @@ contract SmartStorageUnitTest is EveTest {
     });
 
     testcreateAndAnchorSmartStorageUnit(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
       ephemeralStorageCapacity
     );
-    testSetDeployableStateToValid(smartObjectId);
+    testSetDeployableStateToValid();
 
     vm.startPrank(deployer);
     inventorySystem.createAndDepositItemsToInventory(smartObjectId, items);
@@ -456,19 +412,11 @@ contract SmartStorageUnitTest is EveTest {
   }
 
   function testUnanchorWithdrawRevert(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != characterId);
-    vm.assume(smartObjectId != diffCharacterId);
-    vm.assume(smartObjectId != inventoryItemId);
-    vm.assume(smartObjectId != diffInventoryItemId);
-    vm.assume(smartObjectId != ephemeralInventoryItemId);
-    vm.assume(smartObjectId != diffEphemeralInventoryItemId);
-    vm.assume(smartObjectId != 0);
     vm.assume(fuelConsumptionIntervalInSeconds > 1);
     vm.assume(storageCapacity > 500);
     vm.assume(ephemeralStorageCapacity > 1000);
@@ -493,13 +441,12 @@ contract SmartStorageUnitTest is EveTest {
     });
 
     testcreateAndAnchorSmartStorageUnit(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
       ephemeralStorageCapacity
     );
-    testSetDeployableStateToValid(smartObjectId);
+    testSetDeployableStateToValid();
 
     vm.startPrank(deployer);
     inventorySystem.createAndDepositItemsToInventory(smartObjectId, items);
@@ -515,7 +462,7 @@ contract SmartStorageUnitTest is EveTest {
     vm.startPrank(deployer);
     deployableSystem.anchor(smartObjectId, location);
     vm.stopPrank();
-    testSetDeployableStateToValid(smartObjectId);
+    testSetDeployableStateToValid();
 
     vm.expectRevert(
       abi.encodeWithSelector(
@@ -542,19 +489,11 @@ contract SmartStorageUnitTest is EveTest {
   }
 
   function testDestroyAndRevertDepositItems(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != characterId);
-    vm.assume(smartObjectId != diffCharacterId);
-    vm.assume(smartObjectId != inventoryItemId);
-    vm.assume(smartObjectId != diffInventoryItemId);
-    vm.assume(smartObjectId != ephemeralInventoryItemId);
-    vm.assume(smartObjectId != diffEphemeralInventoryItemId);
-    vm.assume(smartObjectId != 0);
     vm.assume(storageCapacity > 0);
     vm.assume(ephemeralStorageCapacity > 0);
 
@@ -569,7 +508,6 @@ contract SmartStorageUnitTest is EveTest {
     });
 
     testCreateAndDepositItemsToInventory(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
@@ -600,19 +538,11 @@ contract SmartStorageUnitTest is EveTest {
   }
 
   function testDestroyAndRevertWithdrawItems(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != characterId);
-    vm.assume(smartObjectId != diffCharacterId);
-    vm.assume(smartObjectId != inventoryItemId);
-    vm.assume(smartObjectId != diffInventoryItemId);
-    vm.assume(smartObjectId != ephemeralInventoryItemId);
-    vm.assume(smartObjectId != diffEphemeralInventoryItemId);
-    vm.assume(smartObjectId != 0);
     vm.assume(storageCapacity > 0);
     vm.assume(ephemeralStorageCapacity > 0);
 
@@ -627,7 +557,6 @@ contract SmartStorageUnitTest is EveTest {
     });
 
     testCreateAndDepositItemsToInventory(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
