@@ -42,6 +42,7 @@ library AccessSystemLib {
   error Access_NotOwnerOrCanDepositToInventory(address caller, uint256 objectId);
   error Access_NotDeployableOwnerOrInventoryInteractSystem(address caller, uint256 objectId);
   error Access_NotInventoryAdmin(address caller, uint256 smartObjectId);
+  error Access_NotAdminOrDeployableSystem(address caller, uint256 objectId);
 
   function onlyOwnerOrCanWithdrawFromInventory(
     AccessSystemType self,
@@ -79,6 +80,10 @@ library AccessSystemLib {
     return CallWrapper(self.toResourceId(), address(0)).onlyInventoryAdmin(smartObjectId, data);
   }
 
+  function onlyAdminOrDeployableSystem(AccessSystemType self, uint256 objectId, bytes memory data) internal view {
+    return CallWrapper(self.toResourceId(), address(0)).onlyAdminOrDeployableSystem(objectId, data);
+  }
+
   function isAdmin(AccessSystemType self, address caller) internal view returns (bool) {
     return CallWrapper(self.toResourceId(), address(0)).isAdmin(caller);
   }
@@ -109,6 +114,10 @@ library AccessSystemLib {
 
   function isInventoryAdmin(AccessSystemType self, uint256 smartObjectId, address caller) internal view returns (bool) {
     return CallWrapper(self.toResourceId(), address(0)).isInventoryAdmin(smartObjectId, caller);
+  }
+
+  function isDeployableSystem(AccessSystemType self, address caller) internal view returns (bool) {
+    return CallWrapper(self.toResourceId(), address(0)).isDeployableSystem(caller);
   }
 
   function onlyOwnerOrCanWithdrawFromInventory(
@@ -229,6 +238,22 @@ library AccessSystemLib {
     abi.decode(returnData, (bytes));
   }
 
+  function onlyAdminOrDeployableSystem(CallWrapper memory self, uint256 objectId, bytes memory data) internal view {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert AccessSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _onlyAdminOrDeployableSystem_uint256_bytes.onlyAdminOrDeployableSystem,
+      (objectId, data)
+    );
+    bytes memory worldCall = self.from == address(0)
+      ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
+      : abi.encodeCall(IWorldCall.callFrom, (self.from, self.systemId, systemCall));
+    (bool success, bytes memory returnData) = address(_world()).staticcall(worldCall);
+    if (!success) revertWithBytes(returnData);
+    abi.decode(returnData, (bytes));
+  }
+
   function isAdmin(CallWrapper memory self, address caller) internal view returns (bool) {
     // if the contract calling this function is a root system, it should use `callAsRoot`
     if (address(_world()) == address(this)) revert AccessSystemLib_CallingFromRootSystem();
@@ -340,6 +365,21 @@ library AccessSystemLib {
     return abi.decode(result, (bool));
   }
 
+  function isDeployableSystem(CallWrapper memory self, address caller) internal view returns (bool) {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert AccessSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(_isDeployableSystem_address.isDeployableSystem, (caller));
+    bytes memory worldCall = self.from == address(0)
+      ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
+      : abi.encodeCall(IWorldCall.callFrom, (self.from, self.systemId, systemCall));
+    (bool success, bytes memory returnData) = address(_world()).staticcall(worldCall);
+    if (!success) revertWithBytes(returnData);
+
+    bytes memory result = abi.decode(returnData, (bytes));
+    return abi.decode(result, (bool));
+  }
+
   function onlyOwnerOrCanWithdrawFromInventory(
     RootCallWrapper memory self,
     uint256 objectId,
@@ -402,6 +442,14 @@ library AccessSystemLib {
     SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
   }
 
+  function onlyAdminOrDeployableSystem(RootCallWrapper memory self, uint256 objectId, bytes memory data) internal view {
+    bytes memory systemCall = abi.encodeCall(
+      _onlyAdminOrDeployableSystem_uint256_bytes.onlyAdminOrDeployableSystem,
+      (objectId, data)
+    );
+    SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
+  }
+
   function isAdmin(RootCallWrapper memory self, address caller) internal view returns (bool) {
     bytes memory systemCall = abi.encodeCall(_isAdmin_address.isAdmin, (caller));
 
@@ -460,6 +508,13 @@ library AccessSystemLib {
       _isInventoryAdmin_uint256_address.isInventoryAdmin,
       (smartObjectId, caller)
     );
+
+    bytes memory result = SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
+    return abi.decode(result, (bool));
+  }
+
+  function isDeployableSystem(RootCallWrapper memory self, address caller) internal view returns (bool) {
+    bytes memory systemCall = abi.encodeCall(_isDeployableSystem_address.isDeployableSystem, (caller));
 
     bytes memory result = SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
     return abi.decode(result, (bool));
@@ -531,6 +586,10 @@ interface _onlyInventoryAdmin_uint256_bytes {
   function onlyInventoryAdmin(uint256 smartObjectId, bytes memory data) external;
 }
 
+interface _onlyAdminOrDeployableSystem_uint256_bytes {
+  function onlyAdminOrDeployableSystem(uint256 objectId, bytes memory data) external;
+}
+
 interface _isAdmin_address {
   function isAdmin(address caller) external;
 }
@@ -553,6 +612,10 @@ interface _isInventoryInteractSystem_address {
 
 interface _isInventoryAdmin_uint256_address {
   function isInventoryAdmin(uint256 smartObjectId, address caller) external;
+}
+
+interface _isDeployableSystem_address {
+  function isDeployableSystem(address caller) external;
 }
 
 using AccessSystemLib for AccessSystemType global;
