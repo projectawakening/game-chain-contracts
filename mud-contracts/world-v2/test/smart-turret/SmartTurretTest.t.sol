@@ -28,9 +28,7 @@ import { CreateAndAnchorDeployableParams } from "../../src/namespaces/evefrontie
 import { AggressionParams } from "../../src/namespaces/evefrontier/systems/smart-turret/types.sol";
 import { EveTest } from "../EveTest.sol";
 
-contract SmartTurretTest is MudTest {
-  IBaseWorld world;
-
+contract SmartTurretTest is EveTest {
   SmartTurretCustomMock smartTurretCustomMock;
   bytes14 constant CUSTOM_NAMESPACE = "custom-namespa";
 
@@ -38,21 +36,14 @@ contract SmartTurretTest is MudTest {
 
   uint256 smartObjectId = 1234;
   uint256 characterId = 11111;
-
-  string mnemonic = "test test test test test test test test test test test junk";
-  uint256 deployerPK = vm.deriveKey(mnemonic, 0);
-  uint256 alicePK = vm.deriveKey(mnemonic, 1);
-
-  address deployer = vm.addr(deployerPK); // ADMIN
-  address alice = vm.addr(alicePK); // BUILDER
   uint256 tribeId = 100;
+
   SmartObjectData smartObjectData;
   EntityRecordData entityRecord;
   WorldPosition worldPosition;
 
   function setUp() public virtual override {
     super.setUp();
-    world = IBaseWorld(worldAddress);
 
     entityRecord = EntityRecordData({ typeId: 123, itemId: 234, volume: 100 });
 
@@ -86,8 +77,10 @@ contract SmartTurretTest is MudTest {
     );
     vm.stopPrank();
 
+    vm.startPrank(deployer);
     deployableSystem.globalResume();
     smartCharacterSystem.createCharacter(characterId, alice, tribeId, entityRecord, entityRecordMetadata);
+    vm.stopPrank();
   }
 
   function testAnchorSmartTurret() public {
@@ -95,6 +88,7 @@ contract SmartTurretTest is MudTest {
     uint256 fuelConsumptionIntervalInSeconds = 100;
     uint256 fuelMaxCapacity = 100;
 
+    vm.startPrank(deployer);
     smartTurretSystem.createAndAnchorSmartTurret(
       CreateAndAnchorDeployableParams({
         smartObjectId: smartObjectId,
@@ -115,13 +109,15 @@ contract SmartTurretTest is MudTest {
 
     fuelSystem.depositFuel(smartObjectId, 1);
     deployableSystem.bringOnline(smartObjectId);
-
+    vm.stopPrank();
     assertEq(SmartAssembly.getSmartAssemblyType(smartObjectId), SMART_TURRET);
   }
 
   function testConfigureSmartTurret() public {
     testAnchorSmartTurret();
+    vm.startPrank(alice);
     smartTurretSystem.configureSmartTurret(smartObjectId, SMART_TURRET_CUSTOM_MOCK_SYSTEM_ID);
+    vm.stopPrank();
 
     ResourceId systemId = SmartTurretConfig.get(smartObjectId);
     assertEq(ResourceId.unwrap(systemId), ResourceId.unwrap(SMART_TURRET_CUSTOM_MOCK_SYSTEM_ID));

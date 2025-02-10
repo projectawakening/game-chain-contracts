@@ -47,6 +47,8 @@ import { smartStorageUnitSystem } from "../src/namespaces/evefrontier/codegen/sy
 import { smartAssemblySystem } from "../src/namespaces/evefrontier/codegen/systems/SmartAssemblySystemLib.sol";
 import { fuelSystem } from "../src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
 import { locationSystem } from "../src/namespaces/evefrontier/codegen/systems/LocationSystemLib.sol";
+import { SmartTurretSystem } from "../src/namespaces/evefrontier/systems/smart-turret/SmartTurretSystem.sol";
+import { smartTurretSystem } from "../src/namespaces/evefrontier/codegen/systems/SmartTurretSystemLib.sol";
 
 abstract contract EveTest is Test {
   address public worldAddress;
@@ -129,31 +131,10 @@ abstract contract EveTest is Test {
     roleManagementSystem.grantRole(adminRole, deployer);
     // End Role Creation
 
-    // Class Creation
-    ResourceId[] memory systemIds = new ResourceId[](9);
-    systemIds[0] = inventorySystem.toResourceId();
-    systemIds[1] = deployableSystem.toResourceId();
-    systemIds[2] = ephemeralInventorySystem.toResourceId();
-    systemIds[3] = inventoryInteractSystem.toResourceId();
-    systemIds[4] = entityRecordSystem.toResourceId();
-    systemIds[5] = smartStorageUnitSystem.toResourceId();
-    systemIds[6] = smartAssemblySystem.toResourceId();
-    systemIds[7] = fuelSystem.toResourceId();
-    systemIds[8] = locationSystem.toResourceId();
-    entitySystem.registerClass(smartStorageUnitSystem.getClassId(), adminRole, systemIds);
-
-    uint256 inventoryItemClassId = uint256(bytes32("INVENTORY_ITEM"));
-    systemIds = new ResourceId[](3);
-    systemIds[0] = inventorySystem.toResourceId();
-    systemIds[1] = entityRecordSystem.toResourceId();
-    systemIds[2] = ephemeralInventorySystem.toResourceId();
-    entitySystem.registerClass(inventoryItemClassId, adminRole, systemIds);
-
-    uint256 smartCharacterClassId = uint256(bytes32("SMART_CHARACTER"));
-    systemIds = new ResourceId[](2);
-    systemIds[0] = entityRecordSystem.toResourceId();
-    systemIds[1] = smartCharacterSystem.toResourceId();
-    entitySystem.registerClass(smartCharacterClassId, adminRole, systemIds);
+    _registerSmartStorageUnitClass(adminRole);
+    _registerInventoryItemClass(adminRole);
+    _registerSmartCharacterClass(adminRole);
+    _registerSmartTurretClass(adminRole);
     // End Class Creation
 
     // DeployableSystem
@@ -476,6 +457,78 @@ abstract contract EveTest is Test {
     );
     accessConfigSystem.setAccessEnforcement(fuelSystem.toResourceId(), FuelSystem.setFuelAmount.selector, true);
 
+    configureSmartTurretAccess();
+
     vm.stopPrank();
+  }
+
+  function _registerSmartStorageUnitClass(bytes32 adminRole) internal {
+    ResourceId[] memory systemIds = new ResourceId[](9);
+    systemIds[0] = inventorySystem.toResourceId();
+    systemIds[1] = deployableSystem.toResourceId();
+    systemIds[2] = ephemeralInventorySystem.toResourceId();
+    systemIds[3] = inventoryInteractSystem.toResourceId();
+    systemIds[4] = entityRecordSystem.toResourceId();
+    systemIds[5] = smartStorageUnitSystem.toResourceId();
+    systemIds[6] = smartAssemblySystem.toResourceId();
+    systemIds[7] = fuelSystem.toResourceId();
+    systemIds[8] = locationSystem.toResourceId();
+    entitySystem.registerClass(smartStorageUnitSystem.getClassId(), adminRole, systemIds);
+  }
+
+  function _registerInventoryItemClass(bytes32 adminRole) internal {
+    uint256 inventoryItemClassId = uint256(bytes32("INVENTORY_ITEM"));
+    ResourceId[] memory systemIds = new ResourceId[](3);
+    systemIds[0] = inventorySystem.toResourceId();
+    systemIds[1] = entityRecordSystem.toResourceId();
+    systemIds[2] = ephemeralInventorySystem.toResourceId();
+    entitySystem.registerClass(inventoryItemClassId, adminRole, systemIds);
+  }
+
+  function _registerSmartCharacterClass(bytes32 adminRole) internal {
+    uint256 smartCharacterClassId = uint256(bytes32("SMART_CHARACTER"));
+    ResourceId[] memory systemIds = new ResourceId[](2);
+    systemIds[0] = entityRecordSystem.toResourceId();
+    systemIds[1] = smartCharacterSystem.toResourceId();
+    entitySystem.registerClass(smartCharacterClassId, adminRole, systemIds);
+  }
+
+  function _registerSmartTurretClass(bytes32 adminRole) internal {
+    ResourceId[] memory smartTurretSystemIds = new ResourceId[](6);
+    smartTurretSystemIds[0] = entityRecordSystem.toResourceId();
+    smartTurretSystemIds[1] = smartTurretSystem.toResourceId();
+    smartTurretSystemIds[2] = fuelSystem.toResourceId();
+    smartTurretSystemIds[3] = locationSystem.toResourceId();
+    smartTurretSystemIds[4] = deployableSystem.toResourceId();
+    smartTurretSystemIds[5] = smartAssemblySystem.toResourceId();
+    entitySystem.registerClass(uint256(bytes32("SMART_TURRET")), adminRole, smartTurretSystemIds);
+  }
+
+  function configureSmartTurretAccess() internal {
+    accessConfigSystem.configureAccess(
+      smartTurretSystem.toResourceId(),
+      SmartTurretSystem.createAndAnchorSmartTurret.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyAdmin.selector
+    );
+
+    accessConfigSystem.setAccessEnforcement(
+      smartTurretSystem.toResourceId(),
+      SmartTurretSystem.createAndAnchorSmartTurret.selector,
+      true
+    );
+
+    accessConfigSystem.configureAccess(
+      smartTurretSystem.toResourceId(),
+      SmartTurretSystem.configureSmartTurret.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyDeployableOwner.selector
+    );
+
+    accessConfigSystem.setAccessEnforcement(
+      smartTurretSystem.toResourceId(),
+      SmartTurretSystem.configureSmartTurret.selector,
+      true
+    );
   }
 }
