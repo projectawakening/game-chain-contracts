@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.24;
-import { console } from "forge-std/console.sol";
+
 import { ResourceId, WorldResourceIdInstance } from "@latticexyz/world/src/WorldResourceId.sol";
 import { NamespaceOwner } from "@latticexyz/world/src/codegen/tables/NamespaceOwner.sol";
 import { SystemRegistry } from "@latticexyz/world/src/codegen/tables/SystemRegistry.sol";
@@ -154,6 +154,12 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
     revert SOFAccess_AccessDenied(entityId, msgSender);
   }
 
+  /**
+   * @notice Validates access for EntitySystem or class-scoped system
+   * @param entityId The ID of the entity to check access for (object or class)
+   * @param targetCallData The calldata of the target function
+   * @dev Handles access control for RoleManagementSystem.sol, particulalry, scopedCreateRole and sopedRevokeAll as these are called by EntitySystem during class/object creation and deletion
+   */
   function allowEntitySystemOrClassScopedSystem(uint256 entityId, bytes memory targetCallData) public view {
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
     (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
@@ -172,15 +178,12 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
     revert SOFAccess_AccessDenied(entityId, msgSender);
   }
 
-  // deleteClass - revoke all members and delete role for class
-  // - direct call only,
-  // - should check _callMsgSender(1) is member of class access role for scopedRevokeAll
-
-  // deleteObject  - revoke all members and delete role for object
-  // - class scoped system or direct call (class admin),
-  // - should check _callMsgSender(1) is member of object access role for scopedRevokeAll in the case of class scoped system call,
-  // - should check if _callMsgSender(1) is member of object's class access role for scopedRevokeAll if direct call
-
+  /**
+   * @notice Validates access for defined systems
+   * @param entityId The ID of the entity to check access for (object or class)
+   * @param targetCallData The calldata of the target function
+   * @dev Handles access control for EntitySystem.scopedRegisterClass, as it is called from SSU, SmartCharacter, SmartTurret, SmartGate, InventorySystem, and EphemeralInventorySystem
+   */
   function allowDefinedSystems(uint256 entityId, bytes memory targetCallData) public view {
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
     (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
@@ -225,10 +228,6 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
   }
 
   function _checkAccessRole(uint256 entityId, address caller) private view returns (bool) {
-    // console.log(entityId);
-    // console.log(caller);
-    // console.logBytes32(Entity.getAccessRole(entityId));
-    // console.logBytes32(keccak256(abi.encodePacked("ACESS_ROLE", entityId)));
     return HasRole.getIsMember(Entity.getAccessRole(entityId), caller);
   }
 }
