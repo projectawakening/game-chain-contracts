@@ -39,4 +39,6 @@ interface ISmartGateSystem {
   function evefrontier__isGateLinked(uint256 sourceGateId, uint256 destinationGateId) external view returns (bool);
 
   function evefrontier__isWithinRange(uint256 sourceGateId, uint256 destinationGateId) external view returns (bool);
+
+  function evefrontier__getSmartGateClassId() external view returns (uint256);
 }

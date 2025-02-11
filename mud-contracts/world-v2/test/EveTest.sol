@@ -49,6 +49,8 @@ import { fuelSystem } from "../src/namespaces/evefrontier/codegen/systems/FuelSy
 import { locationSystem } from "../src/namespaces/evefrontier/codegen/systems/LocationSystemLib.sol";
 import { SmartTurretSystem } from "../src/namespaces/evefrontier/systems/smart-turret/SmartTurretSystem.sol";
 import { smartTurretSystem } from "../src/namespaces/evefrontier/codegen/systems/SmartTurretSystemLib.sol";
+import { SmartGateSystem } from "../src/namespaces/evefrontier/systems/smart-gate/SmartGateSystem.sol";
+import { smartGateSystem } from "../src/namespaces/evefrontier/codegen/systems/SmartGateSystemLib.sol";
 
 abstract contract EveTest is Test {
   address public worldAddress;
@@ -135,6 +137,7 @@ abstract contract EveTest is Test {
     _registerInventoryItemClass(adminRole);
     _registerSmartCharacterClass(adminRole);
     _registerSmartTurretClass(adminRole);
+    _registerSmartGateClass(adminRole);
     // End Class Creation
 
     // DeployableSystem
@@ -458,7 +461,7 @@ abstract contract EveTest is Test {
     accessConfigSystem.setAccessEnforcement(fuelSystem.toResourceId(), FuelSystem.setFuelAmount.selector, true);
 
     configureSmartTurretAccess();
-
+    configureSmartGateAccess();
     vm.stopPrank();
   }
 
@@ -530,5 +533,48 @@ abstract contract EveTest is Test {
       SmartTurretSystem.configureSmartTurret.selector,
       true
     );
+  }
+
+  function _registerSmartGateClass(bytes32 adminRole) internal {
+    ResourceId[] memory smartGateSystemIds = new ResourceId[](6);
+    smartGateSystemIds[0] = entityRecordSystem.toResourceId();
+    smartGateSystemIds[1] = smartGateSystem.toResourceId();
+    smartGateSystemIds[2] = fuelSystem.toResourceId();
+    smartGateSystemIds[3] = locationSystem.toResourceId();
+    smartGateSystemIds[4] = deployableSystem.toResourceId();
+    smartGateSystemIds[5] = smartAssemblySystem.toResourceId();
+    entitySystem.registerClass(uint256(bytes32("SMART_GATE")), adminRole, smartGateSystemIds);
+  }
+
+  function configureSmartGateAccess() internal {
+    accessConfigSystem.configureAccess(
+      smartGateSystem.toResourceId(),
+      SmartGateSystem.createAndAnchorSmartGate.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyAdmin.selector
+    );
+
+    accessConfigSystem.setAccessEnforcement(
+      smartGateSystem.toResourceId(),
+      SmartGateSystem.createAndAnchorSmartGate.selector,
+      true
+    );
+
+    bytes4[3] memory onlyOwnerSelectors = [
+      SmartGateSystem.configureSmartGate.selector,
+      SmartGateSystem.linkSmartGates.selector,
+      SmartGateSystem.unlinkSmartGates.selector
+    ];
+
+    for (uint256 i = 0; i < onlyOwnerSelectors.length; i++) {
+      accessConfigSystem.configureAccess(
+        smartGateSystem.toResourceId(),
+        onlyOwnerSelectors[i],
+        accessSystem.toResourceId(),
+        AccessSystem.onlyDeployableOwner.selector
+      );
+
+      accessConfigSystem.setAccessEnforcement(smartGateSystem.toResourceId(), onlyOwnerSelectors[i], true);
+    }
   }
 }

@@ -18,6 +18,8 @@ import { SMART_GATE } from "../constants.sol";
 import { DeployableSystemLib, deployableSystem } from "../../codegen/systems/DeployableSystemLib.sol";
 import { CreateAndAnchorDeployableParams } from "../deployable/types.sol";
 import { EveSystem } from "../EveSystem.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+
 contract SmartGateSystem is EveSystem {
   error SmartGate_UndefinedClassId();
   error SmartGate_NotConfigured(uint256 smartObjectId);
@@ -35,8 +37,11 @@ contract SmartGateSystem is EveSystem {
   function createAndAnchorSmartGate(
     CreateAndAnchorDeployableParams memory params,
     uint256 maxDistance
-  ) public context access(params.smartObjectId) {
+  ) public context access(params.smartObjectId) scope(getSmartGateClassId()) {
     params.smartAssemblyType = SMART_GATE;
+
+    entitySystem.instantiate(getSmartGateClassId(), params.smartObjectId);
+
     deployableSystem.createAndAnchorDeployable(params);
     SmartGateConfig.setMaxDistance(params.smartObjectId, maxDistance);
   }
@@ -47,7 +52,10 @@ contract SmartGateSystem is EveSystem {
    * @param destinationGateId is the smartObjectId of the destination gate
    * //TODO make it configurable only by owner of the smart gate
    */
-  function linkSmartGates(uint256 sourceGateId, uint256 destinationGateId) public context access(sourceGateId) {
+  function linkSmartGates(
+    uint256 sourceGateId,
+    uint256 destinationGateId
+  ) public context access(sourceGateId) scope(sourceGateId) {
     if (isGateLinked(sourceGateId, destinationGateId)) {
       revert SmartGate_GateAlreadyLinked(sourceGateId, destinationGateId);
     }
@@ -72,7 +80,10 @@ contract SmartGateSystem is EveSystem {
    * @param destinationGateId is the id of the destination gate
    * //TODO make it configurable only by owner of the smart gate
    */
-  function unlinkSmartGates(uint256 sourceGateId, uint256 destinationGateId) public context access(sourceGateId) {
+  function unlinkSmartGates(
+    uint256 sourceGateId,
+    uint256 destinationGateId
+  ) public context access(sourceGateId) scope(sourceGateId) {
     //Check if the gates are linked
     if (!isGateLinked(sourceGateId, destinationGateId)) {
       revert SmartGate_GateNotLinked(sourceGateId, destinationGateId);
@@ -86,7 +97,10 @@ contract SmartGateSystem is EveSystem {
    * @param smartObjectId is smartObjectId of the Smart Gate
    * @param systemId is the system id of the Smart Gate logic
    */
-  function configureSmartGate(uint256 smartObjectId, ResourceId systemId) public context access(smartObjectId) {
+  function configureSmartGate(
+    uint256 smartObjectId,
+    ResourceId systemId
+  ) public context access(smartObjectId) scope(smartObjectId) {
     SmartGateConfig.setSystemId(smartObjectId, systemId);
   }
 
@@ -154,5 +168,9 @@ contract SmartGateSystem is EveSystem {
     // Sum of squares (distance squared in meters)
     uint256 distanceSquaredMeters = (dx * dx) + (dy * dy) + (dz * dz);
     return distanceSquaredMeters <= (maxDistance * maxDistance);
+  }
+
+  function getSmartGateClassId() public view returns (uint256) {
+    return uint256(bytes32("SMART_GATE"));
   }
 }
