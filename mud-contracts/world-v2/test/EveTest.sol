@@ -617,4 +617,25 @@ abstract contract EveTest is Test {
       true
     );
   }
+
+  function configureLocationAccess() internal {
+    bytes4[5] memory onlyAdminSelectors = [
+      LocationSystem.saveLocation.selector,
+      LocationSystem.setSolarSystemId.selector,
+      LocationSystem.setX.selector,
+      LocationSystem.setY.selector,
+      LocationSystem.setZ.selector
+    ];
+
+    for (uint256 i = 0; i < onlyAdminSelectors.length; i++) {
+      accessConfigSystem.configureAccess(
+        locationSystem.toResourceId(),
+        onlyAdminSelectors[i],
+        accessSystem.toResourceId(),
+        AccessSystem.onlyAdmin.selector
+      );
+
+      accessConfigSystem.setAccessEnforcement(locationSystem.toResourceId(), onlyAdminSelectors[i], true);
+    }
+  }
 }
