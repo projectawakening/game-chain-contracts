@@ -120,7 +120,10 @@ contract InventorySystem is EveSystem {
    * @param smartObjectId The smart storage unit id
    * @param items The items to deposit to the inventory
    */
-  function depositToInventory(uint256 smartObjectId, InventoryItem[] memory items) public onlyActive {
+  function depositToInventory(
+    uint256 smartObjectId,
+    InventoryItem[] memory items
+  ) public onlyActive context access(smartObjectId) scope(smartObjectId) {
     {
       State currentState = DeployableState.getCurrentState(smartObjectId);
       if (currentState != State.ONLINE) {
@@ -140,7 +143,10 @@ contract InventorySystem is EveSystem {
    * //TODO Only owner(msg.sender) of the smart storage unit can withdraw items in the inventory
    * @param items The items to withdraw from the inventory
    */
-  function withdrawFromInventory(uint256 smartObjectId, InventoryItem[] memory items) public onlyActive {
+  function withdrawFromInventory(
+    uint256 smartObjectId,
+    InventoryItem[] memory items
+  ) public onlyActive context access(smartObjectId) scope(smartObjectId) {
     {
       State currentState = DeployableState.getCurrentState(smartObjectId);
       if (!(currentState == State.ANCHORED || currentState == State.ONLINE)) {

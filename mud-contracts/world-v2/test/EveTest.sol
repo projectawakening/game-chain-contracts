@@ -462,6 +462,8 @@ abstract contract EveTest is Test {
 
     configureSmartTurretAccess();
     configureSmartGateAccess();
+    configureInventoryAccess();
+
     vm.stopPrank();
   }
 
@@ -576,5 +578,43 @@ abstract contract EveTest is Test {
 
       accessConfigSystem.setAccessEnforcement(smartGateSystem.toResourceId(), onlyOwnerSelectors[i], true);
     }
+  }
+
+  function configureInventoryAccess() internal {
+    accessConfigSystem.configureAccess(
+      inventorySystem.toResourceId(),
+      InventorySystem.setInventoryCapacity.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyAdmin.selector
+    );
+    accessConfigSystem.setAccessEnforcement(
+      inventorySystem.toResourceId(),
+      InventorySystem.setInventoryCapacity.selector,
+      true
+    );
+
+    accessConfigSystem.configureAccess(
+      inventorySystem.toResourceId(),
+      InventorySystem.depositToInventory.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyDeployableOwnerOrInventoryInteractSystem.selector
+    );
+    accessConfigSystem.setAccessEnforcement(
+      inventorySystem.toResourceId(),
+      InventorySystem.depositToInventory.selector,
+      true
+    );
+
+    accessConfigSystem.configureAccess(
+      inventorySystem.toResourceId(),
+      InventorySystem.withdrawFromInventory.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyDeployableOwnerOrInventoryInteractSystem.selector
+    );
+    accessConfigSystem.setAccessEnforcement(
+      inventorySystem.toResourceId(),
+      InventorySystem.withdrawFromInventory.selector,
+      true
+    );
   }
 }
