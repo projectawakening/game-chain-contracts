@@ -20,9 +20,8 @@ contract DelegationControlSystem is DelegationControl {
    * @return verified bool if the caller is the trusted forwarder
    */
   function verify(address, ResourceId systemId, bytes memory) public view returns (bool verified) {
-    address puppet = _msgSender();
     verified =
-      (PuppetRegistry.get(PUPPET_TABLE_ID, systemId) == puppet) ||
+      (PuppetRegistry.get(PUPPET_TABLE_ID, systemId) == _msgSender()) ||
       (trustedForwarders[systemId.getNamespaceId()] == _msgSender());
   }
 
