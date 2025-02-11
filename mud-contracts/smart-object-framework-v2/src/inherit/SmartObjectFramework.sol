@@ -195,12 +195,12 @@ contract SmartObjectFramework is System {
   function _access(uint256 entityId, bytes32 target) internal view virtual {
     AccessConfigData memory accessConfig = AccessConfig.get(target);
     // target function selector is 4 bytes, _msgSender is 20 bytes, _msgValue is 32 bytes = 56
-    bytes memory callData = Bytes.slice(msg.data, 4, msg.data.length - 56);
+    bytes memory paramsData = Bytes.slice(msg.data, 4, msg.data.length - 56);
 
     if (accessConfig.configured && accessConfig.enforcement) {
       IWorldWithContext(_world()).callStatic(
         accessConfig.accessSystemId,
-        abi.encodeWithSelector(accessConfig.accessFunctionId, entityId, callData)
+        abi.encodeWithSelector(accessConfig.accessFunctionId, entityId, paramsData)
       );
     }
   }

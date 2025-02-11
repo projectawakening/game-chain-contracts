@@ -22,7 +22,8 @@
     "@latticexyz/schema-type": "2.2.11",
     "@latticexyz/store": "2.2.11",
     "@latticexyz/world": "2.2.11",
-    "@latticexyz/world-modules": "2.2.11"
+    "@latticexyz/world-modules": "2.2.11",
+    "@eveworld/world-v2": "link:../world-v2"
   },
   "devDependencies": {
     "@types/debug": "4.1.7",

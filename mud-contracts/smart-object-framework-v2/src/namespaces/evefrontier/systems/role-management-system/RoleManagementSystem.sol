@@ -130,11 +130,22 @@ contract RoleManagementSystem is IRoleManagementSystem, SmartObjectFramework {
    * @notice These function calls are access controlled to only be callable by a class scoped system { see EntitySystem, TagSystem, SOFAccessSystem } rather than requiring any direct call. This is useful when you want to interact from other MUD system logic in a safe manner.
    */
 
+  /**
+   * @notice Create a new `role` with specified `admin` role
+   * @dev Creates a new entry in the {Role} table assigning an admin value, and exsitence
+   *   flag under the `role` key. NOTE: If `role` and `admin` are identical, then creates self-administered role
+   * @param entityId The entity ID to use for scoping this function call access
+   * @param role The identifier for the new role
+   * @param admin The identifier for the admin role
+   * @param roleMember The address of the role member to grant membership to
+   * @dev access configuration - only callable by EntitySystem or a Class scoped System of `entityId` (see EntitySyste.registerClass, EntitySystem.scopedRegisterClass, SOFAccessSystem.allowEntitySystemOrClassScoped)
+   */
   function scopedCreateRole(
     uint256 entityId,
     bytes32 role,
-    bytes32 admin
-  ) external context scope(entityId) access(entityId) {
+    bytes32 admin,
+    address roleMember
+  ) external context access(entityId) {
     if (role == bytes32(0) || admin == bytes32(0)) {
       revert RoleManagement_InvalidRole();
     }
@@ -144,46 +155,69 @@ contract RoleManagementSystem is IRoleManagementSystem, SmartObjectFramework {
     }
 
     if (role == admin) {
+      if (roleMember == address(0)) {
+        revert RoleManagement_InvalidRoleMember();
+      }
       _createRole(role, admin);
-      _grantRole(role, _callMsgSender(1));
+      _grantRole(role, roleMember);
     } else {
       _checkRole(admin, _callMsgSender(1));
       _createRole(role, admin);
     }
   }
 
-  function scopedTransferRoleAdmin(
-    uint256 entityId,
-    bytes32 role,
-    bytes32 newAdmin
-  ) external context scope(entityId) access(entityId) onlyRole(Role.getAdmin(role), _callMsgSender(1)) {
+  /**
+   * @notice Updates the admin role for an existing `role` (with access scoped to an entity)
+   * @dev Updates the admin value in the {Role} table with `newAdmin` for the key `role`.
+   * @param entityId The entity ID to use for scoping this function call access
+   * @param role The identifier for the role to modify
+   * @param newAdmin The identifier for
+   * @dev access configuration - only callable by a Class scoped System of `entityId` (see SOFAccessSystem.allowClassScopedSystem)
+   */
+  function scopedTransferRoleAdmin(uint256 entityId, bytes32 role, bytes32 newAdmin) external context access(entityId) {
     _setRoleAdmin(role, newAdmin);
   }
 
-  function scopedGrantRole(
-    uint256 entityId,
-    bytes32 role,
-    address account
-  ) external context scope(entityId) access(entityId) onlyRole(Role.getAdmin(role), _callMsgSender(1)) {
+  /**
+   * @notice Grants role membership to an account (with access scoped to an entity)
+   * @dev Updates the {HasRole} table with `hasRole` = true, for the keys `role`,`account`
+   * @param entityId The entity ID to use for scoping this function call access
+   * @param role The role to grant membership for
+   * @param account The account to grant as a member.
+   * @dev access configuration - only callable by a Class scoped System of `entityId` (see SOFAccessSystem.allowClassScopedSystem)
+   */
+  function scopedGrantRole(uint256 entityId, bytes32 role, address account) external context access(entityId) {
     _grantRole(role, account);
   }
 
-  function scopedRevokeRole(
-    uint256 entityId,
-    bytes32 role,
-    address account
-  ) external context scope(entityId) access(entityId) onlyRole(Role.getAdmin(role), _callMsgSender(1)) {
+  /**
+   * @notice Revokes role membership from an account (with access scoped to an entity)
+   * @dev Updates the {HasRole} table with `hasRole` = false, for the keys `role`,`account`
+   * @param entityId The entity ID to use for scoping this function call access
+   * @param role The role to revoke membership for
+   * @param account The account to revoke membership for
+   * @dev access configuration - only callable by a Class scoped System of `entityId` (see SOFAccessSystem.allowClassScopedSystem)
+   */
+  function scopedRevokeRole(uint256 entityId, bytes32 role, address account) external context access(entityId) {
     if (account == _callMsgSender(1)) {
       revert RoleManagement_MustRenounceSelf();
     }
     _revokeRole(role, account);
   }
 
+  /**
+   * @notice Renounces role membership of an account (with access scoped to an entity)
+   * @dev Updates the {HasRole} table with `hasRole` = false, for the keys `role`,`account`
+   * @param entityId The entity ID to use for scoping this function call access
+   * @param role The role to renounce membership for
+   * @param callerConfirmation The address of the caller to confirm the renounciation
+   * @dev access configuration - only callable by a Class scoped System of `entityId` (see SOFAccessSystem.allowClassScopedSystem)
+   */
   function scopedRenounceRole(
     uint256 entityId,
     bytes32 role,
     address callerConfirmation
-  ) external context scope(entityId) access(entityId) {
+  ) external context access(entityId) {
     if (callerConfirmation != _callMsgSender(1)) {
       revert RoleManagement_BadConfirmation();
     }
@@ -191,10 +225,14 @@ contract RoleManagementSystem is IRoleManagementSystem, SmartObjectFramework {
     _revokeRole(role, callerConfirmation);
   }
 
-  function scopedRevokeAll(
-    uint256 entityId,
-    bytes32 role
-  ) external context scope(entityId) access(entityId) onlyRole(Role.getAdmin(role), _callMsgSender(1)) {
+  /**
+   * @notice Revokes all role membership from an account (with access scoped to an entity)
+   * @dev Updates the {HasRole} table with `hasRole` = false, for the keys `role`,`account`
+   * @param entityId The entity ID to use for scoping this function call access
+   * @param role The role to revoke membership for
+   * @dev access configuration - only callable by EntitySystem or a Class scoped System of `entityId` (see EntitySyste.deleteClass, EntitySystem.deleteObject, SOFAccessSystem.allowEntitySystemOrClassScoped)
+   */
+  function scopedRevokeAll(uint256 entityId, bytes32 role) external context access(entityId) {
     address[] memory members = Role.getMembers(role);
     for (uint256 i = 0; i < members.length; i++) {
       _revokeRole(role, members[i]);

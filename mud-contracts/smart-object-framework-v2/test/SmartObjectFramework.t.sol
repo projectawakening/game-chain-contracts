@@ -58,7 +58,6 @@ contract SmartObjectFrameworkTest is MudTest {
     );
 
   uint256 classId = uint256(bytes32("TEST_CLASS"));
-  bytes32 classAccessRole = bytes32("TEST_CLASS_ACCESS_ROLE");
   uint256 unTaggedClassId = uint256(bytes32("TEST_FAIL_CLASS"));
   uint256 objectId = uint256(bytes32("TEST_OBJECT"));
   uint256 unTaggedObjectId = uint256(bytes32("TEST_FAIL_OBJECT"));
@@ -72,6 +71,8 @@ contract SmartObjectFrameworkTest is MudTest {
   string constant mnemonic = "test test test test test test test test test test test junk";
   uint256 deployerPK = vm.deriveKey(mnemonic, 0);
   address deployer = vm.addr(deployerPK);
+  uint256 alicePK = vm.deriveKey(mnemonic, 1);
+  address alice = vm.addr(alicePK);
 
   function setUp() public override {
     // DEPLOY AND REGISTER A MUD WORLD
@@ -96,29 +97,17 @@ contract SmartObjectFrameworkTest is MudTest {
     ResourceId[] memory scopedSystemIds = new ResourceId[](1);
     scopedSystemIds[0] = TAGGED_SYSTEM_ID;
 
-    // create the Class Access Role with the deployer as the only member
-    world.call(
-      ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
-    );
-
     // register Class (with a taggedSystem tag)
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(EntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (classId, scopedSystemIds)));
 
     // register Class without system tags
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(EntitySystem.registerClass, (unTaggedClassId, classAccessRole, new ResourceId[](0)))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (unTaggedClassId, new ResourceId[](0))));
 
     // instantiate system resource tagged Class->Object
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (classId, objectId)));
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (classId, objectId, alice)));
 
     // instantiate Class->Object without system tags
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (unTaggedClassId, unTaggedObjectId)));
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (unTaggedClassId, unTaggedObjectId, alice)));
 
     vm.stopPrank();
   }

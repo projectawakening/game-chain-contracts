@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.24;
-
+import { console } from "forge-std/console.sol";
 import { ResourceId, WorldResourceIdInstance } from "@latticexyz/world/src/WorldResourceId.sol";
 import { NamespaceOwner } from "@latticexyz/world/src/codegen/tables/NamespaceOwner.sol";
 import { SystemRegistry } from "@latticexyz/world/src/codegen/tables/SystemRegistry.sol";
@@ -20,6 +20,11 @@ import { IWorldWithContext } from "../../../../IWorldWithContext.sol";
 
 import { IEntitySystem } from "../../../evefrontier/interfaces/IEntitySystem.sol";
 import { Utils as EntitySystemUtils } from "../../../evefrontier/systems/entity-system/Utils.sol";
+import { InventoryUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
+import { SmartStorageUnitUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-storage-unit/SmartStorageUnitUtils.sol";
+import { SmartCharacterUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
+import { SmartGateUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-gate/SmartGateUtils.sol";
+import { SmartTurretUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-turret/SmartTurretUtils.sol";
 
 import { SmartObjectFramework } from "../../../../inherit/SmartObjectFramework.sol";
 
@@ -32,26 +37,18 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
   using WorldResourceIdInstance for ResourceId;
 
   /**
-   * @notice Validates if caller has the required role to access an entity
+   * @notice Validates if caller has the required role to access an entity (and is directly calling)
    * @param entityId The ID of the entity to check access for
    * @param targetCallData The calldata of the target function
    * @dev Reverts if caller doesn't have the required role
    */
-  function allowAccessRole(uint256 entityId, bytes memory targetCallData) public view {
-    if (!HasRole.getIsMember(Entity.getAccessRole(entityId), _callMsgSender(1))) {
-      revert SOFAccess_RoleAccessDenied(Entity.getAccessRole(entityId), _callMsgSender(1));
-    }
-  }
-
-  /**
-   * @notice Validates access for class-scoped system-to-system calls only (no direct calls)
-   * @param entityId The ID of the entity (class or object) to check
-   * @param targetCallData The calldata of the target function
-   */
-  function allowClassScopedSystem(uint256 entityId, bytes memory targetCallData) public view {
-    uint256 classId = _getClassId(entityId);
+  function allowDirectAccessRole(uint256 entityId, bytes memory targetCallData) public view {
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
-    _allowClassScopedSystem(classId, callCount);
+    if (callCount == 1 && _checkAccessRole(entityId, _callMsgSender(1))) {
+      return;
+    }
+
+    revert SOFAccess_AccessDenied(entityId, _callMsgSender(1));
   }
 
   /**
@@ -65,42 +62,33 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
     (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
 
-    if (callCount > 1) {
-      // system-to-system call case
-      revert SOFAccess_SystemAccessDenied(classId, msgSender);
-    } else if (callCount == 1) {
-      // direct call to the target system (the system this access logic is configured for)
-      allowAccessRole(classId, targetCallData);
-    } else {
-      // direct call to this access logic
-      revert SOFAccess_DirectCall();
+    if (callCount == 1 && _checkAccessRole(classId, _callMsgSender(1))) {
+      return;
     }
+
+    revert SOFAccess_AccessDenied(entityId, msgSender);
   }
 
   /**
-   * @notice Validates if caller has the required access role for an entity (class access role for a calls and object access role ofr an object) AND if the call is direct to the target function
-   * @param entityId The ID of the entity to check access for
+   * @notice Validates access for only class-scoped system-to-system calls only (no direct calls)
+   * @param entityId The ID of the entity (class or object) to check
    * @param targetCallData The calldata of the target function
-   * @dev Reverts if caller doesn't have the required access role (class or object access respectively), if this is a system-to-system call, or if somone called this access logic directly
    */
-  function allowDirectAccessRole(uint256 entityId, bytes memory targetCallData) public view {
+  function allowClassScopedSystem(uint256 entityId, bytes memory targetCallData) public view {
+    uint256 classId = _getClassId(entityId);
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
-    (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
+    (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    ResourceId callingSystemId = SystemRegistry.get(msgSender);
 
-    if (callCount > 1) {
-      // system-to-system call case
-      revert SOFAccess_SystemAccessDenied(entityId, msgSender);
-    } else if (callCount == 1) {
-      // direct call to the target system (the system this access logic is configured for)
-      allowAccessRole(entityId, targetCallData);
-    } else {
-      // direct call to this access logic
-      revert SOFAccess_DirectCall();
+    if (callCount > 1 && _checkClassScopedSystem(classId, callingSystemId)) {
+      return;
     }
+
+    revert SOFAccess_AccessDenied(entityId, msgSender);
   }
 
   /**
-   * @notice Validates access for class-scoped systems or direct class access role membership (class if a classId is passed, the object's class if an objectId is passed)
+   * @notice Validates access for class-scoped systems or direct class access role membership (for a class if a classId is passed, or the object's class if an objectId is passed)
    * @param entityId The ID of the entity (class or object) to check
    * @param targetCallData The calldata of the target function
    * @dev Handles both direct calls (call depth 1) and class system-scoped calls (call depth > 1)
@@ -108,21 +96,22 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
   function allowClassScopedSystemOrDirectClassAccessRole(uint256 entityId, bytes memory targetCallData) public view {
     uint256 classId = _getClassId(entityId);
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
+    (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    ResourceId callingSystemId = SystemRegistry.get(msgSender);
 
-    if (callCount > 1) {
+    if (callCount > 1 && _checkClassScopedSystem(classId, callingSystemId)) {
       // system-to-system call case
-      _allowClassScopedSystem(classId, callCount);
-    } else if (callCount == 1) {
-      // direct call to the target system (the system this access logic is configured for)
-      allowAccessRole(classId, targetCallData);
-    } else {
-      // direct call to this access logic
-      revert SOFAccess_DirectCall();
+      return;
+    } else if (callCount == 1 && _checkAccessRole(classId, _callMsgSender(1))) {
+      // entry point direct call case
+      return;
     }
+
+    revert SOFAccess_AccessDenied(entityId, msgSender);
   }
 
   /**
-   * @notice Validates access for class-scoped systems or direct access role (class access role if a classId was passed, object access role if an objectId was passed)
+   * @notice Validates access for class-scoped systems or direct access role (for class access role if a classId was passed, or an object access role if an objectId was passed)
    * @param entityId The ID of the object to check access for
    * @param targetCallData The calldata of the target function
    * @dev Handles both direct calls (call depth 1) and class system-scoped calls (call depth > 1)
@@ -130,18 +119,18 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
   function allowClassScopedSystemOrDirectAccessRole(uint256 entityId, bytes memory targetCallData) public view {
     uint256 classId = _getClassId(entityId);
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
+    (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    ResourceId callingSystemId = SystemRegistry.get(msgSender);
 
-    // a direct entrypoint call to EntitySystem.sol will put this access call at callCount = 1
-    if (callCount > 1) {
+    if (callCount > 1 && _checkClassScopedSystem(classId, callingSystemId)) {
       // system-to-system call case
-      _allowClassScopedSystem(classId, callCount);
-    } else if (callCount == 1) {
-      // direct call to the target system (the system this access logic is configured for)
-      allowAccessRole(entityId, targetCallData);
-    } else {
-      // direct call to this access logic
-      revert SOFAccess_DirectCall();
+      return;
+    } else if (callCount == 1 && _checkAccessRole(entityId, _callMsgSender(callCount))) {
+      // entry point direct call case
+      return;
     }
+
+    revert SOFAccess_AccessDenied(entityId, msgSender);
   }
 
   /**
@@ -153,21 +142,64 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
    */
   function allowEntitySystemOrDirectAccessRole(uint256 entityId, bytes memory targetCallData) public view {
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
-    // a direct entrypoint call to TagSystem.sol will put this access call at callCount = 1
-    if (callCount > 1) {
-      // if not a direct entrypoint call to TagSystem, (instead a subsequent internal call), then we only allow EntitySystem.sol as the target System of this function
-      (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
-      ResourceId callingSystemId = SystemRegistry.get(msgSender);
-      if (callingSystemId.unwrap() != EntitySystemUtils.entitySystemId().unwrap()) {
-        // for TagSystem if an internal call is not from EntitySytem or a Class scoped system then we reject the call
-        revert SOFAccess_SystemAccessDenied(entityId, msgSender);
-      }
-    } else if (callCount == 1) {
-      allowAccessRole(entityId, targetCallData);
-    } else {
-      // callCount = 0, means this access function was called directly. It should only be called via an access() modifier, so we revert
-      revert SOFAccess_DirectCall();
+    (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    ResourceId callingSystemId = SystemRegistry.get(msgSender);
+
+    if (callCount > 1 && (callingSystemId.unwrap() == EntitySystemUtils.entitySystemId().unwrap())) {
+      return;
+    } else if (callCount == 1 && _checkAccessRole(entityId, _callMsgSender(1))) {
+      return;
     }
+
+    revert SOFAccess_AccessDenied(entityId, msgSender);
+  }
+
+  function allowEntitySystemOrClassScopedSystem(uint256 entityId, bytes memory targetCallData) public view {
+    uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
+    (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    ResourceId callingSystemId = SystemRegistry.get(msgSender);
+
+    if (callCount > 1 && callingSystemId.unwrap() != EntitySystemUtils.entitySystemId().unwrap()) {
+      uint256 classId = _getClassId(entityId);
+      if (_checkClassScopedSystem(classId, callingSystemId)) {
+        return;
+      }
+    } else if (callCount > 1 && callingSystemId.unwrap() == EntitySystemUtils.entitySystemId().unwrap()) {
+      // EntitySystem.registerClass, EntitySyste.scopedRegisterClass, EntitySystem.initialize, EntitySystem.deleteClass, EntitySystem.deleteObject
+      return;
+    }
+
+    revert SOFAccess_AccessDenied(entityId, msgSender);
+  }
+
+  // deleteClass - revoke all members and delete role for class
+  // - direct call only,
+  // - should check _callMsgSender(1) is member of class access role for scopedRevokeAll
+
+  // deleteObject  - revoke all members and delete role for object
+  // - class scoped system or direct call (class admin),
+  // - should check _callMsgSender(1) is member of object access role for scopedRevokeAll in the case of class scoped system call,
+  // - should check if _callMsgSender(1) is member of object's class access role for scopedRevokeAll if direct call
+
+  function allowDefinedSystems(uint256 entityId, bytes memory targetCallData) public view {
+    uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
+    (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    if (callCount > 1) {
+      // system-to-system call case
+      ResourceId callingSystemId = SystemRegistry.get(msgSender);
+      if (
+        callingSystemId.unwrap() == InventoryUtils.ephemeralInventorySystemId().unwrap() ||
+        callingSystemId.unwrap() == InventoryUtils.inventorySystemId().unwrap() ||
+        callingSystemId.unwrap() == SmartStorageUnitUtils.smartStorageUnitSystemId().unwrap() ||
+        callingSystemId.unwrap() == SmartCharacterUtils.smartCharacterSystemId().unwrap() ||
+        callingSystemId.unwrap() == SmartTurretUtils.smartTurretSystemId().unwrap() ||
+        callingSystemId.unwrap() == SmartGateUtils.smartGateSystemId().unwrap()
+      ) {
+        return;
+      }
+    }
+
+    revert SOFAccess_AccessDenied(entityId, msgSender);
   }
 
   function _getClassId(uint256 entityId) private view returns (uint256) {
@@ -184,22 +216,19 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
     return classId;
   }
 
-  function _allowClassScopedSystem(uint256 classId, uint256 callCount) private view {
-    if (callCount > 1) {
-      // system-to-system call allowable if the previous call was from a Class scoped System
-      (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
-      ResourceId callingSystemId = SystemRegistry.get(msgSender);
-      if (
-        !EntityTagMap.getHasTag(
-          classId,
-          TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(callingSystemId)))
-        )
-      ) {
-        revert SOFAccess_SystemAccessDenied(classId, msgSender);
-      }
-    } else {
-      // we entertain no direct calls to this access logic (callCount = 0) nor to the targeted access controlled system (callCount = 1). i.e. it must be a system-to-system call
-      revert SOFAccess_DirectCall();
-    }
+  function _checkClassScopedSystem(uint256 classId, ResourceId callingSystemId) private view returns (bool) {
+    return
+      EntityTagMap.getHasTag(
+        classId,
+        TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(callingSystemId)))
+      );
+  }
+
+  function _checkAccessRole(uint256 entityId, address caller) private view returns (bool) {
+    // console.log(entityId);
+    // console.log(caller);
+    // console.logBytes32(Entity.getAccessRole(entityId));
+    // console.logBytes32(keccak256(abi.encodePacked("ACESS_ROLE", entityId)));
+    return HasRole.getIsMember(Entity.getAccessRole(entityId), caller);
   }
 }

@@ -45,8 +45,11 @@ contract UnscopedMock is SmartObjectFramework {
     );
   }
 
-  function callInstantiate(uint256 classId, uint256 objectId) public {
-    IWorldKernel(_world()).call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+  function callInstantiate(uint256 classId, uint256 objectId, address account) public {
+    IWorldKernel(_world()).call(
+      ENTITY_SYSTEM_ID,
+      abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, account))
+    );
   }
 
   function callDeleteObject(uint256 objectId) public {
@@ -54,10 +57,10 @@ contract UnscopedMock is SmartObjectFramework {
   }
 
   // RoleManagementSystem.sol
-  function callScopedCreateRole(uint256 objectId, bytes32 role, bytes32 admin) public {
+  function callScopedCreateRole(uint256 objectId, bytes32 role, bytes32 admin, address account) public {
     IWorldKernel(_world()).call(
       ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.scopedCreateRole, (objectId, role, admin))
+      abi.encodeCall(IRoleManagementSystem.scopedCreateRole, (objectId, role, admin, account))
     );
   }
 

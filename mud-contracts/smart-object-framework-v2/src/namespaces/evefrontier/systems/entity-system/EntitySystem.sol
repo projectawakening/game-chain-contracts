@@ -2,6 +2,7 @@
 pragma solidity >=0.8.24;
 
 import { IWorldKernel } from "@latticexyz/world/src/IWorldKernel.sol";
+import { IWorldWithContext } from "../../../../IWorldWithContext.sol";
 import { ResourceId, WorldResourceIdLib } from "@latticexyz/world/src/WorldResourceId.sol";
 import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 import { ResourceIdInstance } from "@latticexyz/store/src/ResourceId.sol";
@@ -17,8 +18,10 @@ import { TAG_TYPE_PROPERTY, TAG_TYPE_ENTITY_RELATION, TAG_TYPE_RESOURCE_RELATION
 
 import { ITagSystem } from "../../interfaces/ITagSystem.sol";
 import { IEntitySystem } from "../../interfaces/IEntitySystem.sol";
+import { IRoleManagementSystem } from "../../interfaces/IRoleManagementSystem.sol";
 
 import { Utils as TagSystemUtils } from "../tag-system/Utils.sol";
+import { Utils as RoleManagementSystemUtils } from "../role-management-system/Utils.sol";
 
 import { SmartObjectFramework } from "../../../../inherit/SmartObjectFramework.sol";
 
@@ -36,55 +39,32 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
   TagId ENTITY_COUNT_PROPERTY_TAG = TagIdLib.encode(TAG_TYPE_PROPERTY, TAG_IDENTIFIER_ENTITY_COUNT);
 
   /**
-   * @notice Registers a new Class Entity into the SOF framework
+   * @notice Registers a new Class Entity into the SOF framework from  direct call
    * @param classId A unique uint256 entity ID which will be tagged with the class property tag
-   * @param accessRole A bytes32 access control role Id to be assigned to the class {see, RoleManagementSystem.sol}
+   * @param scopedSystemIds An array of ResourceIds (of World registered Systems) to associate with this class via COMPOSITION Resource Relation Tags
+   * @dev Validates entity ID (non-zero and non-existence) before registration
+   * @dev Assigns caller as a member of the new access role for this class {see, RoleManagementSystem.sol}
+   * @dev access configuration - no configuration, restricted to direct calls
+   */
+  function registerClass(uint256 classId, ResourceId[] memory scopedSystemIds) public context enforceCallCount(1) {
+    _registerClass(classId, _callMsgSender(1), scopedSystemIds);
+  }
+
+  /**
+   * @notice Registers a new Class Entity into the SOF framework from a system call
+   * @param classId A unique uint256 entity ID which will be tagged with the class property tag
+   * @param accessRoleMember An address to assign as member of the created access role for this new class {see, RoleManagementSystem.sol}, if this is a direct call we ignore this parameter and assign the caller as the member
    * @param scopedSystemIds An array of ResourceIds (of World registered Systems) to associate with this class via COMPOSITION Resource Relation Tags
    * @dev Validates entity ID (non-zero and non-existence) before registration
    * @dev Requires caller to be a member of the specified `accessRole`
+   * @dev access configuration - only callable by specifically defined system classes(see InventorySystem, EphemeralInventorySystem, SmartStorageUnitSystem, SmartCharacterSystem, SmartTurretSystem, SmartGateSystem, SOFAccessSystem.allowDefinedSystems)
    */
-  function registerClass(
+  function scopedRegisterClass(
     uint256 classId,
-    bytes32 accessRole,
+    address accessRoleMember,
     ResourceId[] memory scopedSystemIds
-  ) public context enforceCallCount(1) {
-    if (classId == uint256(0)) {
-      revert Entity_InvalidEntityId(classId);
-    }
-    if (Entity.getExists(classId)) {
-      revert Entity_EntityAlreadyExists(classId);
-    }
-
-    if (!HasRole.getIsMember(accessRole, _callMsgSender(1))) {
-      revert Entity_RoleAccessDenied(accessRole, _callMsgSender(1));
-    }
-
-    Entity.set(classId, true, accessRole, TagId.wrap(bytes32(0)), new bytes32[](0), new bytes32[](0));
-
-    TagParams[] memory propertyTags = new TagParams[](2);
-    propertyTags[0] = TagParams(CLASS_PROPERTY_TAG, bytes(""));
-    propertyTags[1] = TagParams(ENTITY_COUNT_PROPERTY_TAG, abi.encode(uint256(0)));
-
-    IWorldKernel(_world()).call(
-      TagSystemUtils.tagSystemId(),
-      abi.encodeCall(ITagSystem.setTags, (classId, propertyTags))
-    );
-
-    TagParams[] memory systemResourceTags = new TagParams[](scopedSystemIds.length);
-    for (uint i = 0; i < scopedSystemIds.length; i++) {
-      systemResourceTags[i] = TagParams(
-        TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(scopedSystemIds[i]))),
-        abi.encode(
-          ResourceRelationValue("COMPOSITION", RESOURCE_SYSTEM, ResourceIdInstance.getResourceName(scopedSystemIds[i]))
-        )
-      );
-    }
-    if (systemResourceTags.length > 0) {
-      IWorldKernel(_world()).call(
-        TagSystemUtils.tagSystemId(),
-        abi.encodeCall(ITagSystem.setTags, (classId, systemResourceTags))
-      );
-    }
+  ) public context access(classId) {
+    _registerClass(classId, accessRoleMember, scopedSystemIds);
   }
 
   /**
@@ -93,6 +73,7 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
    * @param newAccessRole A bytes32 access control role Id to be assigned to the class {see, RoleManagementSystem.sol}
    * @dev Validates `classId`, and `accessRole` existence
    * @dev Requires a direct caller to be a member of the current `accessRole`, or a System that is associated to the Class
+   * @dev access configuration - only callable directly by a member of the Class access role or by a Class scoped System (see SOFAccessSystem.allowClassScopedSystemOrDirectAccessRole)
    */
   function setClassAccessRole(uint256 classId, bytes32 newAccessRole) public context access(classId) {
     if (!Entity.getExists(classId)) {
@@ -116,6 +97,7 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
    * @dev Requires a direct call to the `deleteClass` function (cannot be called from another System)
    * @dev Requires caller to be a member of the `accessRole`
    * @dev Warning: Dependent data in relationally tagged entities and resources should be handled before deletion!
+   * @dev access configuration - only callable directly by a member of the Class access role (see SOFAccessSystem.allowDirectAccessRole)
    */
   function deleteClass(uint256 classId) public context enforceCallCount(1) access(classId) {
     if (!Entity.getExists(classId)) {
@@ -157,6 +139,16 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
       );
     }
 
+    // delete the class access role data
+    bytes32 classAccessRole = keccak256(abi.encodePacked("ACCESS_ROLE", classId));
+
+    IWorldKernel(_world()).call(
+      RoleManagementSystemUtils.roleManagementSystemId(),
+      abi.encodeCall(IRoleManagementSystem.scopedRevokeAll, (classId, classAccessRole))
+    );
+
+    Role.deleteRecord(classAccessRole);
+
     Entity.deleteRecord(classId);
   }
 
@@ -175,11 +167,13 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
    * @notice Instantiate an Object from a given parent Class
    * @param classId A uint256 ID of an existing class Entity (An entity tagged with the class property tag)
    * @param objectId A uint256 ID of an non-existing object Entity (An entity tagged with the object property tag)
+   * @param accessRoleMember An address to add to the new object's `accessRole`
    * @dev Validates `classId` existence and class tag, along with `objectId` non-existence
    * @dev Maintains class-object relationships in tag mapping tables
    * @dev Requires a direct caller to be a member of the parent Class `accessRole` or a System that is tagged to the parent Class
+   * @dev access configuration - only callable directly by a member of the object's Class access role or a Class scoped System (see SOFAccessSystem.allowClassScopedSystemOrDirectClassAccessRole)
    */
-  function instantiate(uint256 classId, uint256 objectId) public context access(classId) {
+  function instantiate(uint256 classId, uint256 objectId, address accessRoleMember) public context access(classId) {
     if (!Entity.getExists(classId)) {
       revert Entity_EntityDoesNotExist(classId);
     }
@@ -195,7 +189,14 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
       revert Entity_EntityAlreadyExists(objectId);
     }
 
-    Entity.set(objectId, true, bytes32(0), TagId.wrap(bytes32(0)), new bytes32[](0), new bytes32[](0));
+    bytes32 objectAccessRole = keccak256(abi.encodePacked("ACCESS_ROLE", objectId));
+
+    IWorldKernel(_world()).call(
+      RoleManagementSystemUtils.roleManagementSystemId(),
+      abi.encodeCall(IRoleManagementSystem.scopedCreateRole, (0, objectAccessRole, objectAccessRole, accessRoleMember))
+    );
+
+    Entity.set(objectId, true, objectAccessRole, TagId.wrap(bytes32(0)), new bytes32[](0), new bytes32[](0));
 
     // increment the count for the parent class entity relation value
     uint256 numberOfDependentEntities = abi.decode(
@@ -229,7 +230,7 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
    * @param objectId A uint256 ID of an existing object Entity
    * @param newAccessRole A bytes32 access control role Id to be assigned to the object {see, RoleManagementSystem.sol}
    * @dev Validates `objectId` existence, and `newAccessRole` existence
-   * @dev Initially only settable via a Class associated System, thereafter callable directly by an Object accessRole member (or a System that is associated to the Object's inheritance Class)
+   * @dev access configuration - only callable directly by a member of the Object Access role or by a Class scoped System (see SOFAccessSystem.allowClassScopedSystemOrDirectAccessRole)
    */
   function setObjectAccessRole(uint256 objectId, bytes32 newAccessRole) public context access(objectId) {
     if (!Entity.getExists(objectId)) {
@@ -250,6 +251,7 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
    * @dev Handles cleanup of object property, entity, and associated resource tags
    * @dev Requires a direct caller to be a member of the Object's parent Class `accessRole` or a System that is associated with the Object's parent Class
    * @dev Warning: Dependent data in associated entities and resources should be handled before deletion!
+   * @dev access configuration - only callable directly by a member of the object's Class access role or by Class scoped System (see SOFAccessSystem.allowClassScopedSystemOrDirectClassAccessRole)
    */
   function deleteObject(uint256 objectId) public context access(objectId) {
     if (!Entity.getExists(objectId)) {
@@ -301,6 +303,20 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
       );
     }
 
+    // delete the object access role data
+    bytes32 objectAccessRole = keccak256(abi.encodePacked("ACCESS_ROLE", objectId));
+
+    // scoped to `classid` because this function is only callable directly by a member of the object's class access role
+    IWorldKernel(_world()).call(
+      RoleManagementSystemUtils.roleManagementSystemId(),
+      abi.encodeCall(
+        IRoleManagementSystem.scopedRevokeAll,
+        (objectEntityRelationValue.relatedEntityId, objectAccessRole)
+      )
+    );
+
+    Role.deleteRecord(objectAccessRole);
+
     Entity.deleteRecord(objectId);
   }
 
@@ -312,6 +328,52 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
   function deleteObjects(uint256[] memory objectIds) public {
     for (uint i = 0; i < objectIds.length; i++) {
       deleteObject(objectIds[i]);
+    }
+  }
+
+  function _registerClass(uint256 classId, address accessRoleMember, ResourceId[] memory scopedSystemIds) private {
+    if (classId == uint256(0)) {
+      revert Entity_InvalidEntityId(classId);
+    }
+    if (Entity.getExists(classId)) {
+      revert Entity_EntityAlreadyExists(classId);
+    }
+
+    bytes32 classAccessRole = keccak256(abi.encodePacked("ACCESS_ROLE", classId));
+
+    IWorldKernel(_world()).call(
+      RoleManagementSystemUtils.roleManagementSystemId(),
+      abi.encodeCall(
+        IRoleManagementSystem.scopedCreateRole,
+        (classId, classAccessRole, classAccessRole, accessRoleMember)
+      )
+    );
+
+    Entity.set(classId, true, classAccessRole, TagId.wrap(bytes32(0)), new bytes32[](0), new bytes32[](0));
+
+    TagParams[] memory propertyTags = new TagParams[](2);
+    propertyTags[0] = TagParams(CLASS_PROPERTY_TAG, bytes(""));
+    propertyTags[1] = TagParams(ENTITY_COUNT_PROPERTY_TAG, abi.encode(uint256(0)));
+
+    IWorldKernel(_world()).call(
+      TagSystemUtils.tagSystemId(),
+      abi.encodeCall(ITagSystem.setTags, (classId, propertyTags))
+    );
+
+    TagParams[] memory systemResourceTags = new TagParams[](scopedSystemIds.length);
+    for (uint i = 0; i < scopedSystemIds.length; i++) {
+      systemResourceTags[i] = TagParams(
+        TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(scopedSystemIds[i]))),
+        abi.encode(
+          ResourceRelationValue("COMPOSITION", RESOURCE_SYSTEM, ResourceIdInstance.getResourceName(scopedSystemIds[i]))
+        )
+      );
+    }
+    if (systemResourceTags.length > 0) {
+      IWorldKernel(_world()).call(
+        TagSystemUtils.tagSystemId(),
+        abi.encodeCall(ITagSystem.setTags, (classId, systemResourceTags))
+      );
     }
   }
 }

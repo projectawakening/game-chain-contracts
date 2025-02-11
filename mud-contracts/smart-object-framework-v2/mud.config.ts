@@ -98,6 +98,16 @@ export default defineWorld({
           },
           key: ["entityId", "tagId"],
         },
+        /*******************
+         * SYSTEM INITIALIZATION *
+         *******************/
+        Initialized: {
+          schema: {
+            systemId: "ResourceId",
+            initialized: "bool",
+          },
+          key: ["systemId"],
+        },
       },
     },
   },

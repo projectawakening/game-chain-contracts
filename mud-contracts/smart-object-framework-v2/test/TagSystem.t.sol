@@ -59,7 +59,6 @@ contract TagSystemTest is MudTest {
 
   uint256 invalidEntityId = uint256(bytes32("INVALID_ENTITY"));
   uint256 classId = uint256(bytes32("TEST_CLASS"));
-  bytes32 classAccessRole = bytes32("TEST_CLASS_ACCESS_ROLE");
   uint256 classId2 = uint256(bytes32("TEST_CLASS_2"));
   uint256 objectId = uint256(bytes32("TEST_OBJECT"));
   uint256 objectId2 = uint256(bytes32("TEST_OBJECT_2"));
@@ -85,6 +84,8 @@ contract TagSystemTest is MudTest {
   string constant mnemonic = "test test test test test test test test test test test junk";
   uint256 deployerPK = vm.deriveKey(mnemonic, 0);
   address deployer = vm.addr(deployerPK);
+  uint256 alicePK = vm.deriveKey(mnemonic, 1);
+  address alice = vm.addr(alicePK);
 
   function setUp() public override {
     // DEPLOY AND REGISTER A MUD WORLD
@@ -106,23 +107,11 @@ contract TagSystemTest is MudTest {
     unTaggedSystemMock = new SystemMock();
     world.registerSystem(UNTAGGED_SYSTEM_ID, System(unTaggedSystemMock), true);
 
-    // create the Class Access Role with the deployer as the only member
-    world.call(
-      ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
-    );
-
     // register Class without any additional tags
-    world.call(
-      ENTITIES_SYSTEM_ID,
-      abi.encodeCall(EntitySystem.registerClass, (classId, classAccessRole, new ResourceId[](0)))
-    );
+    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (classId, new ResourceId[](0))));
 
     // register Class2 without any additional tags
-    world.call(
-      ENTITIES_SYSTEM_ID,
-      abi.encodeCall(EntitySystem.registerClass, (classId2, classAccessRole, new ResourceId[](0)))
-    );
+    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (classId2, new ResourceId[](0))));
     vm.stopPrank();
   }
 
@@ -245,7 +234,7 @@ contract TagSystemTest is MudTest {
     // successfull calls
 
     // instantiating object adds classId to the Entity.entityRealtionTag of the object
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (classId, objectId)));
+    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (classId, objectId, alice)));
 
     // add an entityRelationTag for the class (class2 as its super class)
     world.call(

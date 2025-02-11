@@ -58,9 +58,9 @@ contract SOFAccessSystemTest is MudTest {
     TagIdLib.encode(TAG_TYPE_RESOURCE_RELATION, bytes30(ResourceId.unwrap(UNSCOPED_SYSTEM_ID)));
 
   uint256 classId = uint256(bytes32("TEST_CLASS"));
-  bytes32 classAccessRole = bytes32("TEST_CLASS_ACCESS_ROLE");
+  bytes32 classAccessRole = keccak256(abi.encodePacked("ACCESS_ROLE", classId));
   uint256 objectId = uint256(bytes32("TEST_OBJECT"));
-  bytes32 objectAccessRole = bytes32("TEST_OBJECT_ACCESS_ROLE");
+  bytes32 objectAccessRole = keccak256(abi.encodePacked("ACCESS_ROLE", objectId));
 
   bytes32 adminRole = bytes32("ADMIN_ROLE");
   bytes32 testRole = bytes32("TEST_ROLE");
@@ -86,11 +86,6 @@ contract SOFAccessSystemTest is MudTest {
     world.registerSystem(UNSCOPED_SYSTEM_ID, System(unscopedSystem), true);
 
     // CONFIGURE ROLES, ACCESS, AND ENFORCEMENT FOR THE ENTITY AND TAG SYSTEMS
-    // create the Class Access Role with the deployer as the only member
-    world.call(
-      ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
-    );
 
     // TagSystem.sol access config and enforcement
     world.call(
@@ -133,9 +128,21 @@ contract SOFAccessSystemTest is MudTest {
         IAccessConfigSystem.configureAccess,
         (
           ENTITY_SYSTEM_ID,
+          IEntitySystem.scopedRegisterClass.selector,
+          SOF_ACCESS_SYSTEM_ID,
+          ISOFAccessSystem.allowDefinedSystems.selector
+        )
+      )
+    );
+    world.call(
+      ACCESS_CONFIG_SYSTEM_ID,
+      abi.encodeCall(
+        IAccessConfigSystem.configureAccess,
+        (
+          ENTITY_SYSTEM_ID,
           IEntitySystem.setClassAccessRole.selector,
           SOF_ACCESS_SYSTEM_ID,
-          ISOFAccessSystem.allowClassScopedSystemOrDirectClassAccessRole.selector
+          ISOFAccessSystem.allowClassScopedSystemOrDirectAccessRole.selector
         )
       )
     );
@@ -147,7 +154,7 @@ contract SOFAccessSystemTest is MudTest {
           ENTITY_SYSTEM_ID,
           IEntitySystem.deleteClass.selector,
           SOF_ACCESS_SYSTEM_ID,
-          ISOFAccessSystem.allowAccessRole.selector
+          ISOFAccessSystem.allowDirectAccessRole.selector
         )
       )
     );
@@ -185,6 +192,13 @@ contract SOFAccessSystemTest is MudTest {
           SOF_ACCESS_SYSTEM_ID,
           ISOFAccessSystem.allowClassScopedSystemOrDirectClassAccessRole.selector
         )
+      )
+    );
+    world.call(
+      ACCESS_CONFIG_SYSTEM_ID,
+      abi.encodeCall(
+        IAccessConfigSystem.setAccessEnforcement,
+        (ENTITY_SYSTEM_ID, IEntitySystem.scopedRegisterClass.selector, true)
       )
     );
     world.call(
@@ -232,7 +246,7 @@ contract SOFAccessSystemTest is MudTest {
           ROLE_MANAGEMENT_SYSTEM_ID,
           IRoleManagementSystem.scopedCreateRole.selector,
           SOF_ACCESS_SYSTEM_ID,
-          ISOFAccessSystem.allowClassScopedSystem.selector
+          ISOFAccessSystem.allowEntitySystemOrClassScopedSystem.selector
         )
       )
     );
@@ -292,7 +306,7 @@ contract SOFAccessSystemTest is MudTest {
           ROLE_MANAGEMENT_SYSTEM_ID,
           IRoleManagementSystem.scopedRevokeAll.selector,
           SOF_ACCESS_SYSTEM_ID,
-          ISOFAccessSystem.allowClassScopedSystem.selector
+          ISOFAccessSystem.allowEntitySystemOrClassScopedSystem.selector
         )
       )
     );
@@ -346,10 +360,6 @@ contract SOFAccessSystemTest is MudTest {
     assertEq(ResourceIds.getExists(CLASS_SCOPED_SYSTEM_ID), true);
     assertEq(ResourceIds.getExists(UNSCOPED_SYSTEM_ID), true);
 
-    // check Role is created and has the deployer as a member
-    assertEq(Role.getExists(classAccessRole), true);
-    assertEq(HasRole.getIsMember(classAccessRole, deployer), true);
-
     // check all target systems/functions are configured with the SOF Access System and enforced
     assertEq(AccessConfig.getConfigured(keccak256(abi.encodePacked(TAG_SYSTEM_ID, ITagSystem.setTag.selector))), true);
     assertEq(AccessConfig.getEnforcement(keccak256(abi.encodePacked(TAG_SYSTEM_ID, ITagSystem.setTag.selector))), true);
@@ -363,6 +373,12 @@ contract SOFAccessSystemTest is MudTest {
       true
     );
 
+    assertEq(
+      AccessConfig.getConfigured(
+        keccak256(abi.encodePacked(ENTITY_SYSTEM_ID, IEntitySystem.scopedRegisterClass.selector))
+      ),
+      true
+    );
     assertEq(
       AccessConfig.getConfigured(
         keccak256(abi.encodePacked(ENTITY_SYSTEM_ID, IEntitySystem.setClassAccessRole.selector))
@@ -505,7 +521,7 @@ contract SOFAccessSystemTest is MudTest {
 
     // revert, if calling system is not the EntitySystem
     vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_SystemAccessDenied.selector, classId, address(unscopedSystem))
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, classId, address(unscopedSystem))
     );
     world.call(
       UNSCOPED_SYSTEM_ID,
@@ -521,24 +537,17 @@ contract SOFAccessSystemTest is MudTest {
       )
     );
 
-    // success, via the EntitySystem call (through registerClass->setSystemTags->setSystemTag)
+    // success, via the EntitySystem call (through registerClass->setTags->setTag)
     // register Class (with the class scoped system tag)
     ResourceId[] memory scopedSystemIds = new ResourceId[](1);
     scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
 
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
 
     // revert, even if the System is in scope but is not explicitly an EntitySystem caller
     vm.expectRevert(
-      abi.encodeWithSelector(
-        ISOFAccessSystem.SOFAccess_SystemAccessDenied.selector,
-        classId,
-        address(classScopedSystem)
-      )
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, classId, address(classScopedSystem))
     );
     world.call(
       CLASS_SCOPED_SYSTEM_ID,
@@ -555,9 +564,7 @@ contract SOFAccessSystemTest is MudTest {
     );
 
     // revert, if direct caller is not a class access role member
-    vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_RoleAccessDenied.selector, classAccessRole, address(this))
-    );
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, classId, address(this)));
     world.call(
       TAG_SYSTEM_ID,
       abi.encodeCall(
@@ -595,14 +602,11 @@ contract SOFAccessSystemTest is MudTest {
     ResourceId[] memory scopedSystemIds = new ResourceId[](1);
     scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
 
     // revert, if calling system is not the EntitySystem
     vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_SystemAccessDenied.selector, classId, address(unscopedSystem))
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, classId, address(unscopedSystem))
     );
     world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callRemoveTag, (classId, CLASS_SCOPED_SYSTEM_TAG)));
 
@@ -612,13 +616,10 @@ contract SOFAccessSystemTest is MudTest {
 
     // re-register Class (with classScopedSystem tag)
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
 
     // set object level tag (unscopedSystem)
-    world.call(CLASS_SCOPED_SYSTEM_ID, abi.encodeCall(ClassScopedMock.callInstantiate, (classId, objectId)));
+    world.call(CLASS_SCOPED_SYSTEM_ID, abi.encodeCall(ClassScopedMock.callInstantiate, (classId, objectId, alice)));
     world.call(
       CLASS_SCOPED_SYSTEM_ID,
       abi.encodeCall(ClassScopedMock.callSetObjectAccessRole, (objectId, classAccessRole))
@@ -640,11 +641,7 @@ contract SOFAccessSystemTest is MudTest {
 
     // revert, even if the System is in scope but is not explicitly an EntitySystem caller
     vm.expectRevert(
-      abi.encodeWithSelector(
-        ISOFAccessSystem.SOFAccess_SystemAccessDenied.selector,
-        classId,
-        address(classScopedSystem)
-      )
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, classId, address(classScopedSystem))
     );
     world.call(
       CLASS_SCOPED_SYSTEM_ID,
@@ -652,9 +649,7 @@ contract SOFAccessSystemTest is MudTest {
     );
 
     // revert, if direct caller is not a class access role member (class)
-    vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_RoleAccessDenied.selector, classAccessRole, address(this))
-    );
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, classId, address(this)));
     world.call(TAG_SYSTEM_ID, abi.encodeCall(ITagSystem.removeTag, (classId, CLASS_SCOPED_SYSTEM_TAG)));
 
     // success, direct caller is a class access role member (class)
@@ -662,9 +657,7 @@ contract SOFAccessSystemTest is MudTest {
     world.call(TAG_SYSTEM_ID, abi.encodeCall(ITagSystem.removeTag, (classId, CLASS_SCOPED_SYSTEM_TAG)));
 
     // revert, if direct caller is not a object access role member (object)
-    vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_RoleAccessDenied.selector, classAccessRole, address(this))
-    );
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(this)));
     world.call(TAG_SYSTEM_ID, abi.encodeCall(ITagSystem.removeTag, (objectId, UNSCOPED_SYSTEM_TAG)));
 
     // success, direct caller is a object access role member (object)
@@ -673,6 +666,8 @@ contract SOFAccessSystemTest is MudTest {
   }
 
   // EntitySystem.sol
+  function test_EntitySystem_registerClass() public {}
+
   function test_EntitySystem_setClassAccessRole() public {
     // setClassAccessRole - allowClassScopedSystemOrDirectClassAccessRole (class)
 
@@ -680,17 +675,15 @@ contract SOFAccessSystemTest is MudTest {
     ResourceId[] memory scopedSystemIds = new ResourceId[](1);
     scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
 
     // set object level tag (unscopedSystem)
-    world.call(CLASS_SCOPED_SYSTEM_ID, abi.encodeCall(ClassScopedMock.callInstantiate, (classId, objectId)));
+    world.call(CLASS_SCOPED_SYSTEM_ID, abi.encodeCall(ClassScopedMock.callInstantiate, (classId, objectId, alice)));
     world.call(
       CLASS_SCOPED_SYSTEM_ID,
       abi.encodeCall(ClassScopedMock.callSetObjectAccessRole, (objectId, classAccessRole))
     );
+
     vm.prank(deployer);
     world.call(
       TAG_SYSTEM_ID,
@@ -708,7 +701,7 @@ contract SOFAccessSystemTest is MudTest {
 
     // revert, if calling system is not class scoped
     vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_SystemAccessDenied.selector, classId, address(unscopedSystem))
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, classId, address(unscopedSystem))
     );
     world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callSetClassAccessRole, (classId, classAccessRole)));
 
@@ -719,9 +712,7 @@ contract SOFAccessSystemTest is MudTest {
     );
 
     // revert, if direct caller is not a class access role member
-    vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_RoleAccessDenied.selector, classAccessRole, address(this))
-    );
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, classId, address(this)));
     world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.setClassAccessRole, (classId, classAccessRole)));
 
     // success, direct caller is a class access role member
@@ -736,17 +727,15 @@ contract SOFAccessSystemTest is MudTest {
     ResourceId[] memory scopedSystemIds = new ResourceId[](1);
     scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
 
     // instantitate object
-    world.call(CLASS_SCOPED_SYSTEM_ID, abi.encodeCall(ClassScopedMock.callInstantiate, (classId, objectId)));
+    vm.prank(deployer);
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
 
     // revert, if calling system is not class scoped for this object's class
     vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_SystemAccessDenied.selector, classId, address(unscopedSystem))
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(unscopedSystem))
     );
     world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callSetObjectAccessRole, (objectId, classAccessRole)));
 
@@ -757,9 +746,7 @@ contract SOFAccessSystemTest is MudTest {
     );
 
     // revert, if direct caller is not a object access role member (in this case the object role is the class role added in the last call)
-    vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_RoleAccessDenied.selector, classAccessRole, address(this))
-    );
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(this)));
     world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.setObjectAccessRole, (objectId, classAccessRole)));
 
     // success, direct caller is a object access role member
@@ -774,67 +761,58 @@ contract SOFAccessSystemTest is MudTest {
     ResourceId[] memory scopedSystemIds = new ResourceId[](1);
     scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
 
     // revert, if calling system is not class scoped
     vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_SystemAccessDenied.selector, classId, address(unscopedSystem))
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, classId, address(unscopedSystem))
     );
-    world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callInstantiate, (classId, objectId)));
+    world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callInstantiate, (classId, objectId, alice)));
 
     // success, via the class scoped system call
-    world.call(CLASS_SCOPED_SYSTEM_ID, abi.encodeCall(ClassScopedMock.callInstantiate, (classId, objectId)));
+    world.call(CLASS_SCOPED_SYSTEM_ID, abi.encodeCall(ClassScopedMock.callInstantiate, (classId, objectId, alice)));
 
     // delete object (so we can successfully instantiate again)
     vm.prank(deployer);
     world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteObject, (objectId)));
 
     // revert, if direct caller is not a class access role member
-    vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_RoleAccessDenied.selector, classAccessRole, address(this))
-    );
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, classId, address(this)));
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
 
     // success, direct caller is a class access role member
     vm.prank(deployer);
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
   }
 
   function test_EntitySystem_deleteObject() public {
-    // deleteObject - allowClassScopedSystemOrDirectClassAccessRole (object)
+    // deleteObject - allowClassScopedSystemOrDirectAccessRole (object)
 
     // register Class (with the class scoped system tag)
     ResourceId[] memory scopedSystemIds = new ResourceId[](1);
     scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
     // instantiate object
     vm.prank(deployer);
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
 
     // revert, if calling system is not class scoped
     vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_SystemAccessDenied.selector, classId, address(unscopedSystem))
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(unscopedSystem))
     );
     world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callDeleteObject, (objectId)));
 
-    // success, via the class scoped system call
+    // success, via the class scoped system call (with a member of the object access role as the caller)
+    vm.prank(alice);
     world.call(CLASS_SCOPED_SYSTEM_ID, abi.encodeCall(ClassScopedMock.callDeleteObject, (objectId)));
 
     // re-instantiate object (so we can successfully delete it again)
     vm.prank(deployer);
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
 
     // revert, if direct caller is not a class access role member
-    vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_RoleAccessDenied.selector, classAccessRole, address(this))
-    );
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(this)));
     world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteObject, (objectId)));
 
     // success, direct caller is a class access role member
@@ -843,26 +821,21 @@ contract SOFAccessSystemTest is MudTest {
   }
 
   function test_EntitySystem_deleteClass() public {
-    // deleteClass - allowClassAccessRole
+    // deleteClass - allowDirectAccessRole
 
     // register Class (with the class scoped system tag)
     ResourceId[] memory scopedSystemIds = new ResourceId[](2);
     scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
     scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
 
     // revert, if any system is calling (only direct calls allowed)
     vm.expectRevert(abi.encodeWithSelector(SmartObjectFramework.SOF_CallTooDeep.selector, 2));
     world.call(CLASS_SCOPED_SYSTEM_ID, abi.encodeCall(ClassScopedMock.callDeleteClass, (classId)));
 
     // revert, if direct caller is not a class access role member
-    vm.expectRevert(
-      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_RoleAccessDenied.selector, classAccessRole, address(this))
-    );
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, classId, address(this)));
     world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteClass, (classId)));
 
     // success, direct caller is a class access role member
@@ -871,35 +844,36 @@ contract SOFAccessSystemTest is MudTest {
   }
 
   function test_RoleManagermentSystem_scopedCreateRole() public {
+    // scopedCreateRole - allowEntitySystemOrClassScopedSystem
     ResourceId[] memory scopedSystemIds = new ResourceId[](2);
     scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
     scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
-    // setup class and object to test against
+    // setup class and object to test against, success case for scopedCreateRole via EntitySystem
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
     vm.prank(deployer);
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
 
     // revert, if direct calling
-    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(this)));
     world.call(
       ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.scopedCreateRole, (objectId, adminRole, adminRole))
+      abi.encodeCall(IRoleManagementSystem.scopedCreateRole, (objectId, adminRole, adminRole, deployer))
     );
 
     // revert, if calling system is not class scoped
     vm.expectRevert(
-      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(unscopedSystem))
     );
-    world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedCreateRole, (objectId, adminRole, adminRole)));
+    world.call(
+      UNSCOPED_SYSTEM_ID,
+      abi.encodeCall(UnscopedMock.callScopedCreateRole, (objectId, adminRole, adminRole, deployer))
+    );
 
     // success, via the class scoped system call
     world.call(
       CLASS_SCOPED_SYSTEM_ID,
-      abi.encodeCall(ClassScopedMock.callScopedCreateRole, (objectId, adminRole, adminRole))
+      abi.encodeCall(ClassScopedMock.callScopedCreateRole, (objectId, adminRole, adminRole, deployer))
     );
   }
 
@@ -909,12 +883,9 @@ contract SOFAccessSystemTest is MudTest {
     scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
     // setup class and object to test against
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
     vm.prank(deployer);
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
 
     // create two roles which have themselves as admin
     vm.prank(deployer);
@@ -923,7 +894,7 @@ contract SOFAccessSystemTest is MudTest {
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
 
     // revert, if direct calling
-    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(this)));
     world.call(
       ROLE_MANAGEMENT_SYSTEM_ID,
       abi.encodeCall(IRoleManagementSystem.scopedTransferRoleAdmin, (objectId, testRole, adminRole))
@@ -931,7 +902,7 @@ contract SOFAccessSystemTest is MudTest {
 
     // revert, if calling system is not class scoped
     vm.expectRevert(
-      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(unscopedSystem))
     );
     world.call(
       UNSCOPED_SYSTEM_ID,
@@ -950,20 +921,17 @@ contract SOFAccessSystemTest is MudTest {
     ResourceId[] memory scopedSystemIds = new ResourceId[](2);
     scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
     scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
-    // setup class and object to test against
+    // setup class and object to test against, success case for scopedGrantRole via EntitySystem
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
     vm.prank(deployer);
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
 
     vm.prank(deployer);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
 
     // revert, if direct calling
-    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(this)));
     world.call(
       ROLE_MANAGEMENT_SYSTEM_ID,
       abi.encodeCall(IRoleManagementSystem.scopedGrantRole, (objectId, adminRole, alice))
@@ -971,7 +939,7 @@ contract SOFAccessSystemTest is MudTest {
 
     // revert, if calling system is not class scoped
     vm.expectRevert(
-      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(unscopedSystem))
     );
     world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedGrantRole, (objectId, adminRole, alice)));
 
@@ -989,12 +957,9 @@ contract SOFAccessSystemTest is MudTest {
     scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
     // setup class and object to test against
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
     vm.prank(deployer);
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
 
     vm.prank(deployer);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
@@ -1002,7 +967,7 @@ contract SOFAccessSystemTest is MudTest {
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.grantRole, (adminRole, alice)));
 
     // revert, if direct calling
-    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(this)));
     world.call(
       ROLE_MANAGEMENT_SYSTEM_ID,
       abi.encodeCall(IRoleManagementSystem.scopedRevokeRole, (objectId, adminRole, alice))
@@ -1010,7 +975,7 @@ contract SOFAccessSystemTest is MudTest {
 
     // revert, if calling system is not class scoped
     vm.expectRevert(
-      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(unscopedSystem))
     );
     world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedRevokeRole, (objectId, adminRole, alice)));
 
@@ -1028,18 +993,15 @@ contract SOFAccessSystemTest is MudTest {
     scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
     // setup class and object to test against
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
     vm.prank(deployer);
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
 
     vm.prank(deployer);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
 
     // revert, if direct calling
-    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(this)));
     world.call(
       ROLE_MANAGEMENT_SYSTEM_ID,
       abi.encodeCall(IRoleManagementSystem.scopedRenounceRole, (objectId, adminRole, deployer))
@@ -1047,7 +1009,7 @@ contract SOFAccessSystemTest is MudTest {
 
     // revert, if calling system is not class scoped
     vm.expectRevert(
-      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(unscopedSystem))
     );
     world.call(
       UNSCOPED_SYSTEM_ID,
@@ -1063,17 +1025,15 @@ contract SOFAccessSystemTest is MudTest {
   }
 
   function test_RoleManagermentSystem_scopedRevokeAll() public {
+    // allowEntitySystemOrClassScopedSystem
     ResourceId[] memory scopedSystemIds = new ResourceId[](2);
     scopedSystemIds[0] = CLASS_SCOPED_SYSTEM_ID;
     scopedSystemIds[1] = ROLE_MANAGEMENT_SYSTEM_ID;
     // setup class and object to test against
     vm.prank(deployer);
-    world.call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.registerClass, (classId, classAccessRole, scopedSystemIds))
-    );
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
     vm.prank(deployer);
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
 
     vm.prank(deployer);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
@@ -1081,17 +1041,19 @@ contract SOFAccessSystemTest is MudTest {
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.grantRole, (adminRole, alice)));
 
     // revert, if direct calling
-    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_DirectCall.selector));
+    vm.expectRevert(abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(this)));
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.scopedRevokeAll, (objectId, adminRole)));
 
     // revert, if calling system is not class scoped
     vm.expectRevert(
-      abi.encodeWithSelector(SmartObjectFramework.SOF_UnscopedSystemCall.selector, objectId, UNSCOPED_SYSTEM_ID)
+      abi.encodeWithSelector(ISOFAccessSystem.SOFAccess_AccessDenied.selector, objectId, address(unscopedSystem))
     );
     world.call(UNSCOPED_SYSTEM_ID, abi.encodeCall(UnscopedMock.callScopedRevokeAll, (objectId, adminRole)));
 
     // success, via the class scoped system call
     vm.prank(deployer);
     world.call(CLASS_SCOPED_SYSTEM_ID, abi.encodeCall(ClassScopedMock.callScopedRevokeAll, (objectId, adminRole)));
+
+    // EntitySystemm calling case success proven in EntitySystem.deleteClass and EntitySystem.deleteObject tests above
   }
 }
