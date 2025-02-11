@@ -28,12 +28,17 @@ import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../src
 import { DeployableSystemLib, deployableSystem } from "../../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
 import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
 import { EveTest } from "../EveTest.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { SmartObjectData } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
+import { FuelSystemLib, fuelSystem } from "../../src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
 
 contract EphemeralInventoryTest is EveTest {
   EntityRecordData charEntityRecordData;
   EntityRecordData ephCharEntityRecordData;
   EntityMetadata characterMetadata;
   string tokenCID;
+
+  uint256 smartObjectId = 1234;
 
   uint256 ownerPK = vm.deriveKey(mnemonic, 2);
   uint256 diffOwnerPK = vm.deriveKey(mnemonic, 3);
@@ -46,9 +51,9 @@ contract EphemeralInventoryTest is EveTest {
   uint256 tribeId = 1122;
 
   function setUp() public virtual override {
-    vm.startPrank(deployer);
     super.setUp();
 
+    vm.startPrank(deployer);
     charEntityRecordData = EntityRecordData({ typeId: 2345, itemId: 1234, volume: 0 });
     ephCharEntityRecordData = EntityRecordData({ typeId: 2345, itemId: 1234, volume: 0 });
     characterMetadata = EntityMetadata({
@@ -68,20 +73,44 @@ contract EphemeralInventoryTest is EveTest {
       characterMetadata
     );
 
+    uint256 inventoryItemClassId = uint256(bytes32("INVENTORY_ITEM"));
     //Mock Item creation
     // Note: this only works because deployer currently owns `ENTITY_RECORD` namespace so direct calls to its tables are allowed
     EntityRecord.set(4235, 4235, 12, 100, true);
+    entitySystem.instantiate(inventoryItemClassId, 4235);
     EntityRecord.set(4236, 4236, 12, 200, true);
+    entitySystem.instantiate(inventoryItemClassId, 4236);
     EntityRecord.set(4237, 4237, 12, 150, true);
+    entitySystem.instantiate(inventoryItemClassId, 4237);
     EntityRecord.set(8235, 8235, 12, 100, true);
+    entitySystem.instantiate(inventoryItemClassId, 8235);
     EntityRecord.set(8236, 8236, 12, 200, true);
+    entitySystem.instantiate(inventoryItemClassId, 8236);
     EntityRecord.set(8237, 8237, 12, 150, true);
-    vm.stopPrank();
-  }
+    entitySystem.instantiate(inventoryItemClassId, 8237);
 
-  function testSetDeployableStateToValid(uint256 smartObjectId) public {
-    vm.assume(smartObjectId != 0);
-    vm.startPrank(deployer);
+    uint256 inventoryTestClassId = uint256(bytes32("INVENTORY_TEST"));
+    ResourceId[] memory inventoryTestSystemIds = new ResourceId[](3);
+    inventoryTestSystemIds[0] = deployableSystem.toResourceId();
+    inventoryTestSystemIds[1] = fuelSystem.toResourceId();
+    inventoryTestSystemIds[2] = ephemeralInventorySystem.toResourceId();
+    entitySystem.registerClass(inventoryTestClassId, "admin", inventoryTestSystemIds);
+    entitySystem.instantiate(inventoryTestClassId, smartObjectId);
+
+    SmartObjectData memory smartObjectData = SmartObjectData({ owner: alice, tokenURI: "test" });
+    uint256 fuelUnitVolume = 1;
+    uint256 fuelConsumptionIntervalInSeconds = 1;
+    uint256 fuelMaxCapacity = 10000;
+
+    deployableSystem.globalResume();
+
+    deployableSystem.registerDeployable(
+      smartObjectId,
+      smartObjectData,
+      fuelUnitVolume,
+      fuelConsumptionIntervalInSeconds,
+      fuelMaxCapacity
+    );
     DeployableState.set(
       smartObjectId,
       DeployableStateData({
@@ -94,22 +123,20 @@ contract EphemeralInventoryTest is EveTest {
         updatedBlockTime: block.timestamp
       })
     );
+
     vm.stopPrank();
   }
 
-  function testSetEphemeralInventoryCapacity(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testSetEphemeralInventoryCapacity(uint256 storageCapacity) public {
     vm.assume(storageCapacity != 0);
-    vm.startPrank(deployer);
-    DeployableState.setCurrentState(smartObjectId, State.ONLINE);
-    vm.stopPrank();
 
+    vm.startPrank(deployer);
     ephemeralInventorySystem.setEphemeralInventoryCapacity(smartObjectId, storageCapacity);
+    vm.stopPrank();
     assertEq(EphemeralInvCapacity.getCapacity(smartObjectId), storageCapacity);
   }
 
-  function testRevertSetInventoryCapacity(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testRevertSetInventoryCapacity(uint256 storageCapacity) public {
     vm.assume(storageCapacity == 0);
     vm.expectRevert(
       abi.encodeWithSelector(
@@ -117,27 +144,29 @@ contract EphemeralInventoryTest is EveTest {
         "EphemeralInventorySystem: storage capacity cannot be 0"
       )
     );
+    vm.startPrank(deployer);
     ephemeralInventorySystem.setEphemeralInventoryCapacity(smartObjectId, storageCapacity);
+    vm.stopPrank();
   }
 
-  function testDepositToEphemeralInventory(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testDepositToEphemeralInventory(uint256 storageCapacity) public {
     vm.assume(storageCapacity >= 1500 && storageCapacity <= 10000);
 
-    testSetDeployableStateToValid(smartObjectId);
     //Note: Issue applying fuzz testing for the below array of inputs : https://github.com/foundry-rs/foundry/issues/5343
     InventoryItem[] memory items = new InventoryItem[](3);
     items[0] = InventoryItem(4235, owner, 4235, 0, 100, 3);
     items[1] = InventoryItem(4236, owner, 4236, 0, 200, 2);
     items[2] = InventoryItem(4237, owner, 4237, 0, 150, 2);
 
-    testSetEphemeralInventoryCapacity(smartObjectId, storageCapacity);
+    testSetEphemeralInventoryCapacity(storageCapacity);
 
     EphemeralInvData memory inventoryData = EphemeralInv.get(smartObjectId, owner);
     uint256 capacityBeforeDeposit = inventoryData.usedCapacity;
     uint256 capacityAfterDeposit = 0;
 
+    vm.startPrank(alice);
     ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, owner, items);
+    vm.stopPrank();
 
     inventoryData = EphemeralInv.get(smartObjectId, owner);
 
@@ -168,22 +197,23 @@ contract EphemeralInventoryTest is EveTest {
     assertEq(inventoryItem3.index, 2);
   }
 
-  function testEphemeralInventoryItemQuantityIncrease(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testEphemeralInventoryItemQuantityIncrease(uint256 storageCapacity) public {
     vm.assume(storageCapacity >= 20000 && storageCapacity <= 50000);
 
-    testSetDeployableStateToValid(smartObjectId);
     //Note: Issue applying fuzz testing for the below array of inputs : https://github.com/foundry-rs/foundry/issues/5343
     InventoryItem[] memory items = new InventoryItem[](3);
     items[0] = InventoryItem(4235, owner, 4235, 0, 100, 3);
     items[1] = InventoryItem(4236, owner, 4236, 0, 200, 2);
     items[2] = InventoryItem(4237, owner, 4237, 0, 150, 2);
 
-    testSetEphemeralInventoryCapacity(smartObjectId, storageCapacity);
-    ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, owner, items);
+    testSetEphemeralInventoryCapacity(storageCapacity);
 
+    vm.startPrank(alice);
+    ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, owner, items);
     //check the increase in quantity
     ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, owner, items);
+    vm.stopPrank();
+
     EphemeralInvItemData memory inventoryItem1 = EphemeralInvItem.get(
       smartObjectId,
       items[0].inventoryItemId,
@@ -210,10 +240,9 @@ contract EphemeralInventoryTest is EveTest {
     assertEq(inventoryItem2.index, 1);
   }
 
-  function testRevertDepositToEphemeralInventory(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testRevertDepositToEphemeralInventory(uint256 storageCapacity) public {
     vm.assume(storageCapacity >= 1 && storageCapacity <= 500);
-    testSetEphemeralInventoryCapacity(smartObjectId, storageCapacity);
+    testSetEphemeralInventoryCapacity(storageCapacity);
 
     InventoryItem[] memory items = new InventoryItem[](1);
     items[0] = InventoryItem(4235, address(1), 4235, 12, 100, 6);
@@ -226,7 +255,9 @@ contract EphemeralInventoryTest is EveTest {
         items[0].volume * items[0].quantity
       )
     );
+    vm.startPrank(alice);
     ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, owner, items);
+    vm.stopPrank();
 
     owner = address(9); // set owner as non-character address
     vm.expectRevert(
@@ -236,17 +267,21 @@ contract EphemeralInventoryTest is EveTest {
         address(9)
       )
     );
+    vm.startPrank(alice);
     ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, owner, items);
+    vm.stopPrank();
   }
 
-  function testDepositToExistingEphemeralInventory(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testDepositToExistingEphemeralInventory(uint256 storageCapacity) public {
     vm.assume(storageCapacity != 0);
-    testDepositToEphemeralInventory(smartObjectId, storageCapacity);
+    testDepositToEphemeralInventory(storageCapacity);
     //Note: Issue applying fuzz testing for the below array of inputs : https://github.com/foundry-rs/foundry/issues/5343
     InventoryItem[] memory items = new InventoryItem[](1);
     items[0] = InventoryItem(8235, owner, 8235, 0, 1, 3);
+
+    vm.startPrank(alice);
     ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, owner, items);
+    vm.stopPrank();
 
     uint256 itemsLength = EphemeralInv.getItems(smartObjectId, owner).length;
     // ALTHOUGH THIS LITLERALLY RETURNS THE VALUE 4 EVERY SINGLE TIME, this assertion fails for me, so I'm commenting out for now
@@ -262,7 +297,10 @@ contract EphemeralInventoryTest is EveTest {
     items = new InventoryItem[](1);
 
     items[0] = InventoryItem(8235, differentOwner, 8235, 0, 1, 3);
+
+    vm.startPrank(alice);
     ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, differentOwner, items);
+    vm.stopPrank();
 
     itemsLength = EphemeralInv.getItems(smartObjectId, differentOwner).length;
     assertEq(itemsLength, 1);
@@ -271,10 +309,9 @@ contract EphemeralInventoryTest is EveTest {
     assertEq(inventoryItem1.index, 0);
   }
 
-  function testWithdrawFromEphemeralInventory(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testWithdrawFromEphemeralInventory(uint256 storageCapacity) public {
     vm.assume(storageCapacity != 0);
-    testDepositToEphemeralInventory(smartObjectId, storageCapacity);
+    testDepositToEphemeralInventory(storageCapacity);
 
     //Note: Issue applying fuzz testing for the below array of inputs : https://github.com/foundry-rs/foundry/issues/5343
     InventoryItem[] memory items = new InventoryItem[](3);
@@ -288,11 +325,13 @@ contract EphemeralInventoryTest is EveTest {
     uint256 capacityAfterWithdrawal = 0;
     assertEq(capacityBeforeWithdrawal, 1000);
 
+    vm.startPrank(alice);
     ephemeralInventorySystem.withdrawFromEphemeralInventory(smartObjectId, owner, items);
     for (uint256 i = 0; i < items.length; i++) {
       uint256 itemVolume = items[i].volume * items[i].quantity;
       capacityAfterWithdrawal += itemVolume;
     }
+    vm.stopPrank();
 
     inventoryData = EphemeralInv.get(smartObjectId, owner);
     assertEq(inventoryData.usedCapacity, capacityBeforeWithdrawal - capacityAfterWithdrawal);
@@ -327,10 +366,9 @@ contract EphemeralInventoryTest is EveTest {
     assertEq(inventoryItem3.index, 1);
   }
 
-  function testWithdrawCompletely(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testWithdrawCompletely(uint256 storageCapacity) public {
     vm.assume(storageCapacity != 0);
-    testDepositToEphemeralInventory(smartObjectId, storageCapacity);
+    testDepositToEphemeralInventory(storageCapacity);
 
     //Note: Issue applying fuzz testing for the below array of inputs : https://github.com/foundry-rs/foundry/issues/5343
     InventoryItem[] memory items = new InventoryItem[](3);
@@ -344,12 +382,13 @@ contract EphemeralInventoryTest is EveTest {
     uint256 capacityAfterWithdrawal = 0;
     assertEq(capacityBeforeWithdrawal, 1000);
 
+    vm.startPrank(alice);
     ephemeralInventorySystem.withdrawFromEphemeralInventory(smartObjectId, owner, items);
     for (uint256 i = 0; i < items.length; i++) {
       uint256 itemVolume = items[i].volume * items[i].quantity;
       capacityAfterWithdrawal += itemVolume;
     }
-
+    vm.stopPrank();
     inventoryData = EphemeralInv.get(smartObjectId, owner);
     assertEq(inventoryData.usedCapacity, capacityBeforeWithdrawal - capacityAfterWithdrawal);
 
@@ -377,10 +416,9 @@ contract EphemeralInventoryTest is EveTest {
     assertEq(inventoryItem3.quantity, 0);
   }
 
-  function testWithdrawMultipleTimes(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testWithdrawMultipleTimes(uint256 storageCapacity) public {
     vm.assume(storageCapacity != 0);
-    testWithdrawFromEphemeralInventory(smartObjectId, storageCapacity);
+    testWithdrawFromEphemeralInventory(storageCapacity);
 
     EphemeralInvData memory inventoryData = EphemeralInv.get(smartObjectId, owner);
     uint256[] memory existingItems = inventoryData.items;
@@ -390,7 +428,9 @@ contract EphemeralInventoryTest is EveTest {
     items[0] = InventoryItem(4237, owner, 4237, 0, 200, 1);
 
     // Try withdraw again
+    vm.startPrank(alice);
     ephemeralInventorySystem.withdrawFromEphemeralInventory(smartObjectId, owner, items);
+    vm.stopPrank();
 
     uint256 itemId1 = uint256(4235);
     uint256 itemId3 = uint256(4237);
@@ -408,10 +448,9 @@ contract EphemeralInventoryTest is EveTest {
     assertEq(existingItems.length, 1);
   }
 
-  function testRevertWithdrawFromEphemeralInventory(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testRevertWithdrawFromEphemeralInventory(uint256 storageCapacity) public {
     vm.assume(storageCapacity != 0);
-    testDepositToEphemeralInventory(smartObjectId, storageCapacity);
+    testDepositToEphemeralInventory(storageCapacity);
 
     InventoryItem[] memory items = new InventoryItem[](1);
     items[0] = InventoryItem(4235, differentOwner, 4235, 12, 100, 6);
@@ -425,6 +464,8 @@ contract EphemeralInventoryTest is EveTest {
         items[0].quantity
       )
     );
+    vm.startPrank(alice);
     ephemeralInventorySystem.withdrawFromEphemeralInventory(smartObjectId, owner, items);
+    vm.stopPrank();
   }
 }

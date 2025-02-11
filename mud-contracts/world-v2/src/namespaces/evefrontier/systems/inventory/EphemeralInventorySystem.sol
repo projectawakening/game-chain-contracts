@@ -54,7 +54,7 @@ contract EphemeralInventorySystem is EveSystem {
   function setEphemeralInventoryCapacity(
     uint256 smartObjectId,
     uint256 ephemeralStorageCapacity
-  ) public context access(smartObjectId) {
+  ) public context access(smartObjectId) scope(smartObjectId) {
     if (ephemeralStorageCapacity == 0) {
       revert Ephemeral_Inventory_InvalidCapacity("EphemeralInventorySystem: storage capacity cannot be 0");
     }
@@ -73,7 +73,7 @@ contract EphemeralInventorySystem is EveSystem {
     uint256 smartObjectId,
     address ephemeralInventoryOwner,
     InventoryItem[] memory items
-  ) public context access(smartObjectId) {
+  ) public context access(smartObjectId) scope(smartObjectId) {
     for (uint256 i = 0; i < items.length; i++) {
       EntityRecordStruct memory entityRecord = EntityRecordStruct({
         typeId: items[i].typeId,
@@ -99,7 +99,7 @@ contract EphemeralInventorySystem is EveSystem {
     uint256 smartObjectId,
     address ephemeralInventoryOwner,
     InventoryItem[] memory items
-  ) public context access(smartObjectId) {
+  ) public context access(smartObjectId) scope(smartObjectId) {
     {
       State currentState = DeployableState.getCurrentState(smartObjectId);
       if (currentState != State.ONLINE) {
@@ -131,7 +131,7 @@ contract EphemeralInventorySystem is EveSystem {
     uint256 smartObjectId,
     address ephemeralInventoryOwner,
     InventoryItem[] memory items
-  ) public context access(smartObjectId) {
+  ) public context access(smartObjectId) scope(smartObjectId) {
     State currentState = DeployableState.getCurrentState(smartObjectId);
     if (!(currentState == State.ANCHORED || currentState == State.ONLINE)) {
       revert DeployableSystem.Deployable_IncorrectState(smartObjectId, currentState);
