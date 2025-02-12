@@ -81,51 +81,7 @@ abstract contract EveTest is Test {
 
     vm.startPrank(deployer);
 
-    // SmartObjectFrameworkV2 Setup
-    AccessConfig.register();
-    HasRole.register();
-    Entity.register();
-    EntityTagMap.register();
-    Role.register();
-
-    world.registerSystem(roleManagementSystem.toResourceId(), new RoleManagementSystem(), true);
-
-    // Register all function selectors from IRoleManagementSystem interface
-    string[5] memory signatures = [
-      "createRole(bytes32,bytes32)",
-      "transferRoleAdmin(bytes32,bytes32)",
-      "grantRole(bytes32,address)",
-      "revokeRole(bytes32,address)",
-      "renounceRole(bytes32,address)"
-    ];
-
-    for (uint256 i = 0; i < signatures.length; i++) {
-      world.registerFunctionSelector(roleManagementSystem.toResourceId(), signatures[i]);
-    }
-
-    world.registerSystem(accessConfigSystem.toResourceId(), new AccessConfigSystem(), true);
-    string[2] memory accessConfigSignatures = [
-      "configureAccess(bytes32,bytes4,bytes32,bytes4)",
-      "setAccessEnforcement(bytes32,bytes4,bool)"
-    ];
-
-    for (uint256 i = 0; i < accessConfigSignatures.length; i++) {
-      world.registerFunctionSelector(accessConfigSystem.toResourceId(), accessConfigSignatures[i]);
-    }
-
-    world.registerSystem(entitySystem.toResourceId(), new EntitySystem(), true);
-    string[2] memory entitySignatures = ["instantiate(uint256,uint256)", "registerClass(uint256,bytes32,ResourceId[])"];
-    for (uint256 i = 0; i < entitySignatures.length; i++) {
-      world.registerFunctionSelector(entitySystem.toResourceId(), entitySignatures[i]);
-    }
-
-    world.registerSystem(tagSystem.toResourceId(), new TagSystem(), true);
-    string[1] memory tagSignatures = ["setTags(uint256,(bytes32,bytes)[])"];
-    for (uint256 i = 0; i < tagSignatures.length; i++) {
-      world.registerFunctionSelector(tagSystem.toResourceId(), tagSignatures[i]);
-    }
-
-    // End SmartObjectFrameworkV2 Setup
+    deploySmartObjectFramework();
 
     // Role Creation
     roleManagementSystem.createRole(adminRole, adminRole);
@@ -140,8 +96,82 @@ abstract contract EveTest is Test {
     _registerSmartGateClass(adminRole);
     // End Class Creation
 
-    // DeployableSystem
+    configureDeployableAccess();
+    configureEntityRecordAccess();
+    configureStaticDataAccess();
+    configureEphemeralInventoryAccess();
+    configureInventoryInteractAccess();
+    configureLocationAccess();
+    configureSmartCharacterAccess();
+    configureFuelAccess();
+    configureSmartTurretAccess();
+    configureSmartGateAccess();
+    configureInventoryAccess();
 
+    vm.stopPrank();
+  }
+
+  // Only needed in tests.
+  // In real deployments this is done by deploying SmartObjectFrameworkV2 to the same world.
+  function deploySmartObjectFramework() public {
+    AccessConfig.register();
+    HasRole.register();
+    Entity.register();
+    EntityTagMap.register();
+    Role.register();
+
+    deployRoleManagementSystem();
+    deployAccessConfigSystem();
+    deployEntitySystem();
+    deployTagSystem();
+  }
+
+  function deployRoleManagementSystem() internal {
+    world.registerSystem(roleManagementSystem.toResourceId(), new RoleManagementSystem(), true);
+
+    // Register all function selectors from IRoleManagementSystem interface
+    string[5] memory signatures = [
+      "createRole(bytes32,bytes32)",
+      "transferRoleAdmin(bytes32,bytes32)",
+      "grantRole(bytes32,address)",
+      "revokeRole(bytes32,address)",
+      "renounceRole(bytes32,address)"
+    ];
+
+    for (uint256 i = 0; i < signatures.length; i++) {
+      world.registerFunctionSelector(roleManagementSystem.toResourceId(), signatures[i]);
+    }
+  }
+
+  function deployAccessConfigSystem() internal {
+    world.registerSystem(accessConfigSystem.toResourceId(), new AccessConfigSystem(), true);
+    string[2] memory accessConfigSignatures = [
+      "configureAccess(bytes32,bytes4,bytes32,bytes4)",
+      "setAccessEnforcement(bytes32,bytes4,bool)"
+    ];
+
+    for (uint256 i = 0; i < accessConfigSignatures.length; i++) {
+      world.registerFunctionSelector(accessConfigSystem.toResourceId(), accessConfigSignatures[i]);
+    }
+  }
+
+  function deployEntitySystem() internal {
+    world.registerSystem(entitySystem.toResourceId(), new EntitySystem(), true);
+    string[2] memory entitySignatures = ["instantiate(uint256,uint256)", "registerClass(uint256,bytes32,ResourceId[])"];
+    for (uint256 i = 0; i < entitySignatures.length; i++) {
+      world.registerFunctionSelector(entitySystem.toResourceId(), entitySignatures[i]);
+    }
+  }
+
+  function deployTagSystem() internal {
+    world.registerSystem(tagSystem.toResourceId(), new TagSystem(), true);
+    string[1] memory tagSignatures = ["setTags(uint256,(bytes32,bytes)[])"];
+    for (uint256 i = 0; i < tagSignatures.length; i++) {
+      world.registerFunctionSelector(tagSystem.toResourceId(), tagSignatures[i]);
+    }
+  }
+
+  function configureDeployableAccess() internal {
     bytes4[8] memory deployableSignatures = [
       DeployableSystem.createAndAnchorDeployable.selector,
       DeployableSystem.registerDeployable.selector,
@@ -186,9 +216,9 @@ abstract contract EveTest is Test {
       DeployableSystem.bringOffline.selector,
       true
     );
+  }
 
-    // EntityRecordSystem
-
+  function configureEntityRecordAccess() internal {
     accessConfigSystem.configureAccess(
       entityRecordSystem.toResourceId(),
       EntityRecordSystem.createEntityRecord.selector,
@@ -248,8 +278,9 @@ abstract contract EveTest is Test {
       EntityRecordSystem.setDescription.selector,
       true
     );
+  }
 
-    // StaticDataSystem
+  function configureStaticDataAccess() internal {
     accessConfigSystem.configureAccess(
       staticDataSystem.toResourceId(),
       StaticDataSystem.setCid.selector,
@@ -269,9 +300,9 @@ abstract contract EveTest is Test {
       StaticDataSystem.setBaseURI.selector,
       true
     );
+  }
 
-    // EphemeralInventorySystem
-
+  function configureEphemeralInventoryAccess() internal {
     accessConfigSystem.configureAccess(
       ephemeralInventorySystem.toResourceId(),
       EphemeralInventorySystem.setEphemeralInventoryCapacity.selector,
@@ -307,9 +338,9 @@ abstract contract EveTest is Test {
       EphemeralInventorySystem.withdrawFromEphemeralInventory.selector,
       true
     );
+  }
 
-    // InventoryInteractSystem
-
+  function configureInventoryInteractAccess() internal {
     accessConfigSystem.configureAccess(
       inventoryInteractSystem.toResourceId(),
       InventoryInteractSystem.ephemeralToInventoryTransfer.selector,
@@ -369,55 +400,30 @@ abstract contract EveTest is Test {
       InventoryInteractSystem.setInventoryAdminAccess.selector,
       true
     );
+  }
 
-    // LocationSystem
-
-    accessConfigSystem.configureAccess(
-      locationSystem.toResourceId(),
+  function configureLocationAccess() internal {
+    bytes4[5] memory onlyAdminSelectors = [
       LocationSystem.saveLocation.selector,
-      accessSystem.toResourceId(),
-      AccessSystem.onlyAdmin.selector
-    );
-    accessConfigSystem.setAccessEnforcement(locationSystem.toResourceId(), LocationSystem.saveLocation.selector, true);
-
-    accessConfigSystem.configureAccess(
-      locationSystem.toResourceId(),
       LocationSystem.setSolarSystemId.selector,
-      accessSystem.toResourceId(),
-      AccessSystem.onlyAdmin.selector
-    );
-    accessConfigSystem.setAccessEnforcement(
-      locationSystem.toResourceId(),
-      LocationSystem.setSolarSystemId.selector,
-      true
-    );
-
-    accessConfigSystem.configureAccess(
-      locationSystem.toResourceId(),
       LocationSystem.setX.selector,
-      accessSystem.toResourceId(),
-      AccessSystem.onlyAdmin.selector
-    );
-    accessConfigSystem.setAccessEnforcement(locationSystem.toResourceId(), LocationSystem.setX.selector, true);
-
-    accessConfigSystem.configureAccess(
-      locationSystem.toResourceId(),
       LocationSystem.setY.selector,
-      accessSystem.toResourceId(),
-      AccessSystem.onlyAdmin.selector
-    );
-    accessConfigSystem.setAccessEnforcement(locationSystem.toResourceId(), LocationSystem.setY.selector, true);
+      LocationSystem.setZ.selector
+    ];
 
-    accessConfigSystem.configureAccess(
-      locationSystem.toResourceId(),
-      LocationSystem.setZ.selector,
-      accessSystem.toResourceId(),
-      AccessSystem.onlyAdmin.selector
-    );
-    accessConfigSystem.setAccessEnforcement(locationSystem.toResourceId(), LocationSystem.setZ.selector, true);
+    for (uint256 i = 0; i < onlyAdminSelectors.length; i++) {
+      accessConfigSystem.configureAccess(
+        locationSystem.toResourceId(),
+        onlyAdminSelectors[i],
+        accessSystem.toResourceId(),
+        AccessSystem.onlyAdmin.selector
+      );
 
-    // SmartCharacterSystem
+      accessConfigSystem.setAccessEnforcement(locationSystem.toResourceId(), onlyAdminSelectors[i], true);
+    }
+  }
 
+  function configureSmartCharacterAccess() internal {
     accessConfigSystem.configureAccess(
       smartCharacterSystem.toResourceId(),
       SmartCharacterSystem.registerCharacterToken.selector,
@@ -429,9 +435,9 @@ abstract contract EveTest is Test {
       SmartCharacterSystem.registerCharacterToken.selector,
       true
     );
+  }
 
-    // FuelSystem
-
+  function configureFuelAccess() internal {
     bytes4[6] memory fuelSignatures = [
       FuelSystem.configureFuelParameters.selector,
       FuelSystem.setFuelUnitVolume.selector,
@@ -459,12 +465,34 @@ abstract contract EveTest is Test {
       AccessSystem.onlyAdminOrDeployableSystem.selector
     );
     accessConfigSystem.setAccessEnforcement(fuelSystem.toResourceId(), FuelSystem.setFuelAmount.selector, true);
+  }
 
-    configureSmartTurretAccess();
-    configureSmartGateAccess();
-    configureInventoryAccess();
+  function configureSmartTurretAccess() internal {
+    accessConfigSystem.configureAccess(
+      smartTurretSystem.toResourceId(),
+      SmartTurretSystem.createAndAnchorSmartTurret.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyAdmin.selector
+    );
 
-    vm.stopPrank();
+    accessConfigSystem.setAccessEnforcement(
+      smartTurretSystem.toResourceId(),
+      SmartTurretSystem.createAndAnchorSmartTurret.selector,
+      true
+    );
+
+    accessConfigSystem.configureAccess(
+      smartTurretSystem.toResourceId(),
+      SmartTurretSystem.configureSmartTurret.selector,
+      accessSystem.toResourceId(),
+      AccessSystem.onlyDeployableOwner.selector
+    );
+
+    accessConfigSystem.setAccessEnforcement(
+      smartTurretSystem.toResourceId(),
+      SmartTurretSystem.configureSmartTurret.selector,
+      true
+    );
   }
 
   function _registerSmartStorageUnitClass(bytes32 adminRole) internal {
@@ -507,34 +535,6 @@ abstract contract EveTest is Test {
     smartTurretSystemIds[4] = deployableSystem.toResourceId();
     smartTurretSystemIds[5] = smartAssemblySystem.toResourceId();
     entitySystem.registerClass(uint256(bytes32("SMART_TURRET")), adminRole, smartTurretSystemIds);
-  }
-
-  function configureSmartTurretAccess() internal {
-    accessConfigSystem.configureAccess(
-      smartTurretSystem.toResourceId(),
-      SmartTurretSystem.createAndAnchorSmartTurret.selector,
-      accessSystem.toResourceId(),
-      AccessSystem.onlyAdmin.selector
-    );
-
-    accessConfigSystem.setAccessEnforcement(
-      smartTurretSystem.toResourceId(),
-      SmartTurretSystem.createAndAnchorSmartTurret.selector,
-      true
-    );
-
-    accessConfigSystem.configureAccess(
-      smartTurretSystem.toResourceId(),
-      SmartTurretSystem.configureSmartTurret.selector,
-      accessSystem.toResourceId(),
-      AccessSystem.onlyDeployableOwner.selector
-    );
-
-    accessConfigSystem.setAccessEnforcement(
-      smartTurretSystem.toResourceId(),
-      SmartTurretSystem.configureSmartTurret.selector,
-      true
-    );
   }
 
   function _registerSmartGateClass(bytes32 adminRole) internal {
@@ -616,26 +616,5 @@ abstract contract EveTest is Test {
       InventorySystem.withdrawFromInventory.selector,
       true
     );
-  }
-
-  function configureLocationAccess() internal {
-    bytes4[5] memory onlyAdminSelectors = [
-      LocationSystem.saveLocation.selector,
-      LocationSystem.setSolarSystemId.selector,
-      LocationSystem.setX.selector,
-      LocationSystem.setY.selector,
-      LocationSystem.setZ.selector
-    ];
-
-    for (uint256 i = 0; i < onlyAdminSelectors.length; i++) {
-      accessConfigSystem.configureAccess(
-        locationSystem.toResourceId(),
-        onlyAdminSelectors[i],
-        accessSystem.toResourceId(),
-        AccessSystem.onlyAdmin.selector
-      );
-
-      accessConfigSystem.setAccessEnforcement(locationSystem.toResourceId(), onlyAdminSelectors[i], true);
-    }
   }
 }
