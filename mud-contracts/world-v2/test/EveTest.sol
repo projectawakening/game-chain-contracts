@@ -70,9 +70,11 @@ abstract contract EveTest is Test {
   bytes32 adminRole = "admin";
 
   function setUp() public virtual {
+    vm.startPrank(deployer);
     worldSetup();
     deploySmartObjectFramework();
     setupScopeAndAccess();
+    vm.stopPrank();
   }
 
   function worldSetup() internal {
@@ -83,14 +85,13 @@ abstract contract EveTest is Test {
   }
 
   function setupScopeAndAccess() internal {
-    vm.startPrank(deployer);
     configureAdminRole();
+
     registerSmartStorageUnitClass(adminRole);
     registerInventoryItemClass(adminRole);
     registerSmartCharacterClass(adminRole);
     registerSmartTurretClass(adminRole);
     registerSmartGateClass(adminRole);
-    // End Class Creation
 
     configureDeployableAccess();
     configureEntityRecordAccess();
@@ -103,8 +104,6 @@ abstract contract EveTest is Test {
     configureFuelAccess();
     configureSmartTurretAccess();
     configureSmartGateAccess();
-
-    vm.stopPrank();
   }
 
   function configureAdminRole() internal {
