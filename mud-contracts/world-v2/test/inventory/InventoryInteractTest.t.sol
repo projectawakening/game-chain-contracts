@@ -64,9 +64,17 @@ contract InventoryInteractTest is EveTest {
   string tokenCID;
 
   function setUp() public override {
-    super.setUp();
-
     vm.startPrank(deployer);
+
+    // Running full EveTest setup was running out of gas.
+    // So we do a subset of the setup here.
+    worldSetup();
+    deploySmartObjectFramework();
+    configureAdminRole();
+    registerInventoryItemClass(adminRole);
+    registerSmartCharacterClass(adminRole);
+    configureInventoryInteractAccess();
+
     // Vending Machine deploy & registration
     vendingMachineMock = new VendingMachineMock();
     world.registerSystem(VENDING_MACHINE_SYSTEM_ID, vendingMachineMock, true);
@@ -105,8 +113,8 @@ contract InventoryInteractTest is EveTest {
     InventoryItem[] memory ephInvItems = new InventoryItem[](1);
     invItems[0] = InventoryItem(itemObjectId1, alice, 45, 1, 50, 10);
     ephInvItems[0] = InventoryItem(itemObjectId2, bob, 46, 2, 70, 10);
-
     SmartObjectData memory smartObjectData = SmartObjectData({ owner: alice, tokenURI: "test" });
+
     uint256 fuelUnitVolume = 1;
     uint256 fuelConsumptionIntervalInSeconds = 1;
     uint256 fuelMaxCapacity = 10000;

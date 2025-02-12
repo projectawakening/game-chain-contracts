@@ -67,48 +67,50 @@ abstract contract EveTest is Test {
   uint256 bobPK = vm.deriveKey(mnemonic, 3);
   address bob = vm.addr(bobPK);
 
+  bytes32 adminRole = "admin";
+
   function setUp() public virtual {
+    worldSetup();
+    deploySmartObjectFramework();
+    setupScopeAndAccess();
+  }
+
+  function worldSetup() internal {
     worldAddress = vm.envAddress("WORLD_ADDRESS");
     StoreSwitch.setStoreAddress(worldAddress);
 
     world = IWorldWithContext(worldAddress);
-
-    _setupSmartObjectFramework();
   }
 
-  function _setupSmartObjectFramework() internal {
-    bytes32 adminRole = "admin";
-
+  function setupScopeAndAccess() internal {
     vm.startPrank(deployer);
-
-    deploySmartObjectFramework();
-
-    // Role Creation
-    roleManagementSystem.createRole(adminRole, adminRole);
-    // TODO: Grant admin role to address list
-    roleManagementSystem.grantRole(adminRole, deployer);
-    // End Role Creation
-
-    _registerSmartStorageUnitClass(adminRole);
-    _registerInventoryItemClass(adminRole);
-    _registerSmartCharacterClass(adminRole);
-    _registerSmartTurretClass(adminRole);
-    _registerSmartGateClass(adminRole);
+    configureAdminRole();
+    registerSmartStorageUnitClass(adminRole);
+    registerInventoryItemClass(adminRole);
+    registerSmartCharacterClass(adminRole);
+    registerSmartTurretClass(adminRole);
+    registerSmartGateClass(adminRole);
     // End Class Creation
 
     configureDeployableAccess();
     configureEntityRecordAccess();
     configureStaticDataAccess();
     configureEphemeralInventoryAccess();
+    configureInventoryAccess();
     configureInventoryInteractAccess();
     configureLocationAccess();
     configureSmartCharacterAccess();
     configureFuelAccess();
     configureSmartTurretAccess();
     configureSmartGateAccess();
-    configureInventoryAccess();
 
     vm.stopPrank();
+  }
+
+  function configureAdminRole() internal {
+    roleManagementSystem.createRole(adminRole, adminRole);
+    // TODO: Grant admin role to address list
+    roleManagementSystem.grantRole(adminRole, deployer);
   }
 
   // Only needed in tests.
@@ -495,7 +497,7 @@ abstract contract EveTest is Test {
     );
   }
 
-  function _registerSmartStorageUnitClass(bytes32 adminRole) internal {
+  function registerSmartStorageUnitClass(bytes32 adminRole) internal {
     ResourceId[] memory systemIds = new ResourceId[](9);
     systemIds[0] = inventorySystem.toResourceId();
     systemIds[1] = deployableSystem.toResourceId();
@@ -509,7 +511,7 @@ abstract contract EveTest is Test {
     entitySystem.registerClass(smartStorageUnitSystem.getClassId(), adminRole, systemIds);
   }
 
-  function _registerInventoryItemClass(bytes32 adminRole) internal {
+  function registerInventoryItemClass(bytes32 adminRole) internal {
     uint256 inventoryItemClassId = uint256(bytes32("INVENTORY_ITEM"));
     ResourceId[] memory systemIds = new ResourceId[](3);
     systemIds[0] = inventorySystem.toResourceId();
@@ -518,7 +520,7 @@ abstract contract EveTest is Test {
     entitySystem.registerClass(inventoryItemClassId, adminRole, systemIds);
   }
 
-  function _registerSmartCharacterClass(bytes32 adminRole) internal {
+  function registerSmartCharacterClass(bytes32 adminRole) internal {
     uint256 smartCharacterClassId = uint256(bytes32("SMART_CHARACTER"));
     ResourceId[] memory systemIds = new ResourceId[](2);
     systemIds[0] = entityRecordSystem.toResourceId();
@@ -526,7 +528,7 @@ abstract contract EveTest is Test {
     entitySystem.registerClass(smartCharacterClassId, adminRole, systemIds);
   }
 
-  function _registerSmartTurretClass(bytes32 adminRole) internal {
+  function registerSmartTurretClass(bytes32 adminRole) internal {
     ResourceId[] memory smartTurretSystemIds = new ResourceId[](6);
     smartTurretSystemIds[0] = entityRecordSystem.toResourceId();
     smartTurretSystemIds[1] = smartTurretSystem.toResourceId();
@@ -537,7 +539,7 @@ abstract contract EveTest is Test {
     entitySystem.registerClass(uint256(bytes32("SMART_TURRET")), adminRole, smartTurretSystemIds);
   }
 
-  function _registerSmartGateClass(bytes32 adminRole) internal {
+  function registerSmartGateClass(bytes32 adminRole) internal {
     ResourceId[] memory smartGateSystemIds = new ResourceId[](6);
     smartGateSystemIds[0] = entityRecordSystem.toResourceId();
     smartGateSystemIds[1] = smartGateSystem.toResourceId();
