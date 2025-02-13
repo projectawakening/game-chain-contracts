@@ -51,6 +51,10 @@ library SmartStorageUnitSystemLib {
       );
   }
 
+  function getClassId(SmartStorageUnitSystemType self) internal view returns (uint256) {
+    return CallWrapper(self.toResourceId(), address(0)).getClassId();
+  }
+
   function createAndAnchorSmartStorageUnit(
     CallWrapper memory self,
     CreateAndAnchorDeployableParams memory params,
@@ -69,6 +73,21 @@ library SmartStorageUnitSystemLib {
       : _world().callFrom(self.from, self.systemId, systemCall);
   }
 
+  function getClassId(CallWrapper memory self) internal view returns (uint256) {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert SmartStorageUnitSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(_getClassId.getClassId, ());
+    bytes memory worldCall = self.from == address(0)
+      ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
+      : abi.encodeCall(IWorldCall.callFrom, (self.from, self.systemId, systemCall));
+    (bool success, bytes memory returnData) = address(_world()).staticcall(worldCall);
+    if (!success) revertWithBytes(returnData);
+
+    bytes memory result = abi.decode(returnData, (bytes));
+    return abi.decode(result, (uint256));
+  }
+
   function createAndAnchorSmartStorageUnit(
     RootCallWrapper memory self,
     CreateAndAnchorDeployableParams memory params,
@@ -80,6 +99,13 @@ library SmartStorageUnitSystemLib {
       (params, storageCapacity, ephemeralStorageCapacity)
     );
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function getClassId(RootCallWrapper memory self) internal view returns (uint256) {
+    bytes memory systemCall = abi.encodeCall(_getClassId.getClassId, ());
+
+    bytes memory result = SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
+    return abi.decode(result, (uint256));
   }
 
   function callFrom(SmartStorageUnitSystemType self, address from) internal pure returns (CallWrapper memory) {
@@ -129,6 +155,10 @@ interface _createAndAnchorSmartStorageUnit_CreateAndAnchorDeployableParams_uint2
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) external;
+}
+
+interface _getClassId {
+  function getClassId() external;
 }
 
 using SmartStorageUnitSystemLib for SmartStorageUnitSystemType global;

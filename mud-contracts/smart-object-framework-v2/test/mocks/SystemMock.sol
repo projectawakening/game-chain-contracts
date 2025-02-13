@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.24;
+pragma solidity ^0.8.24;
 
 import { SmartObjectFramework } from "../../src/inherit/SmartObjectFramework.sol";
 import { IWorldKernel } from "@latticexyz/world/src/IWorldKernel.sol";

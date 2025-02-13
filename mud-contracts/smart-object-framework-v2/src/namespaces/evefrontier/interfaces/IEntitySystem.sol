@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.24;
+pragma solidity ^0.8.24;
 
 import { ResourceId } from "@latticexyz/world/src/WorldResourceId.sol";
 import { TagId } from "../../../libs/TagId.sol";

@@ -156,7 +156,7 @@ contract ERC721System is IERC721Mintable, EveSystem, PuppetMaster {
    *
    * Emits a {Transfer} event.
    */
-  function mint(address to, uint256 tokenId) public virtual {
+  function mint(address to, uint256 tokenId) public virtual context access(tokenId) {
     //_requireOwner(); TODO: This is messing stuff up with access control and how systems should be able to mint, e.g. Smart character
     _mint(to, tokenId);
   }
@@ -172,7 +172,7 @@ contract ERC721System is IERC721Mintable, EveSystem, PuppetMaster {
    *
    * Emits a {Transfer} event.
    */
-  function safeMint(address to, uint256 tokenId) public {
+  function safeMint(address to, uint256 tokenId) public context access(tokenId) {
     _requireOwner();
     _safeMint(to, tokenId, "");
   }
@@ -181,7 +181,7 @@ contract ERC721System is IERC721Mintable, EveSystem, PuppetMaster {
    * @dev Same as {xref-ERC721-safeMint-address-uint256-}[`safeMint`], with an additional `data` parameter which is
    * forwarded in {IERC721Receiver-onERC721Received} to contract recipients.
    */
-  function safeMint(address to, uint256 tokenId, bytes memory data) public virtual {
+  function safeMint(address to, uint256 tokenId, bytes memory data) public virtual context access(tokenId) {
     _requireOwner();
     _safeMint(to, tokenId, data);
   }
@@ -196,7 +196,7 @@ contract ERC721System is IERC721Mintable, EveSystem, PuppetMaster {
    *
    * Emits a {Transfer} event.
    */
-  function burn(uint256 tokenId) public {
+  function burn(uint256 tokenId) public context access(tokenId) {
     _requireOwner();
     _burn(tokenId);
   }

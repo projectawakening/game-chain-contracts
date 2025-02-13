@@ -3,6 +3,7 @@ pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 import { ResourceIds } from "@latticexyz/store/src/codegen/tables/ResourceIds.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
 import { DeployableState } from "../../codegen/index.sol";
 import { SmartTurretConfig } from "../../codegen/index.sol";
@@ -15,9 +16,9 @@ import { WorldPosition } from "../location/types.sol";
 import { LocationData } from "../../codegen/tables/Location.sol";
 import { TargetPriority, Turret, SmartTurretTarget } from "./types.sol";
 import { SMART_TURRET } from "../constants.sol";
-import { EveSystem } from "../EveSystem.sol";
 import { CreateAndAnchorDeployableParams } from "../deployable/types.sol";
 import { AggressionParams } from "./types.sol";
+import { EveSystem } from "../EveSystem.sol";
 
 contract SmartTurretSystem is EveSystem {
   error SmartTurret_NotConfigured(uint256 smartObjectId);
@@ -26,7 +27,11 @@ contract SmartTurretSystem is EveSystem {
    * @notice Create and anchor a Smart Turret
    * @param params CreateAndAnchorDeployableParams
    */
-  function createAndAnchorSmartTurret(CreateAndAnchorDeployableParams memory params) public {
+  function createAndAnchorSmartTurret(
+    CreateAndAnchorDeployableParams memory params
+  ) public context access(params.smartObjectId) scope(getSmartTurretClassId()) {
+    entitySystem.instantiate(getSmartTurretClassId(), params.smartObjectId);
+
     params.smartAssemblyType = SMART_TURRET;
     deployableSystem.createAndAnchorDeployable(params);
   }
@@ -37,7 +42,10 @@ contract SmartTurretSystem is EveSystem {
    * @param systemId is the system id of the Smart Turret logic
    * // TODO make it configurable only by owner of the smart turret
    */
-  function configureSmartTurret(uint256 smartObjectId, ResourceId systemId) public {
+  function configureSmartTurret(
+    uint256 smartObjectId,
+    ResourceId systemId
+  ) public context access(smartObjectId) scope(smartObjectId) {
     SmartTurretConfig.set(smartObjectId, systemId);
   }
 
@@ -55,7 +63,7 @@ contract SmartTurretSystem is EveSystem {
     TargetPriority[] memory priorityQueue,
     Turret memory turret,
     SmartTurretTarget memory turretTarget
-  ) public returns (TargetPriority[] memory updatedPriorityQueue) {
+  ) public context returns (TargetPriority[] memory updatedPriorityQueue) {
     State currentState = DeployableState.getCurrentState(smartObjectId);
     if (currentState != State.ONLINE) {
       revert DeployableSystem.Deployable_IncorrectState(smartObjectId, currentState);
@@ -96,7 +104,9 @@ contract SmartTurretSystem is EveSystem {
    * @notice view function for turret logic based on aggression
    * @param params AggressionParams
    */
-  function aggression(AggressionParams memory params) public returns (TargetPriority[] memory updatedPriorityQueue) {
+  function aggression(
+    AggressionParams memory params
+  ) public context returns (TargetPriority[] memory updatedPriorityQueue) {
     State currentState = DeployableState.getCurrentState(params.smartObjectId);
     if (currentState != State.ONLINE) {
       revert DeployableSystem.Deployable_IncorrectState(params.smartObjectId, currentState);
@@ -127,5 +137,9 @@ contract SmartTurretSystem is EveSystem {
     }
 
     return updatedPriorityQueue;
+  }
+
+  function getSmartTurretClassId() public pure returns (uint256) {
+    return uint256(bytes32("SMART_TURRET"));
   }
 }

@@ -66,6 +66,10 @@ library SmartCharacterSystemLib {
     return CallWrapper(self.toResourceId(), address(0)).updateTribeId(characterId, tribeId);
   }
 
+  function getSmartCharacterClassId(SmartCharacterSystemType self) internal view returns (uint256) {
+    return CallWrapper(self.toResourceId(), address(0)).getSmartCharacterClassId();
+  }
+
   function registerCharacterToken(CallWrapper memory self, address tokenAddress) internal {
     // if the contract calling this function is a root system, it should use `callAsRoot`
     if (address(_world()) == address(this)) revert SmartCharacterSystemLib_CallingFromRootSystem();
@@ -106,6 +110,21 @@ library SmartCharacterSystemLib {
       : _world().callFrom(self.from, self.systemId, systemCall);
   }
 
+  function getSmartCharacterClassId(CallWrapper memory self) internal view returns (uint256) {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert SmartCharacterSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(_getSmartCharacterClassId.getSmartCharacterClassId, ());
+    bytes memory worldCall = self.from == address(0)
+      ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
+      : abi.encodeCall(IWorldCall.callFrom, (self.from, self.systemId, systemCall));
+    (bool success, bytes memory returnData) = address(_world()).staticcall(worldCall);
+    if (!success) revertWithBytes(returnData);
+
+    bytes memory result = abi.decode(returnData, (bytes));
+    return abi.decode(result, (uint256));
+  }
+
   function registerCharacterToken(RootCallWrapper memory self, address tokenAddress) internal {
     bytes memory systemCall = abi.encodeCall(_registerCharacterToken_address.registerCharacterToken, (tokenAddress));
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
@@ -129,6 +148,13 @@ library SmartCharacterSystemLib {
   function updateTribeId(RootCallWrapper memory self, uint256 characterId, uint256 tribeId) internal {
     bytes memory systemCall = abi.encodeCall(_updateTribeId_uint256_uint256.updateTribeId, (characterId, tribeId));
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function getSmartCharacterClassId(RootCallWrapper memory self) internal view returns (uint256) {
+    bytes memory systemCall = abi.encodeCall(_getSmartCharacterClassId.getSmartCharacterClassId, ());
+
+    bytes memory result = SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
+    return abi.decode(result, (uint256));
   }
 
   function callFrom(SmartCharacterSystemType self, address from) internal pure returns (CallWrapper memory) {
@@ -185,6 +211,10 @@ interface _createCharacter_uint256_address_uint256_EntityRecordData_EntityMetada
 
 interface _updateTribeId_uint256_uint256 {
   function updateTribeId(uint256 characterId, uint256 tribeId) external;
+}
+
+interface _getSmartCharacterClassId {
+  function getSmartCharacterClassId() external;
 }
 
 using SmartCharacterSystemLib for SmartCharacterSystemType global;

@@ -9,20 +9,27 @@ import { EntityRecordData } from "../entity-record/types.sol";
 import { SmartObjectData } from "../deployable/types.sol";
 import { WorldPosition } from "../location/types.sol";
 import { SMART_STORAGE_UNIT } from "../constants.sol";
-import { EveSystem } from "../EveSystem.sol";
 import { CreateAndAnchorDeployableParams } from "../deployable/types.sol";
+import { EveSystem } from "../EveSystem.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
 contract SmartStorageUnitSystem is EveSystem {
   function createAndAnchorSmartStorageUnit(
     CreateAndAnchorDeployableParams memory params,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
-  ) public {
+  ) public context access(params.smartObjectId) scope(getClassId()) {
+    entitySystem.instantiate(getClassId(), params.smartObjectId);
+
     params.smartAssemblyType = SMART_STORAGE_UNIT;
     deployableSystem.createAndAnchorDeployable(params);
 
     inventorySystem.setInventoryCapacity(params.smartObjectId, storageCapacity);
 
     ephemeralInventorySystem.setEphemeralInventoryCapacity(params.smartObjectId, ephemeralStorageCapacity);
+  }
+
+  function getClassId() public pure returns (uint256) {
+    return uint256(bytes32("SSU"));
   }
 }

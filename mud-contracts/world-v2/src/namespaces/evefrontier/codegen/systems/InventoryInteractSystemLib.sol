@@ -54,6 +54,44 @@ library InventoryInteractSystemLib {
     return CallWrapper(self.toResourceId(), address(0)).ephemeralToInventoryTransfer(smartObjectId, ephInvOwner, items);
   }
 
+  function setEphemeralToInventoryTransferAccess(
+    InventoryInteractSystemType self,
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) internal {
+    return
+      CallWrapper(self.toResourceId(), address(0)).setEphemeralToInventoryTransferAccess(
+        smartObjectId,
+        accessAddress,
+        isAllowed
+      );
+  }
+
+  function setInventoryToEphemeralTransferAccess(
+    InventoryInteractSystemType self,
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) internal {
+    return
+      CallWrapper(self.toResourceId(), address(0)).setInventoryToEphemeralTransferAccess(
+        smartObjectId,
+        accessAddress,
+        isAllowed
+      );
+  }
+
+  function setInventoryAdminAccess(
+    InventoryInteractSystemType self,
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) internal {
+    return
+      CallWrapper(self.toResourceId(), address(0)).setInventoryAdminAccess(smartObjectId, accessAddress, isAllowed);
+  }
+
   function inventoryToEphemeralTransfer(
     InventoryInteractSystemType self,
     uint256 smartObjectId,
@@ -80,6 +118,60 @@ library InventoryInteractSystemLib {
     bytes memory systemCall = abi.encodeCall(
       _ephemeralToInventoryTransfer_uint256_address_TransferItemArray.ephemeralToInventoryTransfer,
       (smartObjectId, ephInvOwner, items)
+    );
+    self.from == address(0)
+      ? _world().call(self.systemId, systemCall)
+      : _world().callFrom(self.from, self.systemId, systemCall);
+  }
+
+  function setEphemeralToInventoryTransferAccess(
+    CallWrapper memory self,
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) internal {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert InventoryInteractSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _setEphemeralToInventoryTransferAccess_uint256_address_bool.setEphemeralToInventoryTransferAccess,
+      (smartObjectId, accessAddress, isAllowed)
+    );
+    self.from == address(0)
+      ? _world().call(self.systemId, systemCall)
+      : _world().callFrom(self.from, self.systemId, systemCall);
+  }
+
+  function setInventoryToEphemeralTransferAccess(
+    CallWrapper memory self,
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) internal {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert InventoryInteractSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _setInventoryToEphemeralTransferAccess_uint256_address_bool.setInventoryToEphemeralTransferAccess,
+      (smartObjectId, accessAddress, isAllowed)
+    );
+    self.from == address(0)
+      ? _world().call(self.systemId, systemCall)
+      : _world().callFrom(self.from, self.systemId, systemCall);
+  }
+
+  function setInventoryAdminAccess(
+    CallWrapper memory self,
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) internal {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert InventoryInteractSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _setInventoryAdminAccess_uint256_address_bool.setInventoryAdminAccess,
+      (smartObjectId, accessAddress, isAllowed)
     );
     self.from == address(0)
       ? _world().call(self.systemId, systemCall)
@@ -113,6 +205,45 @@ library InventoryInteractSystemLib {
     bytes memory systemCall = abi.encodeCall(
       _ephemeralToInventoryTransfer_uint256_address_TransferItemArray.ephemeralToInventoryTransfer,
       (smartObjectId, ephInvOwner, items)
+    );
+    SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function setEphemeralToInventoryTransferAccess(
+    RootCallWrapper memory self,
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) internal {
+    bytes memory systemCall = abi.encodeCall(
+      _setEphemeralToInventoryTransferAccess_uint256_address_bool.setEphemeralToInventoryTransferAccess,
+      (smartObjectId, accessAddress, isAllowed)
+    );
+    SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function setInventoryToEphemeralTransferAccess(
+    RootCallWrapper memory self,
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) internal {
+    bytes memory systemCall = abi.encodeCall(
+      _setInventoryToEphemeralTransferAccess_uint256_address_bool.setInventoryToEphemeralTransferAccess,
+      (smartObjectId, accessAddress, isAllowed)
+    );
+    SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function setInventoryAdminAccess(
+    RootCallWrapper memory self,
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) internal {
+    bytes memory systemCall = abi.encodeCall(
+      _setInventoryAdminAccess_uint256_address_bool.setInventoryAdminAccess,
+      (smartObjectId, accessAddress, isAllowed)
     );
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
   }
@@ -177,6 +308,18 @@ interface _ephemeralToInventoryTransfer_uint256_address_TransferItemArray {
     address ephInvOwner,
     TransferItem[] memory items
   ) external;
+}
+
+interface _setEphemeralToInventoryTransferAccess_uint256_address_bool {
+  function setEphemeralToInventoryTransferAccess(uint256 smartObjectId, address accessAddress, bool isAllowed) external;
+}
+
+interface _setInventoryToEphemeralTransferAccess_uint256_address_bool {
+  function setInventoryToEphemeralTransferAccess(uint256 smartObjectId, address accessAddress, bool isAllowed) external;
+}
+
+interface _setInventoryAdminAccess_uint256_address_bool {
+  function setInventoryAdminAccess(uint256 smartObjectId, address accessAddress, bool isAllowed) external;
 }
 
 interface _inventoryToEphemeralTransfer_uint256_address_TransferItemArray {

@@ -26,6 +26,20 @@ interface IInventoryInteractSystem {
     TransferItem[] memory items
   ) external;
 
+  function evefrontier__setEphemeralToInventoryTransferAccess(
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) external;
+
+  function evefrontier__setInventoryToEphemeralTransferAccess(
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) external;
+
+  function evefrontier__setInventoryAdminAccess(uint256 smartObjectId, address accessAddress, bool isAllowed) external;
+
   function evefrontier__inventoryToEphemeralTransfer(
     uint256 smartObjectId,
     address ephemeralInventoryOwner,
