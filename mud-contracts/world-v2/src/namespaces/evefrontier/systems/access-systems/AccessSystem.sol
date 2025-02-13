@@ -105,7 +105,8 @@ contract AccessSystem is SmartObjectFramework {
   }
 
   function isAdmin(address caller) public view returns (bool) {
-    return HasRole.getHasRole("admin", caller);
+    bytes32 adminRole = bytes32("admin");
+    return HasRole.getIsMember(adminRole, caller);
   }
 
   function isOwner(address caller, uint256 objectId) public view returns (bool) {
@@ -116,12 +117,12 @@ contract AccessSystem is SmartObjectFramework {
 
   function canWithdrawFromInventory(uint256 smartObjectId, address caller) public view returns (bool) {
     bytes32 accessRole = InventoryUtils.getInventoryToEphemeralTransferAccessRole(smartObjectId);
-    return HasRole.getHasRole(accessRole, caller);
+    return HasRole.getIsMember(accessRole, caller);
   }
 
   function canDepositToInventory(uint256 smartObjectId, address caller) public view returns (bool) {
     bytes32 accessRole = InventoryUtils.getEphemeralToInventoryTransferAccessRole(smartObjectId);
-    return HasRole.getHasRole(accessRole, caller);
+    return HasRole.getIsMember(accessRole, caller);
   }
 
   function isInventoryInteractSystem(address caller) public view returns (bool) {
@@ -130,7 +131,7 @@ contract AccessSystem is SmartObjectFramework {
 
   function isInventoryAdmin(uint256 smartObjectId, address caller) public view returns (bool) {
     bytes32 adminAccessRole = InventoryUtils.getAdminAccessRole(smartObjectId);
-    return HasRole.getHasRole(adminAccessRole, caller);
+    return HasRole.getIsMember(adminAccessRole, caller);
   }
 
   function isDeployableSystem(address caller) public view returns (bool) {

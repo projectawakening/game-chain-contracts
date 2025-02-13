@@ -48,7 +48,8 @@
     "solhint": "solhint --config ./.solhint.json 'src/**/*.sol'"
   },
   "dependencies": {
-    "@eveworld/world-v2": "link:../mud-contracts/world-v2",
+    "@eveworld/world-v3": "link:../mud-contracts/world-v2",
+    "@eveworld/world-v2": "git+ssh://git@github.com/projectawakening/world-chain-contracts.git#4ed48276b125b5665ba6f569209b2ea54f6e0ba0",
     "@latticexyz/cli": "2.2.15-main-ba5191c3d6f74b3c4982afd465cf449d23d70bb7",
     "@latticexyz/gas-report": "2.2.15-main-ba5191c3d6f74b3c4982afd465cf449d23d70bb7",
     "@latticexyz/schema-type": "2.2.15-main-ba5191c3d6f74b3c4982afd465cf449d23d70bb7",

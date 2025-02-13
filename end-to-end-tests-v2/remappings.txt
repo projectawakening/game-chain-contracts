@@ -1,5 +1,4 @@
 ds-test/=node_modules/ds-test/src/
 forge-std/=node_modules/forge-std/src/
 @latticexyz/=node_modules/@latticexyz/
-@eveworld/=node_modules/@eveworld/
-
+@eveworld/=node_modules/@eveworld/world-v2/mud-contracts/

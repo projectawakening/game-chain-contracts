@@ -56,6 +56,44 @@ library RoleManagementSystemLib {
     return CallWrapper(self.toResourceId(), address(0)).renounceRole(role, callerConfirmation);
   }
 
+  function revokeAll(RoleManagementSystemType self, bytes32 role) internal {
+    return CallWrapper(self.toResourceId(), address(0)).revokeAll(role);
+  }
+
+  function scopedCreateRole(RoleManagementSystemType self, uint256 entityId, bytes32 role, bytes32 admin) internal {
+    return CallWrapper(self.toResourceId(), address(0)).scopedCreateRole(entityId, role, admin);
+  }
+
+  function scopedTransferRoleAdmin(
+    RoleManagementSystemType self,
+    uint256 entityId,
+    bytes32 role,
+    bytes32 newAdmin
+  ) internal {
+    return CallWrapper(self.toResourceId(), address(0)).scopedTransferRoleAdmin(entityId, role, newAdmin);
+  }
+
+  function scopedGrantRole(RoleManagementSystemType self, uint256 entityId, bytes32 role, address account) internal {
+    return CallWrapper(self.toResourceId(), address(0)).scopedGrantRole(entityId, role, account);
+  }
+
+  function scopedRevokeRole(RoleManagementSystemType self, uint256 entityId, bytes32 role, address account) internal {
+    return CallWrapper(self.toResourceId(), address(0)).scopedRevokeRole(entityId, role, account);
+  }
+
+  function scopedRenounceRole(
+    RoleManagementSystemType self,
+    uint256 entityId,
+    bytes32 role,
+    address callerConfirmation
+  ) internal {
+    return CallWrapper(self.toResourceId(), address(0)).scopedRenounceRole(entityId, role, callerConfirmation);
+  }
+
+  function scopedRevokeAll(RoleManagementSystemType self, uint256 entityId, bytes32 role) internal {
+    return CallWrapper(self.toResourceId(), address(0)).scopedRevokeAll(entityId, role);
+  }
+
   function createRole(CallWrapper memory self, bytes32 role, bytes32 admin) internal {
     // if the contract calling this function is a root system, it should use `callAsRoot`
     if (address(_world()) == address(this)) revert RoleManagementSystemLib_CallingFromRootSystem();
@@ -106,6 +144,96 @@ library RoleManagementSystemLib {
       : _world().callFrom(self.from, self.systemId, systemCall);
   }
 
+  function revokeAll(CallWrapper memory self, bytes32 role) internal {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert RoleManagementSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(_revokeAll_bytes32.revokeAll, (role));
+    self.from == address(0)
+      ? _world().call(self.systemId, systemCall)
+      : _world().callFrom(self.from, self.systemId, systemCall);
+  }
+
+  function scopedCreateRole(CallWrapper memory self, uint256 entityId, bytes32 role, bytes32 admin) internal {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert RoleManagementSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _scopedCreateRole_uint256_bytes32_bytes32.scopedCreateRole,
+      (entityId, role, admin)
+    );
+    self.from == address(0)
+      ? _world().call(self.systemId, systemCall)
+      : _world().callFrom(self.from, self.systemId, systemCall);
+  }
+
+  function scopedTransferRoleAdmin(CallWrapper memory self, uint256 entityId, bytes32 role, bytes32 newAdmin) internal {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert RoleManagementSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _scopedTransferRoleAdmin_uint256_bytes32_bytes32.scopedTransferRoleAdmin,
+      (entityId, role, newAdmin)
+    );
+    self.from == address(0)
+      ? _world().call(self.systemId, systemCall)
+      : _world().callFrom(self.from, self.systemId, systemCall);
+  }
+
+  function scopedGrantRole(CallWrapper memory self, uint256 entityId, bytes32 role, address account) internal {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert RoleManagementSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _scopedGrantRole_uint256_bytes32_address.scopedGrantRole,
+      (entityId, role, account)
+    );
+    self.from == address(0)
+      ? _world().call(self.systemId, systemCall)
+      : _world().callFrom(self.from, self.systemId, systemCall);
+  }
+
+  function scopedRevokeRole(CallWrapper memory self, uint256 entityId, bytes32 role, address account) internal {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert RoleManagementSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _scopedRevokeRole_uint256_bytes32_address.scopedRevokeRole,
+      (entityId, role, account)
+    );
+    self.from == address(0)
+      ? _world().call(self.systemId, systemCall)
+      : _world().callFrom(self.from, self.systemId, systemCall);
+  }
+
+  function scopedRenounceRole(
+    CallWrapper memory self,
+    uint256 entityId,
+    bytes32 role,
+    address callerConfirmation
+  ) internal {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert RoleManagementSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _scopedRenounceRole_uint256_bytes32_address.scopedRenounceRole,
+      (entityId, role, callerConfirmation)
+    );
+    self.from == address(0)
+      ? _world().call(self.systemId, systemCall)
+      : _world().callFrom(self.from, self.systemId, systemCall);
+  }
+
+  function scopedRevokeAll(CallWrapper memory self, uint256 entityId, bytes32 role) internal {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert RoleManagementSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(_scopedRevokeAll_uint256_bytes32.scopedRevokeAll, (entityId, role));
+    self.from == address(0)
+      ? _world().call(self.systemId, systemCall)
+      : _world().callFrom(self.from, self.systemId, systemCall);
+  }
+
   function createRole(RootCallWrapper memory self, bytes32 role, bytes32 admin) internal {
     bytes memory systemCall = abi.encodeCall(_createRole_bytes32_bytes32.createRole, (role, admin));
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
@@ -128,6 +256,66 @@ library RoleManagementSystemLib {
 
   function renounceRole(RootCallWrapper memory self, bytes32 role, address callerConfirmation) internal {
     bytes memory systemCall = abi.encodeCall(_renounceRole_bytes32_address.renounceRole, (role, callerConfirmation));
+    SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function revokeAll(RootCallWrapper memory self, bytes32 role) internal {
+    bytes memory systemCall = abi.encodeCall(_revokeAll_bytes32.revokeAll, (role));
+    SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function scopedCreateRole(RootCallWrapper memory self, uint256 entityId, bytes32 role, bytes32 admin) internal {
+    bytes memory systemCall = abi.encodeCall(
+      _scopedCreateRole_uint256_bytes32_bytes32.scopedCreateRole,
+      (entityId, role, admin)
+    );
+    SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function scopedTransferRoleAdmin(
+    RootCallWrapper memory self,
+    uint256 entityId,
+    bytes32 role,
+    bytes32 newAdmin
+  ) internal {
+    bytes memory systemCall = abi.encodeCall(
+      _scopedTransferRoleAdmin_uint256_bytes32_bytes32.scopedTransferRoleAdmin,
+      (entityId, role, newAdmin)
+    );
+    SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function scopedGrantRole(RootCallWrapper memory self, uint256 entityId, bytes32 role, address account) internal {
+    bytes memory systemCall = abi.encodeCall(
+      _scopedGrantRole_uint256_bytes32_address.scopedGrantRole,
+      (entityId, role, account)
+    );
+    SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function scopedRevokeRole(RootCallWrapper memory self, uint256 entityId, bytes32 role, address account) internal {
+    bytes memory systemCall = abi.encodeCall(
+      _scopedRevokeRole_uint256_bytes32_address.scopedRevokeRole,
+      (entityId, role, account)
+    );
+    SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function scopedRenounceRole(
+    RootCallWrapper memory self,
+    uint256 entityId,
+    bytes32 role,
+    address callerConfirmation
+  ) internal {
+    bytes memory systemCall = abi.encodeCall(
+      _scopedRenounceRole_uint256_bytes32_address.scopedRenounceRole,
+      (entityId, role, callerConfirmation)
+    );
+    SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function scopedRevokeAll(RootCallWrapper memory self, uint256 entityId, bytes32 role) internal {
+    bytes memory systemCall = abi.encodeCall(_scopedRevokeAll_uint256_bytes32.scopedRevokeAll, (entityId, role));
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
   }
 
@@ -187,6 +375,34 @@ interface _revokeRole_bytes32_address {
 
 interface _renounceRole_bytes32_address {
   function renounceRole(bytes32 role, address callerConfirmation) external;
+}
+
+interface _revokeAll_bytes32 {
+  function revokeAll(bytes32 role) external;
+}
+
+interface _scopedCreateRole_uint256_bytes32_bytes32 {
+  function scopedCreateRole(uint256 entityId, bytes32 role, bytes32 admin) external;
+}
+
+interface _scopedTransferRoleAdmin_uint256_bytes32_bytes32 {
+  function scopedTransferRoleAdmin(uint256 entityId, bytes32 role, bytes32 newAdmin) external;
+}
+
+interface _scopedGrantRole_uint256_bytes32_address {
+  function scopedGrantRole(uint256 entityId, bytes32 role, address account) external;
+}
+
+interface _scopedRevokeRole_uint256_bytes32_address {
+  function scopedRevokeRole(uint256 entityId, bytes32 role, address account) external;
+}
+
+interface _scopedRenounceRole_uint256_bytes32_address {
+  function scopedRenounceRole(uint256 entityId, bytes32 role, address callerConfirmation) external;
+}
+
+interface _scopedRevokeAll_uint256_bytes32 {
+  function scopedRevokeAll(uint256 entityId, bytes32 role) external;
 }
 
 using RoleManagementSystemLib for RoleManagementSystemType global;

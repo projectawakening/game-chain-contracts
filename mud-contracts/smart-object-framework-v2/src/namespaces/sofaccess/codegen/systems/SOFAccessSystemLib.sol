@@ -36,8 +36,32 @@ struct RootCallWrapper {
 library SOFAccessSystemLib {
   error SOFAccessSystemLib_CallingFromRootSystem();
 
-  function allowClassAccessRole(SOFAccessSystemType self, uint256 classId, bytes memory targetCallData) internal view {
-    return CallWrapper(self.toResourceId(), address(0)).allowClassAccessRole(classId, targetCallData);
+  function allowAccessRole(SOFAccessSystemType self, uint256 entityId, bytes memory targetCallData) internal view {
+    return CallWrapper(self.toResourceId(), address(0)).allowAccessRole(entityId, targetCallData);
+  }
+
+  function allowClassScopedSystem(
+    SOFAccessSystemType self,
+    uint256 entityId,
+    bytes memory targetCallData
+  ) internal view {
+    return CallWrapper(self.toResourceId(), address(0)).allowClassScopedSystem(entityId, targetCallData);
+  }
+
+  function allowDirectClassAccessRole(
+    SOFAccessSystemType self,
+    uint256 entityId,
+    bytes memory targetCallData
+  ) internal view {
+    return CallWrapper(self.toResourceId(), address(0)).allowDirectClassAccessRole(entityId, targetCallData);
+  }
+
+  function allowDirectAccessRole(
+    SOFAccessSystemType self,
+    uint256 entityId,
+    bytes memory targetCallData
+  ) internal view {
+    return CallWrapper(self.toResourceId(), address(0)).allowDirectAccessRole(entityId, targetCallData);
   }
 
   function allowClassScopedSystemOrDirectClassAccessRole(
@@ -52,16 +76,13 @@ library SOFAccessSystemLib {
       );
   }
 
-  function allowClassScopedSystemOrDirectObjectAccessRole(
+  function allowClassScopedSystemOrDirectAccessRole(
     SOFAccessSystemType self,
-    uint256 objectId,
+    uint256 entityId,
     bytes memory targetCallData
   ) internal view {
     return
-      CallWrapper(self.toResourceId(), address(0)).allowClassScopedSystemOrDirectObjectAccessRole(
-        objectId,
-        targetCallData
-      );
+      CallWrapper(self.toResourceId(), address(0)).allowClassScopedSystemOrDirectAccessRole(entityId, targetCallData);
   }
 
   function allowEntitySystemOrDirectAccessRole(
@@ -72,13 +93,69 @@ library SOFAccessSystemLib {
     return CallWrapper(self.toResourceId(), address(0)).allowEntitySystemOrDirectAccessRole(entityId, targetCallData);
   }
 
-  function allowClassAccessRole(CallWrapper memory self, uint256 classId, bytes memory targetCallData) internal view {
+  function allowAccessRole(CallWrapper memory self, uint256 entityId, bytes memory targetCallData) internal view {
     // if the contract calling this function is a root system, it should use `callAsRoot`
     if (address(_world()) == address(this)) revert SOFAccessSystemLib_CallingFromRootSystem();
 
     bytes memory systemCall = abi.encodeCall(
-      _allowClassAccessRole_uint256_bytes.allowClassAccessRole,
-      (classId, targetCallData)
+      _allowAccessRole_uint256_bytes.allowAccessRole,
+      (entityId, targetCallData)
+    );
+    bytes memory worldCall = self.from == address(0)
+      ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
+      : abi.encodeCall(IWorldCall.callFrom, (self.from, self.systemId, systemCall));
+    (bool success, bytes memory returnData) = address(_world()).staticcall(worldCall);
+    if (!success) revertWithBytes(returnData);
+    abi.decode(returnData, (bytes));
+  }
+
+  function allowClassScopedSystem(
+    CallWrapper memory self,
+    uint256 entityId,
+    bytes memory targetCallData
+  ) internal view {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert SOFAccessSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _allowClassScopedSystem_uint256_bytes.allowClassScopedSystem,
+      (entityId, targetCallData)
+    );
+    bytes memory worldCall = self.from == address(0)
+      ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
+      : abi.encodeCall(IWorldCall.callFrom, (self.from, self.systemId, systemCall));
+    (bool success, bytes memory returnData) = address(_world()).staticcall(worldCall);
+    if (!success) revertWithBytes(returnData);
+    abi.decode(returnData, (bytes));
+  }
+
+  function allowDirectClassAccessRole(
+    CallWrapper memory self,
+    uint256 entityId,
+    bytes memory targetCallData
+  ) internal view {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert SOFAccessSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _allowDirectClassAccessRole_uint256_bytes.allowDirectClassAccessRole,
+      (entityId, targetCallData)
+    );
+    bytes memory worldCall = self.from == address(0)
+      ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
+      : abi.encodeCall(IWorldCall.callFrom, (self.from, self.systemId, systemCall));
+    (bool success, bytes memory returnData) = address(_world()).staticcall(worldCall);
+    if (!success) revertWithBytes(returnData);
+    abi.decode(returnData, (bytes));
+  }
+
+  function allowDirectAccessRole(CallWrapper memory self, uint256 entityId, bytes memory targetCallData) internal view {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert SOFAccessSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _allowDirectAccessRole_uint256_bytes.allowDirectAccessRole,
+      (entityId, targetCallData)
     );
     bytes memory worldCall = self.from == address(0)
       ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
@@ -108,17 +185,17 @@ library SOFAccessSystemLib {
     abi.decode(returnData, (bytes));
   }
 
-  function allowClassScopedSystemOrDirectObjectAccessRole(
+  function allowClassScopedSystemOrDirectAccessRole(
     CallWrapper memory self,
-    uint256 objectId,
+    uint256 entityId,
     bytes memory targetCallData
   ) internal view {
     // if the contract calling this function is a root system, it should use `callAsRoot`
     if (address(_world()) == address(this)) revert SOFAccessSystemLib_CallingFromRootSystem();
 
     bytes memory systemCall = abi.encodeCall(
-      _allowClassScopedSystemOrDirectObjectAccessRole_uint256_bytes.allowClassScopedSystemOrDirectObjectAccessRole,
-      (objectId, targetCallData)
+      _allowClassScopedSystemOrDirectAccessRole_uint256_bytes.allowClassScopedSystemOrDirectAccessRole,
+      (entityId, targetCallData)
     );
     bytes memory worldCall = self.from == address(0)
       ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
@@ -148,14 +225,46 @@ library SOFAccessSystemLib {
     abi.decode(returnData, (bytes));
   }
 
-  function allowClassAccessRole(
+  function allowAccessRole(RootCallWrapper memory self, uint256 entityId, bytes memory targetCallData) internal view {
+    bytes memory systemCall = abi.encodeCall(
+      _allowAccessRole_uint256_bytes.allowAccessRole,
+      (entityId, targetCallData)
+    );
+    SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
+  }
+
+  function allowClassScopedSystem(
     RootCallWrapper memory self,
-    uint256 classId,
+    uint256 entityId,
     bytes memory targetCallData
   ) internal view {
     bytes memory systemCall = abi.encodeCall(
-      _allowClassAccessRole_uint256_bytes.allowClassAccessRole,
-      (classId, targetCallData)
+      _allowClassScopedSystem_uint256_bytes.allowClassScopedSystem,
+      (entityId, targetCallData)
+    );
+    SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
+  }
+
+  function allowDirectClassAccessRole(
+    RootCallWrapper memory self,
+    uint256 entityId,
+    bytes memory targetCallData
+  ) internal view {
+    bytes memory systemCall = abi.encodeCall(
+      _allowDirectClassAccessRole_uint256_bytes.allowDirectClassAccessRole,
+      (entityId, targetCallData)
+    );
+    SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
+  }
+
+  function allowDirectAccessRole(
+    RootCallWrapper memory self,
+    uint256 entityId,
+    bytes memory targetCallData
+  ) internal view {
+    bytes memory systemCall = abi.encodeCall(
+      _allowDirectAccessRole_uint256_bytes.allowDirectAccessRole,
+      (entityId, targetCallData)
     );
     SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
   }
@@ -172,14 +281,14 @@ library SOFAccessSystemLib {
     SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
   }
 
-  function allowClassScopedSystemOrDirectObjectAccessRole(
+  function allowClassScopedSystemOrDirectAccessRole(
     RootCallWrapper memory self,
-    uint256 objectId,
+    uint256 entityId,
     bytes memory targetCallData
   ) internal view {
     bytes memory systemCall = abi.encodeCall(
-      _allowClassScopedSystemOrDirectObjectAccessRole_uint256_bytes.allowClassScopedSystemOrDirectObjectAccessRole,
-      (objectId, targetCallData)
+      _allowClassScopedSystemOrDirectAccessRole_uint256_bytes.allowClassScopedSystemOrDirectAccessRole,
+      (entityId, targetCallData)
     );
     SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
   }
@@ -234,16 +343,28 @@ library SOFAccessSystemLib {
  * Each interface is uniquely named based on the function name and parameters to prevent collisions.
  */
 
-interface _allowClassAccessRole_uint256_bytes {
-  function allowClassAccessRole(uint256 classId, bytes memory targetCallData) external;
+interface _allowAccessRole_uint256_bytes {
+  function allowAccessRole(uint256 entityId, bytes memory targetCallData) external;
+}
+
+interface _allowClassScopedSystem_uint256_bytes {
+  function allowClassScopedSystem(uint256 entityId, bytes memory targetCallData) external;
+}
+
+interface _allowDirectClassAccessRole_uint256_bytes {
+  function allowDirectClassAccessRole(uint256 entityId, bytes memory targetCallData) external;
+}
+
+interface _allowDirectAccessRole_uint256_bytes {
+  function allowDirectAccessRole(uint256 entityId, bytes memory targetCallData) external;
 }
 
 interface _allowClassScopedSystemOrDirectClassAccessRole_uint256_bytes {
   function allowClassScopedSystemOrDirectClassAccessRole(uint256 entityId, bytes memory targetCallData) external;
 }
 
-interface _allowClassScopedSystemOrDirectObjectAccessRole_uint256_bytes {
-  function allowClassScopedSystemOrDirectObjectAccessRole(uint256 objectId, bytes memory targetCallData) external;
+interface _allowClassScopedSystemOrDirectAccessRole_uint256_bytes {
+  function allowClassScopedSystemOrDirectAccessRole(uint256 entityId, bytes memory targetCallData) external;
 }
 
 interface _allowEntitySystemOrDirectAccessRole_uint256_bytes {
