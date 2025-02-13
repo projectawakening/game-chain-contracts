@@ -19,6 +19,7 @@ import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 struct RoleData {
   bool exists;
   bytes32 admin;
+  address[] members;
 }
 
 library Role {
@@ -26,12 +27,12 @@ library Role {
   ResourceId constant _tableId = ResourceId.wrap(0x746265766566726f6e74696572000000526f6c65000000000000000000000000);
 
   FieldLayout constant _fieldLayout =
-    FieldLayout.wrap(0x0021020001200000000000000000000000000000000000000000000000000000);
+    FieldLayout.wrap(0x0021020101200000000000000000000000000000000000000000000000000000);
 
   // Hex-encoded key schema of (bytes32)
   Schema constant _keySchema = Schema.wrap(0x002001005f000000000000000000000000000000000000000000000000000000);
-  // Hex-encoded value schema of (bool, bytes32)
-  Schema constant _valueSchema = Schema.wrap(0x00210200605f0000000000000000000000000000000000000000000000000000);
+  // Hex-encoded value schema of (bool, bytes32, address[])
+  Schema constant _valueSchema = Schema.wrap(0x00210201605fc300000000000000000000000000000000000000000000000000);
 
   /**
    * @notice Get the table's key field names.
@@ -47,9 +48,10 @@ library Role {
    * @return fieldNames An array of strings with the names of value fields.
    */
   function getFieldNames() internal pure returns (string[] memory fieldNames) {
-    fieldNames = new string[](2);
+    fieldNames = new string[](3);
     fieldNames[0] = "exists";
     fieldNames[1] = "admin";
+    fieldNames[2] = "members";
   }
 
   /**
@@ -151,6 +153,168 @@ library Role {
   }
 
   /**
+   * @notice Get members.
+   */
+  function getMembers(bytes32 role) internal view returns (address[] memory members) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    bytes memory _blob = StoreSwitch.getDynamicField(_tableId, _keyTuple, 0);
+    return (SliceLib.getSubslice(_blob, 0, _blob.length).decodeArray_address());
+  }
+
+  /**
+   * @notice Get members.
+   */
+  function _getMembers(bytes32 role) internal view returns (address[] memory members) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    bytes memory _blob = StoreCore.getDynamicField(_tableId, _keyTuple, 0);
+    return (SliceLib.getSubslice(_blob, 0, _blob.length).decodeArray_address());
+  }
+
+  /**
+   * @notice Set members.
+   */
+  function setMembers(bytes32 role, address[] memory members) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    StoreSwitch.setDynamicField(_tableId, _keyTuple, 0, EncodeArray.encode((members)));
+  }
+
+  /**
+   * @notice Set members.
+   */
+  function _setMembers(bytes32 role, address[] memory members) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    StoreCore.setDynamicField(_tableId, _keyTuple, 0, EncodeArray.encode((members)));
+  }
+
+  /**
+   * @notice Get the length of members.
+   */
+  function lengthMembers(bytes32 role) internal view returns (uint256) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    uint256 _byteLength = StoreSwitch.getDynamicFieldLength(_tableId, _keyTuple, 0);
+    unchecked {
+      return _byteLength / 20;
+    }
+  }
+
+  /**
+   * @notice Get the length of members.
+   */
+  function _lengthMembers(bytes32 role) internal view returns (uint256) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    uint256 _byteLength = StoreCore.getDynamicFieldLength(_tableId, _keyTuple, 0);
+    unchecked {
+      return _byteLength / 20;
+    }
+  }
+
+  /**
+   * @notice Get an item of members.
+   * @dev Reverts with Store_IndexOutOfBounds if `_index` is out of bounds for the array.
+   */
+  function getItemMembers(bytes32 role, uint256 _index) internal view returns (address) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    unchecked {
+      bytes memory _blob = StoreSwitch.getDynamicFieldSlice(_tableId, _keyTuple, 0, _index * 20, (_index + 1) * 20);
+      return (address(bytes20(_blob)));
+    }
+  }
+
+  /**
+   * @notice Get an item of members.
+   * @dev Reverts with Store_IndexOutOfBounds if `_index` is out of bounds for the array.
+   */
+  function _getItemMembers(bytes32 role, uint256 _index) internal view returns (address) {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    unchecked {
+      bytes memory _blob = StoreCore.getDynamicFieldSlice(_tableId, _keyTuple, 0, _index * 20, (_index + 1) * 20);
+      return (address(bytes20(_blob)));
+    }
+  }
+
+  /**
+   * @notice Push an element to members.
+   */
+  function pushMembers(bytes32 role, address _element) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    StoreSwitch.pushToDynamicField(_tableId, _keyTuple, 0, abi.encodePacked((_element)));
+  }
+
+  /**
+   * @notice Push an element to members.
+   */
+  function _pushMembers(bytes32 role, address _element) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    StoreCore.pushToDynamicField(_tableId, _keyTuple, 0, abi.encodePacked((_element)));
+  }
+
+  /**
+   * @notice Pop an element from members.
+   */
+  function popMembers(bytes32 role) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    StoreSwitch.popFromDynamicField(_tableId, _keyTuple, 0, 20);
+  }
+
+  /**
+   * @notice Pop an element from members.
+   */
+  function _popMembers(bytes32 role) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    StoreCore.popFromDynamicField(_tableId, _keyTuple, 0, 20);
+  }
+
+  /**
+   * @notice Update an element of members at `_index`.
+   */
+  function updateMembers(bytes32 role, uint256 _index, address _element) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    unchecked {
+      bytes memory _encoded = abi.encodePacked((_element));
+      StoreSwitch.spliceDynamicData(_tableId, _keyTuple, 0, uint40(_index * 20), uint40(_encoded.length), _encoded);
+    }
+  }
+
+  /**
+   * @notice Update an element of members at `_index`.
+   */
+  function _updateMembers(bytes32 role, uint256 _index, address _element) internal {
+    bytes32[] memory _keyTuple = new bytes32[](1);
+    _keyTuple[0] = role;
+
+    unchecked {
+      bytes memory _encoded = abi.encodePacked((_element));
+      StoreCore.spliceDynamicData(_tableId, _keyTuple, 0, uint40(_index * 20), uint40(_encoded.length), _encoded);
+    }
+  }
+
+  /**
    * @notice Get the full data.
    */
   function get(bytes32 role) internal view returns (RoleData memory _table) {
@@ -183,11 +347,11 @@ library Role {
   /**
    * @notice Set the full data using individual values.
    */
-  function set(bytes32 role, bool exists, bytes32 admin) internal {
+  function set(bytes32 role, bool exists, bytes32 admin, address[] memory members) internal {
     bytes memory _staticData = encodeStatic(exists, admin);
 
-    EncodedLengths _encodedLengths;
-    bytes memory _dynamicData;
+    EncodedLengths _encodedLengths = encodeLengths(members);
+    bytes memory _dynamicData = encodeDynamic(members);
 
     bytes32[] memory _keyTuple = new bytes32[](1);
     _keyTuple[0] = role;
@@ -198,11 +362,11 @@ library Role {
   /**
    * @notice Set the full data using individual values.
    */
-  function _set(bytes32 role, bool exists, bytes32 admin) internal {
+  function _set(bytes32 role, bool exists, bytes32 admin, address[] memory members) internal {
     bytes memory _staticData = encodeStatic(exists, admin);
 
-    EncodedLengths _encodedLengths;
-    bytes memory _dynamicData;
+    EncodedLengths _encodedLengths = encodeLengths(members);
+    bytes memory _dynamicData = encodeDynamic(members);
 
     bytes32[] memory _keyTuple = new bytes32[](1);
     _keyTuple[0] = role;
@@ -216,8 +380,8 @@ library Role {
   function set(bytes32 role, RoleData memory _table) internal {
     bytes memory _staticData = encodeStatic(_table.exists, _table.admin);
 
-    EncodedLengths _encodedLengths;
-    bytes memory _dynamicData;
+    EncodedLengths _encodedLengths = encodeLengths(_table.members);
+    bytes memory _dynamicData = encodeDynamic(_table.members);
 
     bytes32[] memory _keyTuple = new bytes32[](1);
     _keyTuple[0] = role;
@@ -231,8 +395,8 @@ library Role {
   function _set(bytes32 role, RoleData memory _table) internal {
     bytes memory _staticData = encodeStatic(_table.exists, _table.admin);
 
-    EncodedLengths _encodedLengths;
-    bytes memory _dynamicData;
+    EncodedLengths _encodedLengths = encodeLengths(_table.members);
+    bytes memory _dynamicData = encodeDynamic(_table.members);
 
     bytes32[] memory _keyTuple = new bytes32[](1);
     _keyTuple[0] = role;
@@ -250,17 +414,34 @@ library Role {
   }
 
   /**
+   * @notice Decode the tightly packed blob of dynamic data using the encoded lengths.
+   */
+  function decodeDynamic(
+    EncodedLengths _encodedLengths,
+    bytes memory _blob
+  ) internal pure returns (address[] memory members) {
+    uint256 _start;
+    uint256 _end;
+    unchecked {
+      _end = _encodedLengths.atIndex(0);
+    }
+    members = (SliceLib.getSubslice(_blob, _start, _end).decodeArray_address());
+  }
+
+  /**
    * @notice Decode the tightly packed blobs using this table's field layout.
    * @param _staticData Tightly packed static fields.
-   *
-   *
+   * @param _encodedLengths Encoded lengths of dynamic fields.
+   * @param _dynamicData Tightly packed dynamic fields.
    */
   function decode(
     bytes memory _staticData,
-    EncodedLengths,
-    bytes memory
+    EncodedLengths _encodedLengths,
+    bytes memory _dynamicData
   ) internal pure returns (RoleData memory _table) {
     (_table.exists, _table.admin) = decodeStatic(_staticData);
+
+    (_table.members) = decodeDynamic(_encodedLengths, _dynamicData);
   }
 
   /**
@@ -292,16 +473,39 @@ library Role {
   }
 
   /**
+   * @notice Tightly pack dynamic data lengths using this table's schema.
+   * @return _encodedLengths The lengths of the dynamic fields (packed into a single bytes32 value).
+   */
+  function encodeLengths(address[] memory members) internal pure returns (EncodedLengths _encodedLengths) {
+    // Lengths are effectively checked during copy by 2**40 bytes exceeding gas limits
+    unchecked {
+      _encodedLengths = EncodedLengthsLib.pack(members.length * 20);
+    }
+  }
+
+  /**
+   * @notice Tightly pack dynamic (variable length) data using this table's schema.
+   * @return The dynamic data, encoded into a sequence of bytes.
+   */
+  function encodeDynamic(address[] memory members) internal pure returns (bytes memory) {
+    return abi.encodePacked(EncodeArray.encode((members)));
+  }
+
+  /**
    * @notice Encode all of a record's fields.
    * @return The static (fixed length) data, encoded into a sequence of bytes.
    * @return The lengths of the dynamic fields (packed into a single bytes32 value).
    * @return The dynamic (variable length) data, encoded into a sequence of bytes.
    */
-  function encode(bool exists, bytes32 admin) internal pure returns (bytes memory, EncodedLengths, bytes memory) {
+  function encode(
+    bool exists,
+    bytes32 admin,
+    address[] memory members
+  ) internal pure returns (bytes memory, EncodedLengths, bytes memory) {
     bytes memory _staticData = encodeStatic(exists, admin);
 
-    EncodedLengths _encodedLengths;
-    bytes memory _dynamicData;
+    EncodedLengths _encodedLengths = encodeLengths(members);
+    bytes memory _dynamicData = encodeDynamic(members);
 
     return (_staticData, _encodedLengths, _dynamicData);
   }

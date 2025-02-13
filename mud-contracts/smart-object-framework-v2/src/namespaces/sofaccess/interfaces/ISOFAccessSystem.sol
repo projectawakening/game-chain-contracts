@@ -7,9 +7,12 @@ pragma solidity ^0.8.24;
  */
 interface ISOFAccessSystem {
   // EntitySystem.sol access
-  function allowClassAccessRole(uint256 classId, bytes memory targetCallData) external view;
+  function allowAccessRole(uint256 entityId, bytes memory targetCallData) external view;
+  function allowClassScopedSystem(uint256 entityId, bytes memory targetCallData) external view;
+  function allowDirectClassAccessRole(uint256 entityId, bytes memory targetCallData) external view;
+  function allowDirectAccessRole(uint256 entityId, bytes memory targetCallData) external view;
   function allowClassScopedSystemOrDirectClassAccessRole(uint256 entityId, bytes memory targetCallData) external view;
-  function allowClassScopedSystemOrDirectObjectAccessRole(uint256 objectId, bytes memory targetCallData) external view;
+  function allowClassScopedSystemOrDirectAccessRole(uint256 objectId, bytes memory targetCallData) external view;
   // TagSystem.sol access
   function allowEntitySystemOrDirectAccessRole(uint256 entityId, bytes memory targetCallData) external view;
 

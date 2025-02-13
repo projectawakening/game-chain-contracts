@@ -11,7 +11,7 @@ import { ResourceId } from "@latticexyz/world/src/WorldResourceId.sol";
  * @dev This interface is automatically generated from the corresponding system contract. Do not edit manually.
  */
 interface IDelegationControlSystem {
-  function eveworld__verify(address, ResourceId systemId, bytes memory) external view returns (bool);
+  function eveworld__verify(address, ResourceId systemId, bytes memory) external view returns (bool verified);
 
   function eveworld__initDelegation(ResourceId namespaceId, address trustedForwarder) external;
 }

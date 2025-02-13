@@ -59,7 +59,7 @@ contract RoleManagementSystemTest is MudTest {
     assertEq(adminRoleData.admin, adminRole);
 
     // check that the entry point caller has been assigned as a member of this role
-    bool hasRole = HasRole.get(adminRole, deployer);
+    bool hasRole = HasRole.getIsMember(adminRole, deployer);
     assertEq(hasRole, true);
 
     // revert if role already exists
@@ -76,11 +76,22 @@ contract RoleManagementSystemTest is MudTest {
   }
 
   function test_transferRoleAdmin() public {
-    vm.startPrank(deployer);
     // create two roles which have themselves as admin
+    vm.prank(deployer);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (testRole, testRole)));
+    vm.prank(deployer);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
 
+    // revert if the intial caller is not a member of admin
+    vm.expectRevert(
+      abi.encodeWithSelector(IRoleManagementSystem.RoleManagement_UnauthorizedAccount.selector, testRole, address(this))
+    );
+    world.call(
+      ROLE_MANAGEMENT_SYSTEM_ID,
+      abi.encodeCall(IRoleManagementSystem.transferRoleAdmin, (testRole, testRole))
+    );
+
+    vm.startPrank(deployer);
     bytes32 doesNotExist = bytes32("DOES_NOT_EXIST");
 
     // revert, if admin does not exist
@@ -127,23 +138,41 @@ contract RoleManagementSystemTest is MudTest {
   }
 
   function test_grantRole() public {
-    vm.startPrank(deployer);
     // create a role
+    vm.prank(deployer);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
 
+    // revert if the intial caller is not a member of admin
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IRoleManagementSystem.RoleManagement_UnauthorizedAccount.selector,
+        adminRole,
+        address(this)
+      )
+    );
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.grantRole, (adminRole, alice)));
+
+    vm.startPrank(deployer);
     // if an account already has a role, remain the same
-    bool beforeHasRole = HasRole.get(adminRole, deployer);
+    bool beforeHasRole = HasRole.getIsMember(adminRole, deployer);
+    uint256 beforeIndex = HasRole.getIndex(adminRole, deployer);
     assertEq(beforeHasRole, true);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.grantRole, (adminRole, deployer)));
-    bool afterHasRole = HasRole.get(adminRole, deployer);
+    bool afterHasRole = HasRole.getIsMember(adminRole, deployer);
+    uint256 afterIndex = HasRole.getIndex(adminRole, deployer);
     assertEq(afterHasRole, true);
+    assertEq(beforeIndex, afterIndex);
 
     // if account does not have a role, grant it
-    bool beforeNewHasRole = HasRole.get(adminRole, alice);
+    bool beforeNewHasRole = HasRole.getIsMember(adminRole, alice);
+    address[] memory beforeNewMembers = Role.getMembers(adminRole);
     assertEq(beforeNewHasRole, false);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.grantRole, (adminRole, alice)));
-    bool afterNewHasRole = HasRole.get(adminRole, alice);
+    bool afterNewHasRole = HasRole.getIsMember(adminRole, alice);
+    address[] memory afterNewMembers = Role.getMembers(adminRole);
     assertEq(afterNewHasRole, true);
+    assertEq(afterNewMembers.length, beforeNewMembers.length + 1);
+    assertEq(afterNewMembers[afterNewMembers.length - 1], alice);
     vm.stopPrank();
 
     // revert, if caller is not an admin role member
@@ -158,29 +187,48 @@ contract RoleManagementSystemTest is MudTest {
   }
 
   function test_revokeRole() public {
-    vm.startPrank(deployer);
     // create a role
+    vm.prank(deployer);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
+
+    // revert if the intial caller is not a member of admin
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IRoleManagementSystem.RoleManagement_UnauthorizedAccount.selector,
+        adminRole,
+        address(this)
+      )
+    );
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.revokeRole, (adminRole, alice)));
+
+    vm.startPrank(deployer);
     // revert if trying to revoke self
     vm.expectRevert(abi.encodeWithSelector(IRoleManagementSystem.RoleManagement_MustRenounceSelf.selector));
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.revokeRole, (adminRole, deployer)));
 
     // if an account does not have a role, remain the same
-    bool beforeHasRole = HasRole.get(adminRole, alice);
+    bool beforeHasRole = HasRole.getIsMember(adminRole, alice);
     assertEq(beforeHasRole, false);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.revokeRole, (adminRole, alice)));
-    bool afterHasRole = HasRole.get(adminRole, alice);
+    bool afterHasRole = HasRole.getIsMember(adminRole, alice);
     assertEq(afterHasRole, false);
 
     // grant alice the role
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.grantRole, (adminRole, alice)));
 
     // if account has a role, revoke it
-    bool beforeNewHasRole = HasRole.get(adminRole, alice);
+    bool beforeNewHasRole = HasRole.getIsMember(adminRole, alice);
+    uint256 beforeIndex = HasRole.getIndex(adminRole, alice);
+    address[] memory beforeMembers = Role.getMembers(adminRole);
     assertEq(beforeNewHasRole, true);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.revokeRole, (adminRole, alice)));
-    bool afterNewHasRole = HasRole.get(adminRole, alice);
+    bool afterNewHasRole = HasRole.getIsMember(adminRole, alice);
+    address[] memory afterMembers = Role.getMembers(adminRole);
     assertEq(afterNewHasRole, false);
+    assertEq(afterMembers.length, beforeMembers.length - 1);
+    if (beforeIndex < beforeMembers.length - 1) {
+      assertEq(afterMembers[beforeIndex], beforeMembers[beforeMembers.length - 1]);
+    }
     vm.stopPrank();
 
     // revert, if caller is not an admin role member
@@ -195,27 +243,78 @@ contract RoleManagementSystemTest is MudTest {
   }
 
   function test_renounceRole() public {
-    vm.startPrank(deployer);
     // create a role
+    vm.prank(deployer);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
+    // grant alice the role
+    vm.prank(deployer);
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.grantRole, (adminRole, alice)));
 
     // revert if trying to renounce with wrong confirmation account
     vm.expectRevert(abi.encodeWithSelector(IRoleManagementSystem.RoleManagement_BadConfirmation.selector));
-    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.renounceRole, (adminRole, alice)));
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.renounceRole, (adminRole, deployer)));
 
+    vm.startPrank(deployer);
     // if account has a role, revoke it
-    bool beforeHasRole = HasRole.get(adminRole, deployer);
+    bool beforeHasRole = HasRole.getIsMember(adminRole, deployer);
+    uint256 beforeIndex = HasRole.getIndex(adminRole, deployer);
+    address[] memory beforeMembers = Role.getMembers(adminRole);
     assertEq(beforeHasRole, true);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.renounceRole, (adminRole, deployer)));
-    bool afterHasRole = HasRole.get(adminRole, deployer);
+    bool afterHasRole = HasRole.getIsMember(adminRole, deployer);
+    address[] memory afterMembers = Role.getMembers(adminRole);
     assertEq(afterHasRole, false);
+    assertEq(afterMembers.length, beforeMembers.length - 1);
+    assertEq(afterMembers[beforeIndex], beforeMembers[beforeMembers.length - 1]);
 
     // if an account does not have a role, remain the same
-    bool beforeDoesNotHaveRole = HasRole.get(adminRole, deployer);
+    bool beforeDoesNotHaveRole = HasRole.getIsMember(adminRole, deployer);
     assertEq(beforeDoesNotHaveRole, false);
     world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.renounceRole, (adminRole, deployer)));
-    bool afterDoesNotHaveRole = HasRole.get(adminRole, deployer);
+    bool afterDoesNotHaveRole = HasRole.getIsMember(adminRole, deployer);
     assertEq(afterDoesNotHaveRole, false);
+    vm.stopPrank();
+  }
+
+  function test_revokeAll() public {
+    // create a role and grant an additional account to the role
+    vm.prank(deployer);
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.createRole, (adminRole, adminRole)));
+    vm.prank(deployer);
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.grantRole, (adminRole, alice)));
+
+    // revert if the intial caller is not a member of admin
+    vm.expectRevert(
+      abi.encodeWithSelector(
+        IRoleManagementSystem.RoleManagement_UnauthorizedAccount.selector,
+        adminRole,
+        address(this)
+      )
+    );
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.revokeAll, (adminRole)));
+
+    vm.startPrank(deployer);
+    address[] memory beforeMembers = Role.getMembers(adminRole);
+    uint256 beforeDeployerIndex = HasRole.getIndex(adminRole, deployer);
+    bool beforeDeployerHasRole = HasRole.getIsMember(adminRole, deployer);
+    uint256 beforeAliceIndex = HasRole.getIndex(adminRole, alice);
+    bool beforeAliceHasRole = HasRole.getIsMember(adminRole, alice);
+    assertEq(beforeDeployerHasRole, true);
+    assertEq(beforeDeployerIndex, 0);
+    assertEq(beforeAliceHasRole, true);
+    assertEq(beforeAliceIndex, 1);
+    assertEq(beforeMembers.length, 2);
+
+    // successfully revoke all roles
+    world.call(ROLE_MANAGEMENT_SYSTEM_ID, abi.encodeCall(IRoleManagementSystem.revokeAll, (adminRole)));
+
+    address[] memory afterMembers = Role.getMembers(adminRole);
+    bool afterDeployerHasRole = HasRole.getIsMember(adminRole, alice);
+    bool afterAliceHasRole = HasRole.getIsMember(adminRole, alice);
+    assertEq(afterDeployerHasRole, false);
+    assertEq(afterAliceHasRole, false);
+    assertEq(afterMembers.length, 0);
+
     vm.stopPrank();
   }
 }

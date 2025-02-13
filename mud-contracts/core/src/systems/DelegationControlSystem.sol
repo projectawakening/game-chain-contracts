@@ -5,6 +5,8 @@ import { System } from "@latticexyz/world/src/System.sol";
 import { DelegationControl } from "@latticexyz/world/src/DelegationControl.sol";
 import { ResourceId, WorldResourceIdLib, WorldResourceIdInstance } from "@latticexyz/world/src/WorldResourceId.sol";
 import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
+import { PuppetRegistry } from "@latticexyz/world-modules/src/modules/puppet/tables/PuppetRegistry.sol";
+import { PUPPET_TABLE_ID } from "@latticexyz/world-modules/src/modules/puppet/constants.sol";
 
 contract DelegationControlSystem is DelegationControl {
   using WorldResourceIdInstance for ResourceId;
@@ -15,10 +17,12 @@ contract DelegationControlSystem is DelegationControl {
    * @notice Verify the caller is the trusted forwarder
    * @dev Function to check if the caller is the trusted forwarder for the namespace
    * @param systemId The namespace to check the delegation
-   * @return bool True if the caller is the trusted forwarder
+   * @return verified bool if the caller is the trusted forwarder
    */
-  function verify(address, ResourceId systemId, bytes memory) public view returns (bool) {
-    return trustedForwarders[systemId.getNamespaceId()] == _msgSender();
+  function verify(address, ResourceId systemId, bytes memory) public view returns (bool verified) {
+    verified =
+      (PuppetRegistry.get(PUPPET_TABLE_ID, systemId) == _msgSender()) ||
+      (trustedForwarders[systemId.getNamespaceId()] == _msgSender());
   }
 
   /**
