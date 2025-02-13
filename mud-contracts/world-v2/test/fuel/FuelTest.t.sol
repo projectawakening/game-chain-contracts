@@ -32,6 +32,7 @@ import { FuelSystemLib, fuelSystem } from "../../src/namespaces/evefrontier/code
 
 contract FuelTest is DeployableTest {
   LocationData location = LocationData({ solarSystemId: 1, x: 1, y: 1, z: 1 });
+
   function setUp() public virtual override {
     super.setUp();
     world = IWorldWithContext(worldAddress);
@@ -252,7 +253,11 @@ contract FuelTest is DeployableTest {
 
     FuelData memory data = Fuel.get(smartObjectId);
 
-    assertEq((data.fuelAmount) / 1e18, (fuelAmount * (10 ** DECIMALS) - fuelConsumption) / 1e18);
+    // Round values to nearest whole number before comparison
+    uint256 expectedAmount = ((fuelAmount * (10 ** DECIMALS) - fuelConsumption) / ONE_UNIT_IN_WEI) * ONE_UNIT_IN_WEI;
+    uint256 actualAmount = (data.fuelAmount / ONE_UNIT_IN_WEI) * ONE_UNIT_IN_WEI;
+
+    assertEq(actualAmount, expectedAmount);
     assertEq(data.lastUpdatedAt, block.timestamp);
     assertEq(uint8(State.ONLINE), uint8(DeployableState.getCurrentState(smartObjectId)));
   }
