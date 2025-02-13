@@ -18,6 +18,7 @@ import { EveSystem } from "../EveSystem.sol";
 
 import { InventorySystemLib, inventorySystem } from "../../codegen/systems/InventorySystemLib.sol";
 import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../codegen/systems/EphemeralInventorySystemLib.sol";
+import { roleManagementSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/RoleManagementSystemLib.sol";
 
 /**
  * @title InventoryInteractSystem
@@ -25,6 +26,7 @@ import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../cod
  * @notice This system is responsible for the interaction between the inventory and ephemeral inventory
  * @dev This system is responsible for the interaction between the inventory and ephemeral inventory
  */
+
 contract InventoryInteractSystem is EveSystem {
   error Inventory_InvalidTransferItemQuantity(
     string message,
@@ -42,12 +44,13 @@ contract InventoryInteractSystem is EveSystem {
    * @param ephInvOwner is the ephemeral inventory owner
    * @param items is the array of items to transfer
    * TODO: get the _initialMsgSender when execution context is implemented
+   * TODO: add scope modifier back to this function. it was not used due to stack too deep compiler error.
    */
   function ephemeralToInventoryTransfer(
     uint256 smartObjectId,
     address ephInvOwner,
     TransferItem[] memory items
-  ) public {
+  ) public context access(smartObjectId) scope(smartObjectId) {
     InventoryItem[] memory ephInvOut = new InventoryItem[](items.length);
     InventoryItem[] memory invIn = new InventoryItem[](items.length);
     // address ephInvOwner = _initialMsgSender();
@@ -98,18 +101,60 @@ contract InventoryInteractSystem is EveSystem {
     inventorySystem.depositToInventory(smartObjectId, invIn);
   }
 
+  function setEphemeralToInventoryTransferAccess(
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) public context access(smartObjectId) scope(smartObjectId) {
+    bytes32 accessRole = InventoryUtils.getEphemeralToInventoryTransferAccessRole(smartObjectId);
+
+    if (isAllowed) {
+      roleManagementSystem.grantRole(accessRole, accessAddress);
+    } else {
+      roleManagementSystem.revokeRole(accessRole, accessAddress);
+    }
+  }
+
+  function setInventoryToEphemeralTransferAccess(
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) public context access(smartObjectId) scope(smartObjectId) {
+    bytes32 accessRole = InventoryUtils.getInventoryToEphemeralTransferAccessRole(smartObjectId);
+
+    if (isAllowed) {
+      roleManagementSystem.grantRole(accessRole, accessAddress);
+    } else {
+      roleManagementSystem.revokeRole(accessRole, accessAddress);
+    }
+  }
+
+  function setInventoryAdminAccess(
+    uint256 smartObjectId,
+    address accessAddress,
+    bool isAllowed
+  ) public context access(smartObjectId) scope(smartObjectId) {
+    bytes32 adminAccessRole = InventoryUtils.getAdminAccessRole(smartObjectId);
+    if (isAllowed) {
+      roleManagementSystem.grantRole(adminAccessRole, accessAddress);
+    } else {
+      roleManagementSystem.revokeRole(adminAccessRole, accessAddress);
+    }
+  }
+
   /**
    * @notice Transfer items from inventory to ephemeral
    * @dev transfer items from inventory storage to an ephemeral storage
    * @param smartObjectId is the smart object id
    * @param ephemeralInventoryOwner is the ephemeral inventory owner
    * @param items is the array of items to transfer
+   * TODO: add scope modifier back to this function. it was not used due to stack too deep compiler error.
    */
   function inventoryToEphemeralTransfer(
     uint256 smartObjectId,
     address ephemeralInventoryOwner,
     TransferItem[] memory items
-  ) public {
+  ) public context access(smartObjectId) scope(smartObjectId) {
     InventoryItem[] memory invOut = new InventoryItem[](items.length);
     InventoryItem[] memory ephInvIn = new InventoryItem[](items.length);
     address objectInvOwner = IERC721(DeployableToken.getErc721Address()).ownerOf(smartObjectId);

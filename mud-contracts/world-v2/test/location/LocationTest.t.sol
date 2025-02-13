@@ -10,28 +10,33 @@ import { getKeysWithValue } from "@latticexyz/world-modules/src/modules/keyswith
 import { Location } from "../../src/namespaces/evefrontier/codegen/tables/Location.sol";
 import { LocationData } from "../../src/namespaces/evefrontier/codegen/tables/Location.sol";
 import { LocationSystemLib, locationSystem } from "../../src/namespaces/evefrontier/codegen/systems/LocationSystemLib.sol";
+import { EveTest } from "../EveTest.sol";
+import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { AccessSystem } from "../../src/namespaces/evefrontier/systems/access-systems/AccessSystem.sol";
 
-contract StaticDataTest is MudTest {
-  IBaseWorld world;
+contract LocationTest is EveTest {
+  uint256 smartObjectId = 1234;
 
   function setUp() public virtual override {
     super.setUp();
-    world = IBaseWorld(worldAddress);
+
+    vm.startPrank(deployer);
+    uint256 locationTestClassId = uint256(bytes32("LOCATION_TEST"));
+    ResourceId[] memory locationTestSystemIds = new ResourceId[](1);
+    locationTestSystemIds[0] = locationSystem.toResourceId();
+    entitySystem.registerClass(locationTestClassId, "admin", locationTestSystemIds);
+
+    entitySystem.instantiate(locationTestClassId, smartObjectId);
+    vm.stopPrank();
   }
 
-  function testWorldExists() public {
-    uint256 codeSize;
-    address addr = worldAddress;
-    assembly {
-      codeSize := extcodesize(addr)
-    }
-    assertTrue(codeSize > 0);
-  }
-
-  function testSaveLocation(uint256 smartObjectId, uint256 solarSystemId, uint256 x, uint256 y, uint256 z) public {
+  function testSaveLocation(uint256 solarSystemId, uint256 x, uint256 y, uint256 z) public {
     vm.assume(smartObjectId != 0);
 
+    vm.startPrank(deployer);
     locationSystem.saveLocation(smartObjectId, LocationData({ solarSystemId: solarSystemId, x: x, y: y, z: z }));
+    vm.stopPrank();
 
     LocationData memory location = Location.get(smartObjectId);
 
@@ -41,10 +46,12 @@ contract StaticDataTest is MudTest {
     assertEq(z, location.z);
   }
 
-  function testGetLocation(uint256 smartObjectId, uint256 solarSystemId, uint256 x, uint256 y, uint256 z) public {
+  function testGetLocation(uint256 solarSystemId, uint256 x, uint256 y, uint256 z) public {
     vm.assume(smartObjectId != 0);
 
+    vm.startPrank(deployer);
     locationSystem.saveLocation(smartObjectId, LocationData({ solarSystemId: solarSystemId, x: x, y: y, z: z }));
+    vm.stopPrank();
 
     LocationData memory location = Location.get(smartObjectId);
 
@@ -54,39 +61,54 @@ contract StaticDataTest is MudTest {
     assertEq(z, location.z);
   }
 
-  function testSetSolarSystemId(uint256 smartObjectId, uint256 solarSystemId) public {
+  function testSetSolarSystemId(uint256 solarSystemId) public {
     vm.assume(smartObjectId != 0);
 
+    vm.startPrank(deployer);
     locationSystem.setSolarSystemId(smartObjectId, solarSystemId);
+    vm.stopPrank();
 
     LocationData memory location = Location.get(smartObjectId);
     assertEq(solarSystemId, location.solarSystemId);
   }
 
-  function testSetX(uint256 smartObjectId, uint256 x) public {
+  function testSetX(uint256 x) public {
     vm.assume(smartObjectId != 0);
 
+    vm.startPrank(deployer);
     locationSystem.setX(smartObjectId, x);
+    vm.stopPrank();
 
     LocationData memory location = Location.get(smartObjectId);
     assertEq(x, location.x);
   }
 
-  function testSetY(uint256 smartObjectId, uint256 y) public {
+  function testSetY(uint256 y) public {
     vm.assume(smartObjectId != 0);
 
+    vm.startPrank(deployer);
     locationSystem.setY(smartObjectId, y);
+    vm.stopPrank();
 
     LocationData memory location = Location.get(smartObjectId);
     assertEq(y, location.y);
   }
 
-  function testSetZ(uint256 smartObjectId, uint256 z) public {
+  function testSetZ(uint256 z) public {
     vm.assume(smartObjectId != 0);
 
+    vm.startPrank(deployer);
     locationSystem.setZ(smartObjectId, z);
+    vm.stopPrank();
 
     LocationData memory location = Location.get(smartObjectId);
     assertEq(z, location.z);
+  }
+
+  function testMustBeAdminToSetLocation() public {
+    vm.startPrank(alice);
+    vm.expectRevert(abi.encodeWithSelector(AccessSystem.Access_NotAdmin.selector, alice));
+    locationSystem.setSolarSystemId(smartObjectId, 1);
+    vm.stopPrank();
   }
 }

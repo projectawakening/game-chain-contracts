@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.24;
+pragma solidity ^0.8.24;
 
 import { System } from "@latticexyz/world/src/System.sol";
 import { ResourceId } from "@latticexyz/world/src/WorldResourceId.sol";
@@ -74,13 +74,15 @@ contract SmartObjectFramework is System {
    */
   modifier scope(uint256 entityId) {
     // check that the current system is in scope for the given entity
-    ResourceId systemId = SystemRegistry.get(address(this));
-    _scope(entityId, systemId);
-    // if this is a subsequent system-to-system call (callCount > 1), then check that the previous (calling) system is in scope for the given entity
-    uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
-    if (callCount > 1) {
-      (ResourceId prevSystemId, , , ) = IWorldWithContext(_world()).getWorldCallContext(callCount - 1);
-      _scope(entityId, prevSystemId);
+    {
+      ResourceId systemId = SystemRegistry.get(address(this));
+      _scope(entityId, systemId);
+      // if this is a subsequent system-to-system call (callCount > 1), then check that the previous (calling) system is in scope for the given entity
+      uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
+      if (callCount > 1) {
+        (ResourceId prevSystemId, , , ) = IWorldWithContext(_world()).getWorldCallContext(callCount - 1);
+        _scope(entityId, prevSystemId);
+      }
     }
     _;
   }

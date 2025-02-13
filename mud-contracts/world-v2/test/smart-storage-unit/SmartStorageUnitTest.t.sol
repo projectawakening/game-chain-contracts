@@ -33,29 +33,27 @@ import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../src
 import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
 import { CreateAndAnchorDeployableParams } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
 import { SMART_STORAGE_UNIT } from "../../src/namespaces/evefrontier/systems/constants.sol";
+import { EveTest } from "../EveTest.sol";
 
-contract SmartStorageUnitTest is MudTest {
-  IBaseWorld world;
-  string mnemonic = "test test test test test test test test test test test junk";
-  uint256 deployerPK = vm.deriveKey(mnemonic, 0);
-  uint256 alicePK = vm.deriveKey(mnemonic, 2);
-  uint256 bobPK = vm.deriveKey(mnemonic, 3);
-
-  address deployer = vm.addr(deployerPK); // ADMIN
+contract SmartStorageUnitTest is EveTest {
+  uint256 smartObjectId = 6666666;
   uint256 characterId = 123;
   uint256 diffCharacterId = 9999;
-  address alice = vm.addr(alicePK);
-  address bob = vm.addr(bobPK); // Ephemeral Inventory Owner
   uint256 tribeId = 100;
   SmartObjectData smartObjectData;
   WorldPosition worldPosition;
   EntityRecordData entityRecord;
   uint256 fuelMaxCapacity = 1000000000;
 
+  uint256 inventoryItemId = 1233333;
+  uint256 diffInventoryItemId = 9999999;
+  uint256 ephemeralInventoryItemId = 4566666;
+  uint256 diffEphemeralInventoryItemId = 7899999;
+
   function setUp() public virtual override {
     super.setUp();
-    world = IBaseWorld(worldAddress);
 
+    vm.startPrank(deployer);
     deployableSystem.globalResume();
 
     entityRecord = EntityRecordData({ typeId: 123, itemId: 234, volume: 100 });
@@ -71,22 +69,21 @@ contract SmartStorageUnitTest is MudTest {
     worldPosition = WorldPosition({ solarSystemId: 1, position: position });
 
     smartCharacterSystem.createCharacter(characterId, alice, tribeId, entityRecord, entityRecordMetadata);
-
     smartCharacterSystem.createCharacter(diffCharacterId, bob, tribeId, entityRecord, entityRecordMetadata);
+    vm.stopPrank();
   }
 
   function testcreateAndAnchorSmartStorageUnit(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != 0);
     vm.assume(storageCapacity > 0);
     vm.assume(ephemeralStorageCapacity > 0);
     vm.assume(fuelConsumptionIntervalInSeconds > 1);
 
+    vm.startPrank(deployer);
     smartStorageUnitSystem.createAndAnchorSmartStorageUnit(
       CreateAndAnchorDeployableParams({
         smartObjectId: smartObjectId,
@@ -106,10 +103,10 @@ contract SmartStorageUnitTest is MudTest {
       storageCapacity,
       ephemeralStorageCapacity
     );
+    vm.stopPrank();
   }
 
-  function testSetDeployableStateToValid(uint256 smartObjectId) public {
-    vm.assume(smartObjectId != 0);
+  function testSetDeployableStateToValid() public {
     vm.startPrank(deployer);
     DeployableState.set(
       smartObjectId,
@@ -127,29 +124,37 @@ contract SmartStorageUnitTest is MudTest {
   }
 
   function testCreateAndDepositItemsToInventory(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
+    vm.assume(fuelConsumptionIntervalInSeconds > 1);
     vm.assume(storageCapacity > 500);
     vm.assume(ephemeralStorageCapacity > 1000);
 
     testcreateAndAnchorSmartStorageUnit(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
       ephemeralStorageCapacity
     );
 
-    testSetDeployableStateToValid(smartObjectId);
+    testSetDeployableStateToValid();
 
     InventoryItem[] memory items = new InventoryItem[](1);
-    items[0] = InventoryItem({ inventoryItemId: 123, owner: alice, itemId: 12, typeId: 3, volume: 10, quantity: 5 });
+    items[0] = InventoryItem({
+      inventoryItemId: inventoryItemId,
+      owner: alice,
+      itemId: 12,
+      typeId: 3,
+      volume: 10,
+      quantity: 5
+    });
 
+    vm.startPrank(deployer);
     inventorySystem.createAndDepositItemsToInventory(smartObjectId, items);
+    vm.stopPrank();
 
     InventoryData memory inventoryData = Inventory.get(smartObjectId);
     uint256 useCapacity = items[0].volume * items[0].quantity;
@@ -164,29 +169,37 @@ contract SmartStorageUnitTest is MudTest {
   }
 
   function testCreateAndDepositItemsToEphemeralInventory(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
+    vm.assume(storageCapacity > 0);
+    vm.assume(fuelConsumptionIntervalInSeconds > 1);
     vm.assume(storageCapacity > 500);
     vm.assume(ephemeralStorageCapacity > 1000);
 
     testcreateAndAnchorSmartStorageUnit(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
       ephemeralStorageCapacity
     );
-    testSetDeployableStateToValid(smartObjectId);
+    testSetDeployableStateToValid();
 
     InventoryItem[] memory items = new InventoryItem[](1);
+    items[0] = InventoryItem({
+      inventoryItemId: ephemeralInventoryItemId,
+      owner: bob,
+      itemId: 45,
+      typeId: 6,
+      volume: 10,
+      quantity: 5
+    });
 
-    items[0] = InventoryItem({ inventoryItemId: 456, owner: bob, itemId: 45, typeId: 6, volume: 10, quantity: 5 });
-
+    vm.startPrank(deployer);
     ephemeralInventorySystem.createAndDepositItemsToEphemeralInventory(smartObjectId, bob, items);
+    vm.stopPrank();
 
     EphemeralInvData memory ephemeralInvData = EphemeralInv.get(smartObjectId, bob);
 
@@ -205,18 +218,28 @@ contract SmartStorageUnitTest is MudTest {
   }
 
   function testUnanchorAndreAnchor(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
+    vm.assume(storageCapacity > 0);
+    vm.assume(ephemeralStorageCapacity > 0);
+    vm.assume(fuelConsumptionIntervalInSeconds > 1);
+
     InventoryItem[] memory items = new InventoryItem[](1);
-    items[0] = InventoryItem({ inventoryItemId: 123, owner: alice, itemId: 12, typeId: 3, volume: 10, quantity: 5 });
+    items[0] = InventoryItem({
+      inventoryItemId: inventoryItemId,
+      owner: alice,
+      itemId: 12,
+      typeId: 3,
+      volume: 10,
+      quantity: 5
+    });
 
     InventoryItem[] memory ephemeralItems = new InventoryItem[](1);
     ephemeralItems[0] = InventoryItem({
-      inventoryItemId: 456,
+      inventoryItemId: ephemeralInventoryItemId,
       owner: bob,
       itemId: 45,
       typeId: 6,
@@ -225,17 +248,18 @@ contract SmartStorageUnitTest is MudTest {
     });
 
     testCreateAndDepositItemsToInventory(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
       ephemeralStorageCapacity
     );
 
+    vm.startPrank(deployer);
     ephemeralInventorySystem.createAndDepositItemsToEphemeralInventory(smartObjectId, bob, ephemeralItems);
 
     deployableSystem.bringOffline(smartObjectId);
     deployableSystem.unanchor(smartObjectId);
+    vm.stopPrank();
 
     DeployableStateData memory deployableStateData = DeployableState.get(smartObjectId);
 
@@ -243,8 +267,8 @@ contract SmartStorageUnitTest is MudTest {
     assertEq(deployableStateData.isValid, false);
 
     InventoryItemData memory inventoryItemData = InventoryItemTable.get(smartObjectId, items[0].inventoryItemId);
-    assertEq(inventoryItemData.quantity, items[0].quantity);
-    assertEq(deployableStateData.anchoredAt >= inventoryItemData.stateUpdate, true);
+    assertEq(inventoryItemData.quantity, items[0].quantity, "inventoryItemData.quantity");
+    assertEq(deployableStateData.anchoredAt >= inventoryItemData.stateUpdate, true, "deployableStateData.anchoredAt");
 
     EphemeralInvItemData memory ephemeralInvItemData = EphemeralInvItem.get(
       smartObjectId,
@@ -252,31 +276,49 @@ contract SmartStorageUnitTest is MudTest {
       ephemeralItems[0].owner
     );
 
-    assertEq(ephemeralInvItemData.quantity, ephemeralItems[0].quantity);
-    assertEq(deployableStateData.anchoredAt >= ephemeralInvItemData.stateUpdate, true);
+    assertEq(ephemeralInvItemData.quantity, ephemeralItems[0].quantity, "ephemeralInvItemData.quantity");
+    assertEq(
+      deployableStateData.anchoredAt >= ephemeralInvItemData.stateUpdate,
+      true,
+      "deployableStateData.anchoredAt"
+    );
 
     vm.warp(block.timestamp + 10);
 
-    testcreateAndAnchorSmartStorageUnit(
-      smartObjectId,
-      fuelUnitVolume,
-      fuelConsumptionIntervalInSeconds,
-      storageCapacity,
-      ephemeralStorageCapacity
-    );
+    testSetDeployableStateToValid();
 
-    testSetDeployableStateToValid(smartObjectId);
+    items = new InventoryItem[](1);
+    items[0] = InventoryItem({
+      inventoryItemId: diffInventoryItemId,
+      owner: alice,
+      itemId: 12,
+      typeId: 3,
+      volume: 10,
+      quantity: 5
+    });
+
+    ephemeralItems = new InventoryItem[](1);
+    ephemeralItems[0] = InventoryItem({
+      inventoryItemId: diffEphemeralInventoryItemId,
+      owner: bob,
+      itemId: 45,
+      typeId: 6,
+      volume: 10,
+      quantity: 5
+    });
+
+    vm.startPrank(deployer);
     inventorySystem.createAndDepositItemsToInventory(smartObjectId, items);
-
     ephemeralInventorySystem.createAndDepositItemsToEphemeralInventory(smartObjectId, bob, ephemeralItems);
+    vm.stopPrank();
 
     deployableStateData = DeployableState.get(smartObjectId);
 
-    assertEq(uint8(deployableStateData.currentState), uint8(State.ONLINE));
-    assertEq(deployableStateData.isValid, true);
+    assertEq(uint8(deployableStateData.currentState), uint8(State.ONLINE), "deployableStateData.currentState");
+    assertEq(deployableStateData.isValid, true, "deployableStateData.isValid");
 
     inventoryItemData = InventoryItemTable.get(smartObjectId, items[0].inventoryItemId);
-    assertEq(inventoryItemData.quantity, items[0].quantity);
+    assertEq(inventoryItemData.quantity, items[0].quantity, "inventoryItemData.quantity 2");
 
     ephemeralInvItemData = EphemeralInvItem.get(
       smartObjectId,
@@ -284,26 +326,32 @@ contract SmartStorageUnitTest is MudTest {
       ephemeralItems[0].owner
     );
 
-    assertEq(ephemeralInvItemData.quantity, ephemeralItems[0].quantity);
+    assertEq(ephemeralInvItemData.quantity, ephemeralItems[0].quantity, "ephemeralInvItemData.quantity 2");
   }
 
   function testUnanchorDepositRevert(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != 0);
+    vm.assume(fuelConsumptionIntervalInSeconds > 1);
     vm.assume(storageCapacity > 500);
     vm.assume(ephemeralStorageCapacity > 1000);
 
     InventoryItem[] memory items = new InventoryItem[](1);
-    items[0] = InventoryItem({ inventoryItemId: 123, owner: alice, itemId: 12, typeId: 3, volume: 10, quantity: 5 });
+    items[0] = InventoryItem({
+      inventoryItemId: inventoryItemId,
+      owner: alice,
+      itemId: 12,
+      typeId: 3,
+      volume: 10,
+      quantity: 5
+    });
 
     InventoryItem[] memory ephemeralItems = new InventoryItem[](1);
     ephemeralItems[0] = InventoryItem({
-      inventoryItemId: 456,
+      inventoryItemId: ephemeralInventoryItemId,
       owner: bob,
       itemId: 45,
       typeId: 6,
@@ -312,19 +360,20 @@ contract SmartStorageUnitTest is MudTest {
     });
 
     testcreateAndAnchorSmartStorageUnit(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
       ephemeralStorageCapacity
     );
-    testSetDeployableStateToValid(smartObjectId);
-    inventorySystem.createAndDepositItemsToInventory(smartObjectId, items);
+    testSetDeployableStateToValid();
 
+    vm.startPrank(deployer);
+    inventorySystem.createAndDepositItemsToInventory(smartObjectId, items);
     ephemeralInventorySystem.createAndDepositItemsToEphemeralInventory(smartObjectId, bob, ephemeralItems);
 
     deployableSystem.bringOffline(smartObjectId);
     deployableSystem.unanchor(smartObjectId);
+    vm.stopPrank();
 
     DeployableStateData memory deployableStateData = DeployableState.get(smartObjectId);
 
@@ -333,35 +382,57 @@ contract SmartStorageUnitTest is MudTest {
 
     vm.warp(block.timestamp + 10);
 
+    vm.startPrank(deployer);
+    items[0] = InventoryItem({
+      inventoryItemId: diffInventoryItemId,
+      owner: alice,
+      itemId: 12,
+      typeId: 3,
+      volume: 10,
+      quantity: 5
+    });
     vm.expectRevert(
       abi.encodeWithSelector(DeployableSystem.Deployable_IncorrectState.selector, smartObjectId, State.UNANCHORED)
     );
-
     inventorySystem.createAndDepositItemsToInventory(smartObjectId, items);
+
+    ephemeralItems[0] = InventoryItem({
+      inventoryItemId: diffEphemeralInventoryItemId,
+      owner: bob,
+      itemId: 45,
+      typeId: 6,
+      volume: 10,
+      quantity: 5
+    });
     vm.expectRevert(
       abi.encodeWithSelector(DeployableSystem.Deployable_IncorrectState.selector, smartObjectId, State.UNANCHORED)
     );
-
     ephemeralInventorySystem.createAndDepositItemsToEphemeralInventory(smartObjectId, bob, ephemeralItems);
+    vm.stopPrank();
   }
 
   function testUnanchorWithdrawRevert(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != 0);
+    vm.assume(fuelConsumptionIntervalInSeconds > 1);
     vm.assume(storageCapacity > 500);
     vm.assume(ephemeralStorageCapacity > 1000);
 
     InventoryItem[] memory items = new InventoryItem[](1);
-    items[0] = InventoryItem({ inventoryItemId: 123, owner: alice, itemId: 12, typeId: 3, volume: 10, quantity: 5 });
-
+    items[0] = InventoryItem({
+      inventoryItemId: inventoryItemId,
+      owner: alice,
+      itemId: 12,
+      typeId: 3,
+      volume: 10,
+      quantity: 5
+    });
     InventoryItem[] memory ephemeralItems = new InventoryItem[](1);
     ephemeralItems[0] = InventoryItem({
-      inventoryItemId: 456,
+      inventoryItemId: ephemeralInventoryItemId,
       owner: bob,
       itemId: 45,
       typeId: 6,
@@ -370,25 +441,28 @@ contract SmartStorageUnitTest is MudTest {
     });
 
     testcreateAndAnchorSmartStorageUnit(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
       ephemeralStorageCapacity
     );
-    testSetDeployableStateToValid(smartObjectId);
-    inventorySystem.createAndDepositItemsToInventory(smartObjectId, items);
+    testSetDeployableStateToValid();
 
+    vm.startPrank(deployer);
+    inventorySystem.createAndDepositItemsToInventory(smartObjectId, items);
     ephemeralInventorySystem.createAndDepositItemsToEphemeralInventory(smartObjectId, bob, ephemeralItems);
 
     deployableSystem.bringOffline(smartObjectId);
     deployableSystem.unanchor(smartObjectId);
+    vm.stopPrank();
 
     vm.warp(block.timestamp + 10);
     LocationData memory location = LocationData({ solarSystemId: 1, x: 1, y: 1, z: 1 });
 
+    vm.startPrank(deployer);
     deployableSystem.anchor(smartObjectId, location);
-    testSetDeployableStateToValid(smartObjectId);
+    vm.stopPrank();
+    testSetDeployableStateToValid();
 
     vm.expectRevert(
       abi.encodeWithSelector(
@@ -399,8 +473,8 @@ contract SmartStorageUnitTest is MudTest {
       )
     );
 
+    vm.startPrank(alice);
     inventorySystem.withdrawFromInventory(smartObjectId, items);
-    vm.startPrank(bob);
     vm.expectRevert(
       abi.encodeWithSelector(
         EphemeralInventorySystem.Ephemeral_Inventory_InvalidItemQuantity.selector,
@@ -415,27 +489,35 @@ contract SmartStorageUnitTest is MudTest {
   }
 
   function testDestroyAndRevertDepositItems(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != 0);
+    vm.assume(storageCapacity > 0);
+    vm.assume(ephemeralStorageCapacity > 0);
 
     InventoryItem[] memory items = new InventoryItem[](1);
-    items[0] = InventoryItem({ inventoryItemId: 123, owner: bob, itemId: 12, typeId: 3, volume: 10, quantity: 5 });
+    items[0] = InventoryItem({
+      inventoryItemId: inventoryItemId,
+      owner: bob,
+      itemId: 12,
+      typeId: 3,
+      volume: 10,
+      quantity: 5
+    });
 
     testCreateAndDepositItemsToInventory(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
       ephemeralStorageCapacity
     );
 
+    vm.startPrank(deployer);
     deployableSystem.bringOffline(smartObjectId);
     deployableSystem.destroyDeployable(smartObjectId);
+    vm.stopPrank();
     DeployableStateData memory deployableStateData = DeployableState.get(smartObjectId);
 
     assertEq(uint8(deployableStateData.currentState), uint8(State.DESTROYED));
@@ -450,36 +532,47 @@ contract SmartStorageUnitTest is MudTest {
       abi.encodeWithSelector(DeployableSystem.Deployable_IncorrectState.selector, smartObjectId, State.DESTROYED)
     );
     LocationData memory location = LocationData({ solarSystemId: 1, x: 1, y: 1, z: 1 });
-
+    vm.startPrank(deployer);
     deployableSystem.anchor(smartObjectId, location);
+    vm.stopPrank();
   }
 
   function testDestroyAndRevertWithdrawItems(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public {
-    vm.assume(smartObjectId != 0);
+    vm.assume(storageCapacity > 0);
+    vm.assume(ephemeralStorageCapacity > 0);
+
     InventoryItem[] memory items = new InventoryItem[](1);
-    items[0] = InventoryItem({ inventoryItemId: 123, owner: alice, itemId: 12, typeId: 3, volume: 10, quantity: 5 });
+    items[0] = InventoryItem({
+      inventoryItemId: inventoryItemId,
+      owner: alice,
+      itemId: 12,
+      typeId: 3,
+      volume: 10,
+      quantity: 5
+    });
 
     testCreateAndDepositItemsToInventory(
-      smartObjectId,
       fuelUnitVolume,
       fuelConsumptionIntervalInSeconds,
       storageCapacity,
       ephemeralStorageCapacity
     );
 
+    vm.startPrank(deployer);
     deployableSystem.bringOffline(smartObjectId);
     deployableSystem.destroyDeployable(smartObjectId);
+    vm.stopPrank();
 
     vm.expectRevert(
       abi.encodeWithSelector(DeployableSystem.Deployable_IncorrectState.selector, smartObjectId, State.DESTROYED)
     );
-
+    vm.startPrank(alice);
     inventorySystem.withdrawFromInventory(smartObjectId, items);
+    vm.stopPrank();
   }
 }

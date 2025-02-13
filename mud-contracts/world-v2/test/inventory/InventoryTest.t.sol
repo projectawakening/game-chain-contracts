@@ -21,10 +21,12 @@ import { IWorld } from "../../src/codegen/world/IWorld.sol";
 import { SmartCharacterSystemLib, smartCharacterSystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
 import { DeployableSystemLib, deployableSystem } from "../../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
 import { InventorySystemLib, inventorySystem } from "../../src/namespaces/evefrontier/codegen/systems/InventorySystemLib.sol";
+import { EveTest } from "../EveTest.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { State, SmartObjectData } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
+import { FuelSystemLib, fuelSystem } from "../../src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
 
-contract InventoryTest is MudTest {
-  IBaseWorld world;
-
+contract InventoryTest is EveTest {
   // Inventory variables
   InventoryItem item1;
   InventoryItem item2;
@@ -40,6 +42,7 @@ contract InventoryTest is MudTest {
   InventoryItem item12;
   InventoryItem item13;
 
+  uint256 smartObjectId;
   uint256 characterId;
   uint256 ephCharacterId;
   uint256 tribeId;
@@ -48,20 +51,11 @@ contract InventoryTest is MudTest {
   EntityMetadata characterMetadata;
   string tokenCID;
 
-  string mnemonic = "test test test test test test test test test test test junk";
-  uint256 deployerPK = vm.deriveKey(mnemonic, 0);
-  uint256 alicePK = vm.deriveKey(mnemonic, 1);
-  uint256 bobPK = vm.deriveKey(mnemonic, 2);
-
-  address deployer = vm.addr(deployerPK); // ADMIN
-  address alice = vm.addr(alicePK); // Inventory Owner
-  address bob = vm.addr(bobPK); // Ephemeral Inventory Owner
-
   function setUp() public virtual override {
     super.setUp();
-    world = IBaseWorld(worldAddress);
     vm.startPrank(deployer);
 
+    smartObjectId = 1234;
     characterId = 1111;
     ephCharacterId = 1111;
     tribeId = 1122;
@@ -91,29 +85,59 @@ contract InventoryTest is MudTest {
     item12 = InventoryItem(6238, alice, 6238, 12, 150, 1);
     item13 = InventoryItem(6239, bob, 6239, 12, 150, 1);
 
+    uint256 inventoryItemClassId = uint256(bytes32("INVENTORY_ITEM"));
+
     //Mock Item creation
     EntityRecord.set(item1.inventoryItemId, item1.itemId, item1.typeId, item1.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item1.inventoryItemId);
     EntityRecord.set(item2.inventoryItemId, item2.itemId, item2.typeId, item2.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item2.inventoryItemId);
     EntityRecord.set(item3.inventoryItemId, item3.itemId, item3.typeId, item3.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item3.inventoryItemId);
     EntityRecord.set(item4.inventoryItemId, item4.itemId, item4.typeId, item4.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item4.inventoryItemId);
     EntityRecord.set(item5.inventoryItemId, item5.itemId, item5.typeId, item5.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item5.inventoryItemId);
     EntityRecord.set(item6.inventoryItemId, item6.itemId, item6.typeId, item6.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item6.inventoryItemId);
     EntityRecord.set(item7.inventoryItemId, item7.itemId, item7.typeId, item7.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item7.inventoryItemId);
     EntityRecord.set(item8.inventoryItemId, item8.itemId, item8.typeId, item8.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item8.inventoryItemId);
     EntityRecord.set(item9.inventoryItemId, item9.itemId, item9.typeId, item9.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item9.inventoryItemId);
     EntityRecord.set(item10.inventoryItemId, item10.itemId, item10.typeId, item10.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item10.inventoryItemId);
     EntityRecord.set(item11.inventoryItemId, item11.itemId, item11.typeId, item11.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item11.inventoryItemId);
     EntityRecord.set(item12.inventoryItemId, item12.itemId, item12.typeId, item12.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item12.inventoryItemId);
     EntityRecord.set(item13.inventoryItemId, item13.itemId, item13.typeId, item13.volume, true);
+    entitySystem.instantiate(inventoryItemClassId, item13.inventoryItemId);
+
+    uint256 inventoryTestClassId = uint256(bytes32("INVENTORY_TEST"));
+    ResourceId[] memory inventoryTestSystemIds = new ResourceId[](3);
+    inventoryTestSystemIds[0] = inventorySystem.toResourceId();
+    inventoryTestSystemIds[1] = deployableSystem.toResourceId();
+    inventoryTestSystemIds[2] = fuelSystem.toResourceId();
+    entitySystem.registerClass(inventoryTestClassId, "admin", inventoryTestSystemIds);
+
+    entitySystem.instantiate(inventoryTestClassId, smartObjectId);
+
+    SmartObjectData memory smartObjectData = SmartObjectData({ owner: alice, tokenURI: "test" });
+    uint256 fuelUnitVolume = 1;
+    uint256 fuelConsumptionIntervalInSeconds = 1;
+    uint256 fuelMaxCapacity = 10000;
 
     deployableSystem.globalResume();
 
-    vm.stopPrank();
-  }
-
-  function testSetDeployableStateToValid(uint256 smartObjectId) public {
-    vm.assume(smartObjectId != 0);
-    vm.startPrank(deployer);
+    deployableSystem.registerDeployable(
+      smartObjectId,
+      smartObjectData,
+      fuelUnitVolume,
+      fuelConsumptionIntervalInSeconds,
+      fuelMaxCapacity
+    );
     DeployableState.set(
       smartObjectId,
       DeployableStateData({
@@ -126,18 +150,21 @@ contract InventoryTest is MudTest {
         updatedBlockTime: block.timestamp
       })
     );
+
     vm.stopPrank();
   }
 
-  function testSetInventoryCapacity(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testSetInventoryCapacity(uint256 storageCapacity) public {
     vm.assume(storageCapacity != 0);
+
+    vm.startPrank(deployer);
     inventorySystem.setInventoryCapacity(smartObjectId, storageCapacity);
+    vm.stopPrank();
 
     assertEq(Inventory.getCapacity(smartObjectId), storageCapacity);
   }
 
-  function testRevertSetInventoryCapacity(uint256 smartObjectId, uint256 storageCapacity) public {
+  function testRevertSetInventoryCapacity(uint256 storageCapacity) public {
     storageCapacity = 0;
     vm.expectRevert(
       abi.encodeWithSelector(
@@ -145,10 +172,12 @@ contract InventoryTest is MudTest {
         "InventorySystem: storage capacity cannot be 0"
       )
     );
+    vm.startPrank(deployer);
     inventorySystem.setInventoryCapacity(smartObjectId, storageCapacity);
+    vm.stopPrank();
   }
 
-  function testDepositToInventory(uint256 smartObjectId, uint256 storageCapacity) public {
+  function testDepositToInventory(uint256 storageCapacity) public {
     vm.assume(smartObjectId != 0);
     vm.assume(storageCapacity >= 1500 && storageCapacity <= 10000);
 
@@ -160,14 +189,15 @@ contract InventoryTest is MudTest {
     items[1] = item2;
     items[2] = item3;
 
-    testSetDeployableStateToValid(smartObjectId);
-    testSetInventoryCapacity(smartObjectId, storageCapacity);
+    testSetInventoryCapacity(storageCapacity);
 
     InventoryData memory inventoryData = Inventory.get(smartObjectId);
     uint256 capacityBeforeDeposit = inventoryData.usedCapacity;
     uint256 capacityAfterDeposit = 0;
 
+    vm.startPrank(alice);
     inventorySystem.depositToInventory(smartObjectId, items);
+    vm.stopPrank();
     inventoryData = Inventory.get(smartObjectId);
 
     //Check whether the items are stored in the inventory table
@@ -195,8 +225,7 @@ contract InventoryTest is MudTest {
     assertEq(inventoryItem3.index, 2);
   }
 
-  function testInventoryItemQuantityIncrease(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testInventoryItemQuantityIncrease(uint256 storageCapacity) public {
     vm.assume(storageCapacity >= 20000 && storageCapacity <= 50000);
 
     InventoryItem[] memory items = new InventoryItem[](3);
@@ -207,9 +236,11 @@ contract InventoryTest is MudTest {
     items[1] = item2;
     items[2] = item3;
 
-    testSetInventoryCapacity(smartObjectId, storageCapacity);
-    testSetDeployableStateToValid(smartObjectId);
+    testSetInventoryCapacity(storageCapacity);
+
+    vm.startPrank(alice);
     inventorySystem.depositToInventory(smartObjectId, items);
+    vm.stopPrank();
 
     InventoryItemData memory inventoryItem1 = InventoryItemTable.get(smartObjectId, items[0].inventoryItemId);
     InventoryItemData memory inventoryItem2 = InventoryItemTable.get(smartObjectId, items[1].inventoryItemId);
@@ -218,7 +249,10 @@ contract InventoryTest is MudTest {
     assertEq(inventoryItem2.quantity, items[1].quantity);
 
     //check the increase in quantity
+    vm.startPrank(alice);
     inventorySystem.depositToInventory(smartObjectId, items);
+    vm.stopPrank();
+
     inventoryItem1 = InventoryItemTable.get(smartObjectId, items[0].inventoryItemId);
     inventoryItem2 = InventoryItemTable.get(smartObjectId, items[1].inventoryItemId);
 
@@ -232,29 +266,31 @@ contract InventoryTest is MudTest {
     assertEq(inventoryItem2.index, 1);
   }
 
-  function testDepositToExistingInventory(uint256 smartObjectId, uint256 storageCapacity) public {
+  function testDepositToExistingInventory(uint256 storageCapacity) public {
     vm.assume(storageCapacity >= 1200 && storageCapacity <= 10000);
-    testDepositToInventory(smartObjectId, storageCapacity);
+    testDepositToInventory(storageCapacity);
 
     InventoryItem[] memory items = new InventoryItem[](1);
     items[0] = item4;
+    vm.startPrank(alice);
     inventorySystem.depositToInventory(smartObjectId, items);
+    vm.stopPrank();
 
     uint256 itemsLength = Inventory.getItems(smartObjectId).length;
     assertEq(itemsLength, 4);
 
+    vm.startPrank(alice);
     inventorySystem.depositToInventory(smartObjectId, items);
+    vm.stopPrank();
     InventoryItemData memory inventoryItem1 = InventoryItemTable.get(smartObjectId, items[0].inventoryItemId);
     assertEq(inventoryItem1.index, 3);
   }
 
-  function testRevertDepositToInventory(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testRevertDepositToInventory(uint256 storageCapacity) public {
     vm.assume(storageCapacity >= 150 && storageCapacity <= 500);
 
     // create SSU smart object with token
-    testSetDeployableStateToValid(smartObjectId);
-    testSetInventoryCapacity(smartObjectId, storageCapacity);
+    testSetInventoryCapacity(storageCapacity);
 
     InventoryItem[] memory items = new InventoryItem[](1);
     item1.inventoryItemId = 20;
@@ -268,7 +304,9 @@ contract InventoryTest is MudTest {
         item1.inventoryItemId
       )
     );
+    vm.startPrank(alice);
     inventorySystem.depositToInventory(smartObjectId, items);
+    vm.stopPrank();
 
     item2.quantity = 60;
     items[0] = item2;
@@ -281,11 +319,13 @@ contract InventoryTest is MudTest {
         items[0].volume * items[0].quantity
       )
     );
+    vm.startPrank(alice);
     inventorySystem.depositToInventory(smartObjectId, items);
+    vm.stopPrank();
   }
 
-  function testWithdrawFromInventory(uint256 smartObjectId, uint256 storageCapacity) public {
-    testDepositToInventory(smartObjectId, storageCapacity);
+  function testWithdrawFromInventory(uint256 storageCapacity) public {
+    testDepositToInventory(storageCapacity);
 
     InventoryItem[] memory items = new InventoryItem[](3);
     item1.quantity = 1;
@@ -301,7 +341,9 @@ contract InventoryTest is MudTest {
 
     assertEq(capacityBeforeWithdrawal, 1000);
 
+    vm.startPrank(alice);
     inventorySystem.withdrawFromInventory(smartObjectId, items);
+    vm.stopPrank();
 
     for (uint256 i = 0; i < items.length; i++) {
       itemVolume += items[i].volume * items[i].quantity;
@@ -324,19 +366,19 @@ contract InventoryTest is MudTest {
     assertEq(inventoryItem3.index, 1);
   }
 
-  function testDeposit1andWithdraw1(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testDeposit1andWithdraw1(uint256 storageCapacity) public {
     vm.assume(storageCapacity >= 1100 && storageCapacity <= 10000);
 
     InventoryItem[] memory items = new InventoryItem[](1);
     item1.quantity = 3;
     items[0] = item1;
 
-    testSetInventoryCapacity(smartObjectId, storageCapacity);
-    testSetDeployableStateToValid(smartObjectId);
-    inventorySystem.depositToInventory(smartObjectId, items);
+    testSetInventoryCapacity(storageCapacity);
 
+    vm.startPrank(alice);
+    inventorySystem.depositToInventory(smartObjectId, items);
     inventorySystem.withdrawFromInventory(smartObjectId, items);
+    vm.stopPrank();
 
     InventoryData memory inventoryData = Inventory.get(smartObjectId);
     assertEq(inventoryData.items.length, 0);
@@ -346,8 +388,8 @@ contract InventoryTest is MudTest {
     assertEq(inventoryItem1.quantity, 0);
   }
 
-  function testWithdrawRemove2Items(uint256 smartObjectId, uint256 storageCapacity) public {
-    testDepositToInventory(smartObjectId, storageCapacity);
+  function testWithdrawRemove2Items(uint256 storageCapacity) public {
+    testDepositToInventory(storageCapacity);
 
     InventoryItem[] memory items = new InventoryItem[](2);
     item1.quantity = 3;
@@ -361,7 +403,10 @@ contract InventoryTest is MudTest {
 
     assertEq(capacityBeforeWithdrawal, 1000);
 
+    vm.startPrank(alice);
     inventorySystem.withdrawFromInventory(smartObjectId, items);
+    vm.stopPrank();
+
     for (uint256 i = 0; i < items.length; i++) {
       itemVolume += items[i].volume * items[i].quantity;
     }
@@ -386,8 +431,9 @@ contract InventoryTest is MudTest {
     assertEq(inventoryItem3.index, 0);
   }
 
-  function testWithdrawRemoveCompletely(uint256 smartObjectId, uint256 storageCapacity) public {
-    testDepositToInventory(smartObjectId, storageCapacity);
+  function testWithdrawRemoveCompletely(uint256 storageCapacity) public {
+    testDepositToInventory(storageCapacity);
+
     item1.quantity = 3;
     item2.quantity = 2;
     item3.quantity = 2;
@@ -402,7 +448,10 @@ contract InventoryTest is MudTest {
 
     assertEq(capacityBeforeWithdrawal, 1000);
 
+    vm.startPrank(alice);
     inventorySystem.withdrawFromInventory(smartObjectId, items);
+    vm.stopPrank();
+
     for (uint256 i = 0; i < items.length; i++) {
       itemVolume += items[i].volume * items[i].quantity;
     }
@@ -427,12 +476,10 @@ contract InventoryTest is MudTest {
     assertEq(inventoryItem3.index, 0);
   }
 
-  function testWithdrawWithBigArraySize(uint256 smartObjectId, uint256 storageCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testWithdrawWithBigArraySize(uint256 storageCapacity) public {
     vm.assume(storageCapacity >= 11000 && storageCapacity <= 90000);
 
-    testSetDeployableStateToValid(smartObjectId);
-    testSetInventoryCapacity(smartObjectId, storageCapacity);
+    testSetInventoryCapacity(storageCapacity);
 
     InventoryItem[] memory items = new InventoryItem[](12);
     item1.quantity = 3;
@@ -461,7 +508,9 @@ contract InventoryTest is MudTest {
     items[10] = item11;
     items[11] = item12;
 
+    vm.startPrank(alice);
     inventorySystem.depositToInventory(smartObjectId, items);
+    vm.stopPrank();
 
     //Change the order
     items = new InventoryItem[](12);
@@ -477,7 +526,10 @@ contract InventoryTest is MudTest {
     items[9] = item1;
     items[10] = item9;
     items[11] = item4;
+
+    vm.startPrank(alice);
     inventorySystem.withdrawFromInventory(smartObjectId, items);
+    vm.stopPrank();
 
     InventoryData memory inventoryData = Inventory.get(smartObjectId);
     assertEq(inventoryData.items.length, 0);
@@ -495,8 +547,8 @@ contract InventoryTest is MudTest {
     assertEq(inventoryItem3.index, 0);
   }
 
-  function testWithdrawMultipleTimes(uint256 smartObjectId, uint256 storageCapacity) public {
-    testWithdrawFromInventory(smartObjectId, storageCapacity);
+  function testWithdrawMultipleTimes(uint256 storageCapacity) public {
+    testWithdrawFromInventory(storageCapacity);
 
     InventoryData memory inventoryData = Inventory.get(smartObjectId);
     assertEq(inventoryData.items.length, 2);
@@ -506,7 +558,9 @@ contract InventoryTest is MudTest {
     items[0] = item3;
 
     // Try withdraw again
+    vm.startPrank(alice);
     inventorySystem.withdrawFromInventory(smartObjectId, items);
+    vm.stopPrank();
 
     uint256 itemId1 = uint256(4235);
     uint256 itemId3 = uint256(4237);
@@ -524,8 +578,8 @@ contract InventoryTest is MudTest {
     assertEq(inventoryData.items.length, 1);
   }
 
-  function revertWithdrawalForInvalidQuantity(uint256 smartObjectId, uint256 storageCapacity) public {
-    testDepositToInventory(smartObjectId, storageCapacity);
+  function revertWithdrawalForInvalidQuantity(uint256 storageCapacity) public {
+    testDepositToInventory(storageCapacity);
 
     InventoryItem[] memory items = new InventoryItem[](1);
     item3.quantity = 1;
@@ -538,6 +592,8 @@ contract InventoryTest is MudTest {
         items[0].quantity
       )
     );
+    vm.startPrank(alice);
     inventorySystem.withdrawFromInventory(smartObjectId, items);
+    vm.stopPrank();
   }
 }

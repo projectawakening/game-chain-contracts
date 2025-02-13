@@ -24,23 +24,27 @@ import { CreateAndAnchorDeployableParams } from "../../src/namespaces/evefrontie
 
 import { ONE_UNIT_IN_WEI } from "../../src/namespaces/evefrontier/systems/constants.sol";
 
-contract DeployableTest is MudTest {
-  IBaseWorld world;
+import { IWorldWithContext } from "@eveworld/smart-object-framework-v2/src/IWorldWithContext.sol";
+import { EveTest } from "../EveTest.sol";
+import { AccessSystem } from "../../src/namespaces/evefrontier/systems/access-systems/AccessSystem.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { entityRecordSystem } from "../../src/namespaces/evefrontier/codegen/systems/EntityRecordSystemLib.sol";
+import { fuelSystem } from "../../src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
+import { locationSystem } from "../../src/namespaces/evefrontier/codegen/systems/LocationSystemLib.sol";
+import { smartAssemblySystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartAssemblySystemLib.sol";
 
-  string mnemonic = "test test test test test test test test test test test junk";
-  uint256 deployerPK = vm.deriveKey(mnemonic, 0);
-  uint256 alicePK = vm.deriveKey(mnemonic, 2);
-
+contract DeployableTest is EveTest {
+  uint256 smartObjectId = 999;
   uint256 characterId = 123;
-  address alice = vm.addr(alicePK);
+  uint256 testClassId = uint256(bytes32("TEST"));
+  uint256 itemId = 234;
   uint256 tribeId = 100;
   SmartObjectData smartObjectData;
 
   function setUp() public virtual override {
     super.setUp();
-    world = IBaseWorld(worldAddress);
 
-    EntityRecordData memory entityRecord = EntityRecordData({ typeId: 123, itemId: 234, volume: 100 });
+    EntityRecordData memory entityRecord = EntityRecordData({ typeId: 123, itemId: itemId, volume: 100 });
 
     EntityMetadata memory entityRecordMetadata = EntityMetadata({
       name: "name",
@@ -50,7 +54,20 @@ contract DeployableTest is MudTest {
 
     smartObjectData = SmartObjectData({ owner: alice, tokenURI: "test" });
 
+    vm.startPrank(deployer);
+
+    ResourceId[] memory systemIds = new ResourceId[](6);
+    systemIds[0] = smartCharacterSystem.toResourceId();
+    systemIds[1] = entityRecordSystem.toResourceId();
+    systemIds[2] = deployableSystem.toResourceId();
+    systemIds[3] = fuelSystem.toResourceId();
+    systemIds[4] = locationSystem.toResourceId();
+    systemIds[5] = smartAssemblySystem.toResourceId();
+    entitySystem.registerClass(testClassId, "admin", systemIds);
+
     smartCharacterSystem.createCharacter(characterId, alice, tribeId, entityRecord, entityRecordMetadata);
+
+    vm.stopPrank();
   }
 
   function testWorldExists() public {
@@ -63,16 +80,16 @@ contract DeployableTest is MudTest {
   }
 
   function testRegisterDeployable(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity
   ) public {
-    vm.assume(smartObjectId != 0);
     vm.assume(fuelUnitVolume != 0);
     vm.assume(fuelConsumptionIntervalInSeconds >= 1);
     vm.assume(fuelMaxCapacity != 0);
 
+    vm.startPrank(deployer);
+    entitySystem.instantiate(testClassId, smartObjectId);
     deployableSystem.globalResume();
 
     DeployableStateData memory data = DeployableStateData({
@@ -93,6 +110,8 @@ contract DeployableTest is MudTest {
       fuelMaxCapacity
     );
 
+    vm.stopPrank();
+
     DeployableStateData memory tableData = DeployableState.get(smartObjectId);
 
     assertEq(data.createdAt, tableData.createdAt);
@@ -101,16 +120,16 @@ contract DeployableTest is MudTest {
   }
 
   function testAnchor(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     LocationData memory location
   ) public {
-    vm.assume(smartObjectId != 0);
-    testRegisterDeployable(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity);
+    testRegisterDeployable(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity);
 
+    vm.startPrank(deployer);
     deployableSystem.anchor(smartObjectId, location);
+    vm.stopPrank();
 
     LocationData memory tableData = Location.get(smartObjectId);
 
@@ -122,65 +141,62 @@ contract DeployableTest is MudTest {
   }
 
   function testBringOnline(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     LocationData memory location
   ) public {
-    vm.assume(smartObjectId != 0);
-
-    testAnchor(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
     vm.assume(fuelUnitVolume < type(uint64).max / 2);
     vm.assume(fuelUnitVolume < fuelMaxCapacity);
 
+    vm.startPrank(deployer);
     fuelSystem.depositFuel(smartObjectId, 1);
-
     deployableSystem.bringOnline(smartObjectId);
+    vm.stopPrank();
     assertEq(uint8(State.ONLINE), uint8(DeployableState.getCurrentState(smartObjectId)));
   }
 
   function testBringOffline(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     LocationData memory location
   ) public {
-    vm.assume(smartObjectId != 0);
-    testBringOnline(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    testBringOnline(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    vm.startPrank(deployer);
     deployableSystem.bringOffline(smartObjectId);
+    vm.stopPrank();
     assertEq(uint8(State.ANCHORED), uint8(DeployableState.getCurrentState(smartObjectId)));
   }
 
   function testUnanchor(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     LocationData memory location
   ) public {
-    vm.assume(smartObjectId != 0);
-    testAnchor(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    vm.startPrank(deployer);
     deployableSystem.unanchor(smartObjectId);
+    vm.stopPrank();
     assertEq(uint8(State.UNANCHORED), uint8(DeployableState.getCurrentState(smartObjectId)));
   }
 
   function testDestroyDeployable(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     LocationData memory location
   ) public {
-    vm.assume(smartObjectId != 0);
-    testAnchor(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    vm.startPrank(deployer);
     deployableSystem.destroyDeployable(smartObjectId);
+    vm.stopPrank();
     assertEq(uint8(State.DESTROYED), uint8(DeployableState.getCurrentState(smartObjectId)));
   }
 
   function testCreateAndAnchorDeployable(
-    uint256 smartObjectId,
     string memory smartAssemblyType,
     EntityRecordData memory entityRecordData,
     uint256 fuelUnitVolume,
@@ -188,11 +204,13 @@ contract DeployableTest is MudTest {
     uint256 fuelMaxCapacity,
     LocationData memory locationData
   ) public {
-    vm.assume(smartObjectId != 0);
     vm.assume(fuelUnitVolume != 0);
     vm.assume(fuelConsumptionIntervalInSeconds >= 1);
     vm.assume(fuelMaxCapacity != 0);
     vm.assume((keccak256(abi.encodePacked(smartAssemblyType)) != keccak256(abi.encodePacked(""))));
+
+    vm.startPrank(deployer);
+    entitySystem.instantiate(testClassId, smartObjectId);
 
     deployableSystem.globalResume();
     deployableSystem.createAndAnchorDeployable(
@@ -208,14 +226,7 @@ contract DeployableTest is MudTest {
       })
     );
 
-    //   uint256 smartObjectId;
-    // string smartAssemblyType;
-    // EntityRecordData entityRecordData;
-    // SmartObjectData smartObjectData;
-    // uint256 fuelUnitVolume;
-    // uint256 fuelConsumptionIntervalInSeconds;
-    // uint256 fuelMaxCapacity;
-    // LocationData locationData;
+    vm.stopPrank();
 
     LocationData memory location = Location.get(smartObjectId);
 
@@ -224,5 +235,32 @@ contract DeployableTest is MudTest {
     assertEq(locationData.y, location.y);
     assertEq(locationData.z, location.z);
     assertEq(uint8(State.ANCHORED), uint8(DeployableState.getCurrentState(smartObjectId)));
+  }
+
+  function testOnlineOfflineAccess(uint256 fuelConsumptionIntervalInSeconds, LocationData memory location) public {
+    uint256 fuelUnitVolume = 1;
+    uint256 fuelMaxCapacity = 100;
+
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+
+    vm.startPrank(deployer);
+    fuelSystem.depositFuel(smartObjectId, fuelMaxCapacity);
+    deployableSystem.bringOnline(smartObjectId);
+    vm.stopPrank();
+
+    vm.startPrank(alice);
+    deployableSystem.bringOffline(smartObjectId);
+    deployableSystem.bringOnline(smartObjectId);
+    vm.stopPrank();
+
+    vm.startPrank(deployer);
+    deployableSystem.bringOffline(smartObjectId);
+    vm.stopPrank();
+
+    // just some random dude
+    vm.startPrank(bob);
+    vm.expectRevert(abi.encodeWithSelector(AccessSystem.Access_NotAdminOrOwner.selector, bob, smartObjectId));
+    deployableSystem.bringOnline(smartObjectId);
+    vm.stopPrank();
   }
 }

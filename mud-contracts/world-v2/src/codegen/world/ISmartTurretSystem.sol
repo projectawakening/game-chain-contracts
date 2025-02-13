@@ -30,4 +30,6 @@ interface ISmartTurretSystem {
   function evefrontier__aggression(
     AggressionParams memory params
   ) external returns (TargetPriority[] memory updatedPriorityQueue);
+
+  function evefrontier__getSmartTurretClassId() external pure returns (uint256);
 }

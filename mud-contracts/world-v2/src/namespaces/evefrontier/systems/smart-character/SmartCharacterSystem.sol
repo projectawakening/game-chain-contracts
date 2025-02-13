@@ -3,7 +3,6 @@
 pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
-import { System } from "@latticexyz/world/src/System.sol";
 import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/FunctionSelectors.sol";
 
 import { Characters, CharacterToken } from "../../codegen/index.sol";
@@ -15,6 +14,7 @@ import { EveSystem } from "../EveSystem.sol";
 
 import { EntityRecordUtils } from "../entity-record/EntityRecordUtils.sol";
 import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
 contract SmartCharacterSystem is EveSystem {
   using EntityRecordUtils for bytes14;
@@ -27,7 +27,7 @@ contract SmartCharacterSystem is EveSystem {
    * @notice Register a new character token
    * @param tokenAddress The address of the token to register
    */
-  function registerCharacterToken(address tokenAddress) public {
+  function registerCharacterToken(address tokenAddress) public context access(0) scope(0) {
     if (CharacterToken.get() != address(0)) {
       revert SmartCharacter_ERC721AlreadyInitialized();
     }
@@ -47,13 +47,15 @@ contract SmartCharacterSystem is EveSystem {
     uint256 tribeId,
     EntityRecordData memory entityRecord,
     EntityMetadata memory entityRecordMetadata
-  ) public {
+  ) public context access(characterId) scope(getSmartCharacterClassId()) {
     uint256 createdAt = block.timestamp;
 
     // enforce one-to-one mapping
     if (CharactersByAddress.get(characterAddress) != 0) {
       revert SmartCharacter_AlreadyCreated(characterAddress, characterId);
     }
+
+    entitySystem.instantiate(getSmartCharacterClassId(), characterId);
 
     Characters.set(characterId, characterAddress, tribeId, createdAt);
     CharactersByAddress.set(characterAddress, characterId);
@@ -66,10 +68,14 @@ contract SmartCharacterSystem is EveSystem {
     IERC721Mintable(CharacterToken.get()).mint(characterAddress, characterId);
   }
 
-  function updateTribeId(uint256 characterId, uint256 tribeId) public {
+  function updateTribeId(uint256 characterId, uint256 tribeId) public context access(characterId) scope(characterId) {
     if (Characters.getTribeId(characterId) == 0) {
       revert SmartCharacterDoesNotExist(characterId);
     }
     Characters.setTribeId(characterId, tribeId);
+  }
+
+  function getSmartCharacterClassId() public pure returns (uint256) {
+    return uint256(bytes32("SMART_CHARACTER"));
   }
 }

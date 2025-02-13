@@ -34,7 +34,7 @@ contract SmartAssemblySystem is EveSystem {
     uint256 smartObjectId,
     string memory smartAssemblyType,
     EntityRecordData memory entityRecord
-  ) public {
+  ) public context access(smartObjectId) {
     entityRecordSystem.createEntityRecord(smartObjectId, entityRecord);
     setSmartAssemblyType(smartObjectId, smartAssemblyType);
   }
@@ -45,7 +45,10 @@ contract SmartAssemblySystem is EveSystem {
    * @param smartAssemblyType The type of the smart assembly
    * //TODO : only owner can set smart assembly type
    */
-  function setSmartAssemblyType(uint256 smartObjectId, string memory smartAssemblyType) public {
+  function setSmartAssemblyType(
+    uint256 smartObjectId,
+    string memory smartAssemblyType
+  ) public context access(smartObjectId) {
     if ((keccak256(abi.encodePacked(smartAssemblyType)) == keccak256(abi.encodePacked("")))) {
       revert SmartAssemblyTypeCannotBeEmpty(smartObjectId);
     }
@@ -66,7 +69,10 @@ contract SmartAssemblySystem is EveSystem {
    * @param smartAssemblyType The type of the smart assembly
    * //TODO : only owner can update smart assembly type
    */
-  function updateSmartAssemblyType(uint256 smartObjectId, string memory smartAssemblyType) public {
+  function updateSmartAssemblyType(
+    uint256 smartObjectId,
+    string memory smartAssemblyType
+  ) public context access(smartObjectId) {
     if (
       keccak256(abi.encodePacked(SmartAssembly.getSmartAssemblyType(smartObjectId))) == keccak256(abi.encodePacked(""))
     ) {
