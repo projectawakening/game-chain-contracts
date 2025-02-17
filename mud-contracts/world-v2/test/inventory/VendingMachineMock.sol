@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.24;
 
-import { System } from "@latticexyz/world/src/System.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
 import { DeployableToken } from "../../src/namespaces/evefrontier/codegen/tables/DeployableToken.sol";
 import { TransferItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
 import { IERC721 } from "../../src/namespaces/evefrontier/systems/eve-erc721-puppet/IERC721.sol";
-import { EveSystem } from "../../src/namespaces/evefrontier/systems/EveSystem.sol";
 
 import { InventoryInteractSystemLib, inventoryInteractSystem } from "../../src/namespaces/evefrontier/codegen/systems/InventoryInteractSystemLib.sol";
 
-contract VendingMachineMock is EveSystem {
+contract VendingMachineMock is SmartObjectFramework {
   /**
    * @notice Handle the interaction flow for vending machine to exchange 2x:10y items between two players
    * @dev Ideally the ration can be configured in a seperate function and stored on-chain

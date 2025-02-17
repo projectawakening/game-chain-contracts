@@ -14,7 +14,7 @@ import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems
 
 import { InventoryItem } from "./types.sol";
 import { State } from "../deployable/types.sol";
-import { EveSystem } from "../EveSystem.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 import { roleManagementSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/RoleManagementSystemLib.sol";
 import { Role } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/index.sol";
 import { InventoryUtils } from "./InventoryUtils.sol";
@@ -25,7 +25,7 @@ import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces
  * @author CCP Games
  * @notice InventorySystem stores the inventory of a smart object on-chain
  */
-contract InventorySystem is EveSystem {
+contract InventorySystem is SmartObjectFramework {
   error Inventory_InvalidCapacity(string message);
   error Inventory_InsufficientCapacity(string message, uint256 maxCapacity, uint256 usedCapacity);
   error Inventory_InvalidItemQuantity(string message, uint256 quantity, uint256 maxQuantity);

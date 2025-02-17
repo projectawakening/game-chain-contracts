@@ -2,6 +2,7 @@
 pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 
 import { InventorySystem } from "./InventorySystem.sol";
 import { EphemeralInventorySystem } from "./EphemeralInventorySystem.sol";
@@ -13,7 +14,6 @@ import { ItemTransferOffchain } from "../../codegen/index.sol";
 import { EphemeralInvItem } from "../../codegen/index.sol";
 import { InventoryUtils } from "./InventoryUtils.sol";
 import { TransferItem, InventoryItem } from "./types.sol";
-import { EveSystem } from "../EveSystem.sol";
 
 import { InventorySystemLib, inventorySystem } from "../../codegen/systems/InventorySystemLib.sol";
 import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../codegen/systems/EphemeralInventorySystemLib.sol";
@@ -26,7 +26,7 @@ import { roleManagementSystem } from "@eveworld/smart-object-framework-v2/src/na
  * @dev This system is responsible for the interaction between the inventory and ephemeral inventory
  */
 
-contract InventoryInteractSystem is EveSystem {
+contract InventoryInteractSystem is SmartObjectFramework {
   error Inventory_InvalidTransferItemQuantity(
     string message,
     uint256 smartObjectId,

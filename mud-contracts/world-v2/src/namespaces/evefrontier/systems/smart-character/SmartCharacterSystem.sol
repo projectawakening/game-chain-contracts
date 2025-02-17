@@ -3,6 +3,7 @@
 pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/FunctionSelectors.sol";
 
 import { Characters, CharacterToken } from "../../codegen/index.sol";
@@ -10,13 +11,12 @@ import { CharactersByAddress } from "../../codegen/tables/CharactersByAddress.so
 import { EntityRecordSystem } from "../entity-record/EntityRecordSystem.sol";
 import { EntityRecordData, EntityMetadata } from "../entity-record/types.sol";
 import { IERC721Mintable } from "../eve-erc721-puppet/IERC721Mintable.sol";
-import { EveSystem } from "../EveSystem.sol";
 
 import { EntityRecord } from "../../codegen/tables/EntityRecord.sol";
 import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.sol";
 import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
-contract SmartCharacterSystem is EveSystem {
+contract SmartCharacterSystem is SmartObjectFramework {
   error SmartCharacter_ERC721AlreadyInitialized();
   error SmartCharacter_AlreadyCreated(address characterAddress, uint256 characterId);
   error SmartCharacterDoesNotExist(uint256 characterId);

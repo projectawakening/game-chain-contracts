@@ -2,7 +2,7 @@
 pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
-import { EveSystem } from "../EveSystem.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 
 import { GlobalDeployableState, GlobalDeployableStateData } from "../../codegen/index.sol";
 import { DeployableState, DeployableStateData } from "../../codegen/index.sol";
@@ -21,7 +21,6 @@ import { StaticDataSystemLib, staticDataSystem } from "../../codegen/systems/Sta
 import { SmartAssemblySystemLib, smartAssemblySystem } from "../../codegen/systems/SmartAssemblySystemLib.sol";
 import { FuelSystemLib, fuelSystem } from "../../codegen/systems/FuelSystemLib.sol";
 import { EntityRecordData } from "../entity-record/types.sol";
-import { EveSystem } from "../EveSystem.sol";
 
 import { State, SmartObjectData, CreateAndAnchorDeployableParams } from "./types.sol";
 import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
@@ -32,7 +31,7 @@ import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
  * DeployableSystem stores the deployable state of a smart object on-chain
  */
 
-contract DeployableSystem is EveSystem {
+contract DeployableSystem is SmartObjectFramework {
   error Deployable_IncorrectState(uint256 smartObjectId, State currentState);
   error Deployable_NoFuel(uint256 smartObjectId);
   error Deployable_StateTransitionPaused();

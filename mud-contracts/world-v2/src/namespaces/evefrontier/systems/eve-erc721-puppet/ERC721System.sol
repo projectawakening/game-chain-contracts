@@ -2,7 +2,7 @@
 pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
-import { System } from "@latticexyz/world/src/System.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 import { WorldResourceIdInstance } from "@latticexyz/world/src/WorldResourceId.sol";
 import { SystemRegistry } from "@latticexyz/world/src/codegen/tables/SystemRegistry.sol";
 
@@ -26,9 +26,7 @@ import { LibString } from "@latticexyz/world-modules/src/modules/erc721-puppet/l
 import { StaticDataSystem } from "../static-data/StaticDataSystem.sol";
 import { StaticData, StaticDataMetadata } from "../../codegen/index.sol";
 
-import { EveSystem } from "../EveSystem.sol";
-
-contract ERC721System is IERC721Mintable, EveSystem, PuppetMaster {
+contract ERC721System is IERC721Mintable, SmartObjectFramework, PuppetMaster {
   using WorldResourceIdInstance for ResourceId;
   using LibString for uint256;
 

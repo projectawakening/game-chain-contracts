@@ -3,6 +3,8 @@ pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 import { ResourceIds } from "@latticexyz/store/src/codegen/tables/ResourceIds.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
+import { IWorldWithContext } from "@eveworld/smart-object-framework-v2/src/IWorldWithContext.sol";
 
 import { SmartGateConfig } from "../../codegen/tables/SmartGateConfig.sol";
 import { SmartGateLink, SmartGateLinkData } from "../../codegen/tables/SmartGateLink.sol";
@@ -15,10 +17,9 @@ import { LocationData, Location } from "../../codegen/tables/Location.sol";
 import { SMART_GATE } from "../constants.sol";
 import { DeployableSystemLib, deployableSystem } from "../../codegen/systems/DeployableSystemLib.sol";
 import { CreateAndAnchorDeployableParams } from "../deployable/types.sol";
-import { EveSystem } from "../EveSystem.sol";
 import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
-contract SmartGateSystem is EveSystem {
+contract SmartGateSystem is SmartObjectFramework {
   error SmartGate_UndefinedClassId();
   error SmartGate_NotConfigured(uint256 smartObjectId);
   error SmartGate_GateAlreadyLinked(uint256 sourceGateId, uint256 destinationGateId);
@@ -129,7 +130,7 @@ contract SmartGateSystem is EveSystem {
     ResourceId systemId = SmartGateConfig.getSystemId(sourceGateId);
 
     if (ResourceIds.getExists(systemId)) {
-      bytes memory returnData = world().call(
+      bytes memory returnData = getWorld().call(
         systemId,
         abi.encodeCall(this.canJump, (characterId, sourceGateId, destinationGateId))
       );
@@ -170,5 +171,9 @@ contract SmartGateSystem is EveSystem {
 
   function getSmartGateClassId() public view returns (uint256) {
     return uint256(bytes32("SMART_GATE"));
+  }
+
+  function getWorld() internal view returns (IWorldWithContext) {
+    return IWorldWithContext(_world());
   }
 }

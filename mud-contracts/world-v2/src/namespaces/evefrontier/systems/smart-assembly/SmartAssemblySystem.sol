@@ -2,7 +2,7 @@
 pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
-import { System } from "@latticexyz/world/src/System.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 
 import { SmartAssemblyData, SmartAssembly } from "../../codegen/index.sol";
 import { EntityRecordData } from "../entity-record/types.sol";
@@ -10,14 +10,13 @@ import { EntityRecordSystem } from "../entity-record/EntityRecordSystem.sol";
 import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.sol";
 
 import { DEPLOYMENT_NAMESPACE } from "./../constants.sol";
-import { EveSystem } from "../EveSystem.sol";
 
 /**
  * @title SmartAssemblySystem
  * @author CCP Games
  * @notice This is the base building block for all smart objects
  */
-contract SmartAssemblySystem is EveSystem {
+contract SmartAssemblySystem is SmartObjectFramework {
   error SmartAssemblyTypeAlreadyExists(uint256 smartObjectId);
   error SmartAssemblyTypeCannotBeEmpty(uint256 smartObjectId);
   error SmartAssemblyDoesNotExist(uint256 smartObjectId);

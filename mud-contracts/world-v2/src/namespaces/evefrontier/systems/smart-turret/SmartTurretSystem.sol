@@ -4,6 +4,8 @@ pragma solidity >=0.8.24;
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 import { ResourceIds } from "@latticexyz/store/src/codegen/tables/ResourceIds.sol";
 import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
+import { IWorldWithContext } from "@eveworld/smart-object-framework-v2/src/IWorldWithContext.sol";
 
 import { DeployableState } from "../../codegen/index.sol";
 import { SmartTurretConfig } from "../../codegen/index.sol";
@@ -18,9 +20,8 @@ import { TargetPriority, Turret, SmartTurretTarget } from "./types.sol";
 import { SMART_TURRET } from "../constants.sol";
 import { CreateAndAnchorDeployableParams } from "../deployable/types.sol";
 import { AggressionParams } from "./types.sol";
-import { EveSystem } from "../EveSystem.sol";
 
-contract SmartTurretSystem is EveSystem {
+contract SmartTurretSystem is SmartObjectFramework {
   error SmartTurret_NotConfigured(uint256 smartObjectId);
 
   /**
@@ -89,7 +90,7 @@ contract SmartTurretSystem is EveSystem {
         updatedPriorityQueue = priorityQueue;
       }
     } else {
-      bytes memory returnData = world().call(
+      bytes memory returnData = getWorld().call(
         systemId,
         abi.encodeCall(this.inProximity, (smartObjectId, turretOwnerCharacterId, priorityQueue, turret, turretTarget))
       );
@@ -131,7 +132,7 @@ contract SmartTurretSystem is EveSystem {
         updatedPriorityQueue = params.priorityQueue;
       }
     } else {
-      bytes memory returnData = world().call(systemId, abi.encodeCall(this.aggression, (params)));
+      bytes memory returnData = getWorld().call(systemId, abi.encodeCall(this.aggression, (params)));
 
       updatedPriorityQueue = abi.decode(returnData, (TargetPriority[]));
     }
@@ -141,5 +142,9 @@ contract SmartTurretSystem is EveSystem {
 
   function getSmartTurretClassId() public pure returns (uint256) {
     return uint256(bytes32("SMART_TURRET"));
+  }
+
+  function getWorld() internal view returns (IWorldWithContext) {
+    return IWorldWithContext(_world());
   }
 }
