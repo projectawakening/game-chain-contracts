@@ -9,8 +9,6 @@ import { SmartGateLink, SmartGateLinkData } from "../../codegen/tables/SmartGate
 import { DeployableState, DeployableStateData } from "../../codegen/index.sol";
 import { State, SmartObjectData } from "../deployable/types.sol";
 import { DeployableSystem } from "../deployable/DeployableSystem.sol";
-import { DeployableUtils } from "../deployable/DeployableUtils.sol";
-import { FuelUtils } from "../fuel/FuelUtils.sol";
 import { EntityRecordData } from "../entity-record/types.sol";
 import { WorldPosition } from "../location/types.sol";
 import { LocationData, Location } from "../../codegen/tables/Location.sol";

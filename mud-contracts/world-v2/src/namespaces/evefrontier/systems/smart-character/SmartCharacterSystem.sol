@@ -12,13 +12,11 @@ import { EntityRecordData, EntityMetadata } from "../entity-record/types.sol";
 import { IERC721Mintable } from "../eve-erc721-puppet/IERC721Mintable.sol";
 import { EveSystem } from "../EveSystem.sol";
 
-import { EntityRecordUtils } from "../entity-record/EntityRecordUtils.sol";
+import { EntityRecord } from "../../codegen/tables/EntityRecord.sol";
 import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.sol";
 import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
 contract SmartCharacterSystem is EveSystem {
-  using EntityRecordUtils for bytes14;
-
   error SmartCharacter_ERC721AlreadyInitialized();
   error SmartCharacter_AlreadyCreated(address characterAddress, uint256 characterId);
   error SmartCharacterDoesNotExist(uint256 characterId);

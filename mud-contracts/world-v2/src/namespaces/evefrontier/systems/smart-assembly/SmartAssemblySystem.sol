@@ -5,7 +5,6 @@ import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 import { System } from "@latticexyz/world/src/System.sol";
 
 import { SmartAssemblyData, SmartAssembly } from "../../codegen/index.sol";
-import { EntityRecordUtils } from "../entity-record/EntityRecordUtils.sol";
 import { EntityRecordData } from "../entity-record/types.sol";
 import { EntityRecordSystem } from "../entity-record/EntityRecordSystem.sol";
 import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.sol";

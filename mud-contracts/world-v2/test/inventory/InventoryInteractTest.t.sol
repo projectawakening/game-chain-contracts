@@ -17,9 +17,6 @@ import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefronti
 import { DEPLOYMENT_NAMESPACE } from "../../src/namespaces/evefrontier/systems/constants.sol";
 import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
 import { InventoryItem } from "../../src/namespaces/evefrontier/systems/inventory/types.sol";
-import { InventoryUtils } from "../../src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
-import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
-import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
 import { EphemeralInventorySystem } from "../../src/namespaces/evefrontier/systems/inventory/EphemeralInventorySystem.sol";
 import { InventorySystem } from "../../src/namespaces/evefrontier/systems/inventory/InventorySystem.sol";
 import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";

@@ -12,7 +12,6 @@ import { InventoryItemData, InventoryItem as InventoryItemTable } from "../../co
 import { ItemTransferOffchain } from "../../codegen/index.sol";
 import { EphemeralInvItem } from "../../codegen/index.sol";
 import { InventoryUtils } from "./InventoryUtils.sol";
-
 import { TransferItem, InventoryItem } from "./types.sol";
 import { EveSystem } from "../EveSystem.sol";
 

@@ -15,14 +15,11 @@ import { FuelSystem } from "../../src/namespaces/evefrontier/systems/fuel/FuelSy
 import { Fuel, FuelData } from "../../src/namespaces/evefrontier/codegen/tables/Fuel.sol";
 import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
 import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";
-import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
 import { DeployableState, DeployableStateData } from "../../src/namespaces/evefrontier/codegen/tables/DeployableState.sol";
 import { State, SmartObjectData } from "../../src/namespaces/evefrontier/systems/deployable/types.sol";
 import { Location, LocationData } from "../../src/namespaces/evefrontier/codegen/tables/Location.sol";
 
-import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
 import { EntityRecordData, EntityMetadata } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
-import { FuelUtils } from "../../src/namespaces/evefrontier/systems/fuel/FuelUtils.sol";
 
 import { DECIMALS, ONE_UNIT_IN_WEI } from "../../src/namespaces/evefrontier/systems/constants.sol";
 
