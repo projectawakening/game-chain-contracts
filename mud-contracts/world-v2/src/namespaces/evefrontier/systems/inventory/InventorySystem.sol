@@ -18,6 +18,10 @@ import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems
 import { InventoryItem } from "./types.sol";
 import { State, SmartObjectData } from "../deployable/types.sol";
 import { EveSystem } from "../EveSystem.sol";
+import { roleManagementSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/RoleManagementSystemLib.sol";
+import { Role } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/index.sol";
+import { InventoryUtils } from "./InventoryUtils.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
 /**
  * @title InventorySystem
@@ -56,10 +60,33 @@ contract InventorySystem is EveSystem {
    * @param capacity the capacity of the inventory
    * //TODO : onlyAdmin
    */
-  function setInventoryCapacity(uint256 smartObjectId, uint256 capacity) public {
+  function setInventoryCapacity(
+    uint256 smartObjectId,
+    uint256 capacity
+  ) public context access(smartObjectId) scope(smartObjectId) {
     if (capacity == 0) {
       revert Inventory_InvalidCapacity("InventorySystem: storage capacity cannot be 0");
     }
+
+    bytes32 adminAccessRole = InventoryUtils.getAdminAccessRole(smartObjectId);
+    if (!Role.getExists(adminAccessRole)) {
+      roleManagementSystem.createRole(adminAccessRole, adminAccessRole);
+    }
+
+    bytes32 depositAccessRole = InventoryUtils.getEphemeralToInventoryTransferAccessRole(smartObjectId);
+
+    if (!Role.getExists(depositAccessRole)) {
+      roleManagementSystem.createRole(depositAccessRole, adminAccessRole);
+    }
+
+    bytes32 withdrawAccessRole = InventoryUtils.getInventoryToEphemeralTransferAccessRole(smartObjectId);
+
+    if (!Role.getExists(withdrawAccessRole)) {
+      roleManagementSystem.createRole(withdrawAccessRole, adminAccessRole);
+    }
+
+    roleManagementSystem.grantRole(adminAccessRole, _callMsgSender(1));
+
     Inventory.setCapacity(smartObjectId, capacity);
   }
 
@@ -68,7 +95,10 @@ contract InventorySystem is EveSystem {
    * @dev Create and deposit items to the inventory by smart object
    * //TODO Only admin can use this function
    */
-  function createAndDepositItemsToInventory(uint256 smartObjectId, InventoryItem[] memory items) public onlyActive {
+  function createAndDepositItemsToInventory(
+    uint256 smartObjectId,
+    InventoryItem[] memory items
+  ) public onlyActive access(smartObjectId) scope(smartObjectId) {
     for (uint256 i = 0; i < items.length; i++) {
       EntityRecordStruct memory entityRecord = EntityRecordStruct({
         typeId: items[i].typeId,
@@ -76,6 +106,7 @@ contract InventorySystem is EveSystem {
         volume: items[i].volume
       });
 
+      entitySystem.instantiate(uint256(bytes32("INVENTORY_ITEM")), items[i].inventoryItemId);
       entityRecordSystem.createEntityRecord(items[i].inventoryItemId, entityRecord);
     }
 
@@ -89,7 +120,10 @@ contract InventorySystem is EveSystem {
    * @param smartObjectId The smart storage unit id
    * @param items The items to deposit to the inventory
    */
-  function depositToInventory(uint256 smartObjectId, InventoryItem[] memory items) public onlyActive {
+  function depositToInventory(
+    uint256 smartObjectId,
+    InventoryItem[] memory items
+  ) public onlyActive context access(smartObjectId) scope(smartObjectId) {
     {
       State currentState = DeployableState.getCurrentState(smartObjectId);
       if (currentState != State.ONLINE) {
@@ -109,7 +143,10 @@ contract InventorySystem is EveSystem {
    * //TODO Only owner(msg.sender) of the smart storage unit can withdraw items in the inventory
    * @param items The items to withdraw from the inventory
    */
-  function withdrawFromInventory(uint256 smartObjectId, InventoryItem[] memory items) public onlyActive {
+  function withdrawFromInventory(
+    uint256 smartObjectId,
+    InventoryItem[] memory items
+  ) public onlyActive context access(smartObjectId) scope(smartObjectId) {
     {
       State currentState = DeployableState.getCurrentState(smartObjectId);
       if (!(currentState == State.ANCHORED || currentState == State.ONLINE)) {

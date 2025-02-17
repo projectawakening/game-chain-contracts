@@ -5,18 +5,33 @@ import "forge-std/Test.sol";
 import { MudTest } from "@latticexyz/world/test/MudTest.t.sol";
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 import { World } from "@latticexyz/world/src/World.sol";
+import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
+
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
 import { EntityRecord, EntityRecordData as EntityRecordTableData } from "../../src/namespaces/evefrontier/codegen/tables/EntityRecord.sol";
+import { EntityRecordSystemLib, entityRecordSystem } from "../../src/namespaces/evefrontier/codegen/systems/EntityRecordSystemLib.sol";
+
 import { SmartAssembly } from "../../src/namespaces/evefrontier/codegen/tables/SmartAssembly.sol";
 import { EntityRecordData } from "../../src/namespaces/evefrontier/systems/entity-record/types.sol";
 import { SmartAssemblySystemLib, smartAssemblySystem } from "../../src/namespaces/evefrontier/codegen/systems/SmartAssemblySystemLib.sol";
 
-contract SmartAssemblyTest is MudTest {
-  IBaseWorld world;
+import { EveTest } from "../EveTest.sol";
+
+contract SmartAssemblyTest is EveTest {
+  uint256 testClassId = uint256(bytes32("TEST"));
+  uint256 smartObjectId = 1234;
+  string smartAssemblyType = "SSU";
 
   function setUp() public virtual override {
     super.setUp();
-    world = IBaseWorld(worldAddress);
+    vm.startPrank(deployer);
+    ResourceId[] memory systemIds = new ResourceId[](2);
+    systemIds[0] = entityRecordSystem.toResourceId();
+    systemIds[1] = smartAssemblySystem.toResourceId();
+    entitySystem.registerClass(testClassId, "admin", systemIds);
+    entitySystem.instantiate(testClassId, smartObjectId);
+    vm.stopPrank();
   }
 
   function testWorldExists() public {
@@ -28,16 +43,8 @@ contract SmartAssemblyTest is MudTest {
     assertTrue(codeSize > 0);
   }
 
-  function testCreateSmartAssembly(
-    uint256 smartObjectId,
-    string memory smartAssemblyType,
-    uint256 itemId,
-    uint256 typeId,
-    uint256 volume
-  ) public {
-    vm.assume(smartObjectId != 0);
-    vm.assume((keccak256(abi.encodePacked(smartAssemblyType)) != keccak256(abi.encodePacked(""))));
-
+  function testCreateSmartAssembly(uint256 itemId, uint256 typeId, uint256 volume) public {
+    vm.startPrank(deployer);
     EntityRecordData memory entityRecordInput = EntityRecordData({ typeId: typeId, itemId: itemId, volume: volume });
 
     smartAssemblySystem.createSmartAssembly(smartObjectId, smartAssemblyType, entityRecordInput);
@@ -49,60 +56,37 @@ contract SmartAssemblyTest is MudTest {
     assertEq(volume, entityRecord.volume);
 
     assertEq(smartAssemblyType, SmartAssembly.getSmartAssemblyType(smartObjectId));
+    vm.stopPrank();
   }
 
-  function testUpdateSmartAssemblyType(
-    uint256 smartObjectId,
-    string memory smartAssemblyType,
-    uint256 itemId,
-    uint256 typeId,
-    uint256 volume
-  ) public {
-    vm.assume(smartObjectId != 0);
-    vm.assume((keccak256(abi.encodePacked(smartAssemblyType)) != keccak256(abi.encodePacked(""))));
-
+  function testUpdateSmartAssemblyType(uint256 itemId, uint256 typeId, uint256 volume) public {
+    vm.startPrank(deployer);
     EntityRecordData memory entityRecordInput = EntityRecordData({ typeId: typeId, itemId: itemId, volume: volume });
 
     smartAssemblySystem.createSmartAssembly(smartObjectId, smartAssemblyType, entityRecordInput);
-
-    smartAssemblyType = "SSU";
-
     smartAssemblySystem.updateSmartAssemblyType(smartObjectId, smartAssemblyType);
 
     assertEq("SSU", SmartAssembly.getSmartAssemblyType(smartObjectId));
+    vm.stopPrank();
   }
 
-  function testRevertEmptyAssemblyType(
-    uint256 smartObjectId,
-    string memory smartAssemblyType,
-    uint256 itemId,
-    uint256 typeId,
-    uint256 volume
-  ) public {
-    vm.assume(smartObjectId != 0);
-    vm.assume((keccak256(abi.encodePacked(smartAssemblyType)) == keccak256(abi.encodePacked(""))));
-
+  function testRevertEmptyAssemblyType(uint256 itemId, uint256 typeId, uint256 volume) public {
+    vm.startPrank(deployer);
     EntityRecordData memory entityRecordInput = EntityRecordData({ typeId: typeId, itemId: itemId, volume: volume });
 
     vm.expectRevert(
       abi.encodeWithSelector(SmartAssemblySystemLib.SmartAssemblyTypeCannotBeEmpty.selector, smartObjectId)
     );
 
-    smartAssemblySystem.createSmartAssembly(smartObjectId, smartAssemblyType, entityRecordInput);
+    smartAssemblySystem.createSmartAssembly(smartObjectId, "", entityRecordInput);
+    vm.stopPrank();
   }
 
-  function testRevertAssemblyDoesNotExist(
-    uint256 smartObjectId,
-    string memory smartAssemblyType,
-    uint256 itemId,
-    uint256 typeId,
-    uint256 volume
-  ) public {
-    vm.assume(smartObjectId != 0);
-    vm.assume((keccak256(abi.encodePacked(smartAssemblyType)) != keccak256(abi.encodePacked(""))));
-
+  function testRevertAssemblyDoesNotExist(uint256 itemId, uint256 typeId, uint256 volume) public {
+    vm.startPrank(deployer);
     vm.expectRevert(abi.encodeWithSelector(SmartAssemblySystemLib.SmartAssemblyDoesNotExist.selector, smartObjectId));
 
     smartAssemblySystem.updateSmartAssemblyType(smartObjectId, smartAssemblyType);
+    vm.stopPrank();
   }
 }

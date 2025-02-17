@@ -31,9 +31,12 @@ import { DeployableSystemLib, deployableSystem } from "../../src/namespaces/evef
 import { InventorySystemLib, inventorySystem } from "../../src/namespaces/evefrontier/codegen/systems/InventorySystemLib.sol";
 import { EphemeralInventorySystemLib, ephemeralInventorySystem } from "../../src/namespaces/evefrontier/codegen/systems/EphemeralInventorySystemLib.sol";
 import { InventoryInteractSystemLib, inventoryInteractSystem } from "../../src/namespaces/evefrontier/codegen/systems/InventoryInteractSystemLib.sol";
+import { EveTest } from "../EveTest.sol";
+import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { AccessSystem } from "../../src/namespaces/evefrontier/systems/access-systems/AccessSystem.sol";
+import { FuelSystemLib, fuelSystem } from "../../src/namespaces/evefrontier/codegen/systems/FuelSystemLib.sol";
 
-contract InventoryInteractTest is MudTest {
-  IBaseWorld world;
+contract InventoryInteractTest is EveTest {
   VendingMachineMock vendingMachineMock;
   bytes16 constant SYSTEM_NAME = bytes16("VendingMachineMo");
   ResourceId constant VENDING_MACHINE_SYSTEM_ID =
@@ -42,6 +45,8 @@ contract InventoryInteractTest is MudTest {
   VendingMachineMock notAllowedMock;
   ResourceId constant NOT_ALLOWED_SYSTEM_ID =
     ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, bytes14("not-allowed"), SYSTEM_NAME))));
+
+  uint256 vendingMachineClassId = uint256(bytes32("VENDING_MACHINE"));
 
   uint256 smartObjectId = uint256(keccak256(abi.encode("item:<tenant_id>-<db_id>-2345")));
   uint256 itemObjectId1 = uint256(keccak256(abi.encode("item:45")));
@@ -58,20 +63,17 @@ contract InventoryInteractTest is MudTest {
   EntityMetadata characterMetadata;
   string tokenCID;
 
-  string mnemonic = "test test test test test test test test test test test junk";
-  uint256 deployerPK = vm.deriveKey(mnemonic, 0);
-  uint256 alicePK = vm.deriveKey(mnemonic, 1);
-  uint256 bobPK = vm.deriveKey(mnemonic, 2);
-
-  address deployer = vm.addr(deployerPK); // ADMIN
-  address alice = vm.addr(alicePK); // SSU owner
-  address bob = vm.addr(bobPK); // EphInv owner
-
   function setUp() public override {
     vm.startPrank(deployer);
 
-    super.setUp();
-    world = IBaseWorld(worldAddress);
+    // Running full EveTest setup was running out of gas.
+    // So we do a subset of the setup here.
+    worldSetup();
+    deploySmartObjectFramework();
+    configureAdminRole();
+    registerInventoryItemClass(adminRole);
+    registerSmartCharacterClass(adminRole);
+    configureInventoryInteractAccess();
 
     // Vending Machine deploy & registration
     vendingMachineMock = new VendingMachineMock();
@@ -111,11 +113,21 @@ contract InventoryInteractTest is MudTest {
     InventoryItem[] memory ephInvItems = new InventoryItem[](1);
     invItems[0] = InventoryItem(itemObjectId1, alice, 45, 1, 50, 10);
     ephInvItems[0] = InventoryItem(itemObjectId2, bob, 46, 2, 70, 10);
-
     SmartObjectData memory smartObjectData = SmartObjectData({ owner: alice, tokenURI: "test" });
+
     uint256 fuelUnitVolume = 1;
     uint256 fuelConsumptionIntervalInSeconds = 1;
     uint256 fuelMaxCapacity = 10000;
+
+    ResourceId[] memory systemIds = new ResourceId[](5);
+    systemIds[0] = inventorySystem.toResourceId();
+    systemIds[1] = deployableSystem.toResourceId();
+    systemIds[2] = ephemeralInventorySystem.toResourceId();
+    systemIds[3] = inventoryInteractSystem.toResourceId();
+    systemIds[4] = fuelSystem.toResourceId();
+    entitySystem.registerClass(vendingMachineClassId, "admin", systemIds);
+
+    entitySystem.instantiate(vendingMachineClassId, smartObjectId);
 
     deployableSystem.registerDeployable(
       smartObjectId,
@@ -138,11 +150,12 @@ contract InventoryInteractTest is MudTest {
     );
     inventorySystem.setInventoryCapacity(smartObjectId, storageCapacity);
     ephemeralInventorySystem.setEphemeralInventoryCapacity(smartObjectId, ephemeralStorageCapacity);
+    vm.stopPrank();
 
+    vm.startPrank(alice);
     inventorySystem.depositToInventory(smartObjectId, invItems);
     ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, bob, ephInvItems);
-    ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, alice, ephInvItems);
-
+    // ephemeralInventorySystem.depositToEphemeralInventory(smartObjectId, alice, ephInvItems);
     vm.stopPrank();
   }
 
@@ -159,7 +172,7 @@ contract InventoryInteractTest is MudTest {
     TransferItem[] memory transferItems = new TransferItem[](1);
     transferItems[0] = TransferItem(itemObjectId2, bob, quantity);
 
-    vm.startPrank(bob);
+    vm.startPrank(alice);
     inventoryInteractSystem.ephemeralToInventoryTransfer(smartObjectId, bob, transferItems);
     vm.stopPrank();
 
@@ -189,7 +202,9 @@ contract InventoryInteractTest is MudTest {
       )
     );
 
+    vm.startPrank(alice);
     inventoryInteractSystem.ephemeralToInventoryTransfer(smartObjectId, bob, transferItems);
+    vm.stopPrank();
 
     vm.expectRevert(
       abi.encodeWithSelector(
@@ -202,7 +217,10 @@ contract InventoryInteractTest is MudTest {
         quantity
       )
     );
+
+    vm.startPrank(alice);
     inventoryInteractSystem.ephemeralToInventoryTransfer(smartObjectId, bob, transferItems);
+    vm.stopPrank();
   }
 
   function testInventoryToEphemeralTransfer() public {
@@ -217,8 +235,8 @@ contract InventoryInteractTest is MudTest {
 
     TransferItem[] memory transferItems = new TransferItem[](1);
     transferItems[0] = TransferItem(itemObjectId1, alice, quantity);
-    vm.startPrank(alice);
 
+    vm.startPrank(alice);
     inventoryInteractSystem.inventoryToEphemeralTransfer(smartObjectId, bob, transferItems);
     vm.stopPrank();
 
@@ -230,5 +248,32 @@ contract InventoryInteractTest is MudTest {
     assertEq(storedEphInventoryItems1.quantity, 2);
   }
 
-  //TODO All access control tests
+  function testBobCannotTransferFromInventory() public {
+    uint256 quantity = 2;
+
+    TransferItem[] memory transferItems = new TransferItem[](1);
+    transferItems[0] = TransferItem(itemObjectId1, bob, quantity);
+
+    vm.startPrank(bob);
+    vm.expectRevert(
+      abi.encodeWithSelector(AccessSystem.Access_NotOwnerOrCanWithdrawFromInventory.selector, bob, smartObjectId)
+    );
+    inventoryInteractSystem.inventoryToEphemeralTransfer(smartObjectId, bob, transferItems);
+    vm.stopPrank();
+  }
+
+  function testGrantTransferFromInventoryAccess() public {
+    uint256 quantity = 2;
+
+    TransferItem[] memory transferItems = new TransferItem[](1);
+    transferItems[0] = TransferItem(itemObjectId1, bob, quantity);
+
+    vm.startPrank(deployer);
+    inventoryInteractSystem.setInventoryToEphemeralTransferAccess(smartObjectId, bob, true);
+    vm.stopPrank();
+
+    vm.startPrank(bob);
+    inventoryInteractSystem.inventoryToEphemeralTransfer(smartObjectId, bob, transferItems);
+    vm.stopPrank();
+  }
 }

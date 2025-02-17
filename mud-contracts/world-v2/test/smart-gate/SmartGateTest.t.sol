@@ -25,22 +25,16 @@ import { CreateAndAnchorDeployableParams } from "../../src/namespaces/evefrontie
 import { LocationData } from "../../src/namespaces/evefrontier/codegen/tables/Location.sol";
 
 import { SMART_GATE } from "../../src/namespaces/evefrontier/systems/constants.sol";
+import { EveTest } from "../EveTest.sol";
+import { AccessSystem } from "../../src/namespaces/evefrontier/systems/access-systems/AccessSystem.sol";
 
-contract SmartGateTest is MudTest {
-  IBaseWorld world;
-
+contract SmartGateTest is EveTest {
   SmartGateCustomMock smartGateCustomMock;
   bytes14 constant CUSTOM_NAMESPACE = "custom-namespa";
 
   ResourceId SMART_GATE_CUSTOM_MOCK_SYSTEM_ID;
 
-  string mnemonic = "test test test test test test test test test test test junk";
-  uint256 deployerPK = vm.deriveKey(mnemonic, 0);
-  uint256 alicePK = vm.deriveKey(mnemonic, 1);
-
-  address deployer = vm.addr(deployerPK); // ADMIN
-  address alice = vm.addr(alicePK); // BUILDER
-
+  uint256 smartObjectId = 777777;
   uint256 sourceGateId = 1234;
   uint256 destinationGateId = 1235;
 
@@ -58,8 +52,6 @@ contract SmartGateTest is MudTest {
 
   function setUp() public virtual override {
     super.setUp();
-    world = IBaseWorld(worldAddress);
-
     entityRecord = EntityRecordData({ typeId: 123, itemId: 234, volume: 100 });
 
     EntityMetadata memory entityRecordMetadata = EntityMetadata({
@@ -80,41 +72,21 @@ contract SmartGateTest is MudTest {
     SMART_GATE_CUSTOM_MOCK_SYSTEM_ID = ResourceId.wrap(
       (bytes32(abi.encodePacked(RESOURCE_SYSTEM, CUSTOM_NAMESPACE, "SmartGateCustomM")))
     );
-    // BUILER deploy and register mock
+    // BUILDER deploy and register mock
     smartGateCustomMock = new SmartGateCustomMock();
     world.registerSystem(SMART_GATE_CUSTOM_MOCK_SYSTEM_ID, smartGateCustomMock, true);
     world.registerFunctionSelector(SMART_GATE_CUSTOM_MOCK_SYSTEM_ID, "canJump(uint256,uint256,uint256)");
-
     vm.stopPrank();
 
+    vm.startPrank(deployer);
     deployableSystem.globalResume();
     smartCharacterSystem.createCharacter(characterId, alice, tribeId, entityRecord, entityRecordMetadata);
+    vm.stopPrank();
   }
 
-  function testAnchorSmartGate(uint256 smartObjectId) public {
-    vm.assume(smartObjectId != 0);
+  function testAnchorSmartGate() public {
+    _anchorSmartGate(smartObjectId);
 
-    smartGateSystem.createAndAnchorSmartGate(
-      CreateAndAnchorDeployableParams({
-        smartObjectId: smartObjectId,
-        smartAssemblyType: SMART_GATE,
-        entityRecordData: entityRecord,
-        smartObjectData: smartObjectData,
-        fuelUnitVolume: fuelUnitVolume,
-        fuelConsumptionIntervalInSeconds: fuelConsumptionIntervalInSeconds,
-        fuelMaxCapacity: fuelMaxCapacity,
-        locationData: LocationData({
-          solarSystemId: worldPosition.solarSystemId,
-          x: worldPosition.position.x,
-          y: worldPosition.position.y,
-          z: worldPosition.position.z
-        })
-      }),
-      maxDistance
-    );
-
-    fuelSystem.depositFuel(smartObjectId, 1);
-    deployableSystem.bringOnline(smartObjectId);
     assertEq(SmartAssembly.getSmartAssemblyType(smartObjectId), SMART_GATE);
 
     State currentState = DeployableState.getCurrentState(smartObjectId);
@@ -122,7 +94,9 @@ contract SmartGateTest is MudTest {
   }
 
   function testLinkSmartGates() public {
-    smartGateSystem.linkSmartGates(sourceGateId, destinationGateId);
+    _anchorSmartGate(sourceGateId);
+    _anchorSmartGate(destinationGateId);
+    _linkSmartGates(sourceGateId, destinationGateId);
 
     bool isLinked = smartGateSystem.isGateLinked(sourceGateId, destinationGateId);
     assert(isLinked);
@@ -140,25 +114,36 @@ contract SmartGateTest is MudTest {
       )
     );
 
+    vm.startPrank(alice);
     smartGateSystem.linkSmartGates(sourceGateId, sourceGateId);
+    vm.stopPrank();
   }
 
   function testUnlinkSmartGates() public {
-    testLinkSmartGates();
+    _anchorSmartGate(sourceGateId);
+    _anchorSmartGate(destinationGateId);
+    _linkSmartGates(sourceGateId, destinationGateId);
 
+    vm.startPrank(alice);
     smartGateSystem.unlinkSmartGates(sourceGateId, destinationGateId);
+    vm.stopPrank();
 
     bool isLinked = smartGateSystem.isGateLinked(sourceGateId, destinationGateId);
     assert(!isLinked);
   }
 
   function testRevertExistingLink() public {
-    testLinkSmartGates();
+    _anchorSmartGate(sourceGateId);
+    _anchorSmartGate(destinationGateId);
+    _linkSmartGates(sourceGateId, destinationGateId);
+
     vm.expectRevert(
       abi.encodeWithSelector(SmartGateSystem.SmartGate_GateAlreadyLinked.selector, sourceGateId, destinationGateId)
     );
 
+    vm.startPrank(alice);
     smartGateSystem.linkSmartGates(sourceGateId, destinationGateId);
+    vm.stopPrank();
   }
 
   function testLinkRevertDistanceAboveMax() public {
@@ -174,6 +159,7 @@ contract SmartGateTest is MudTest {
       position: Coord({ x: 1000000000, y: 1000000000, z: 1000000000 })
     });
 
+    vm.startPrank(deployer);
     smartGateSystem.createAndAnchorSmartGate(
       CreateAndAnchorDeployableParams({
         smartObjectId: smartObjectIdA,
@@ -217,54 +203,122 @@ contract SmartGateTest is MudTest {
 
     fuelSystem.depositFuel(smartObjectIdB, 1);
     deployableSystem.bringOnline(smartObjectIdB);
+    vm.stopPrank();
 
     vm.expectRevert(
       abi.encodeWithSelector(SmartGateSystem.SmartGate_NotWithtinRange.selector, smartObjectIdA, smartObjectIdB)
     );
+
+    vm.startPrank(alice);
     smartGateSystem.linkSmartGates(smartObjectIdA, smartObjectIdB);
+    vm.stopPrank();
   }
 
   function testRevertUnlinkSmartGates() public {
+    _anchorSmartGate(sourceGateId);
+    _anchorSmartGate(destinationGateId);
+
     vm.expectRevert(
       abi.encodeWithSelector(SmartGateSystem.SmartGate_GateNotLinked.selector, sourceGateId, destinationGateId)
     );
 
+    vm.startPrank(alice);
     smartGateSystem.unlinkSmartGates(sourceGateId, destinationGateId);
+    vm.stopPrank();
   }
 
   function testConfigureSmartGate() public {
-    smartGateSystem.configureSmartGate(sourceGateId, SMART_GATE_CUSTOM_MOCK_SYSTEM_ID);
+    _anchorSmartGate(sourceGateId);
+    _configureSmartGate(sourceGateId, SMART_GATE_CUSTOM_MOCK_SYSTEM_ID);
 
     ResourceId systemId = SmartGateConfig.getSystemId(sourceGateId);
     assertEq(ResourceId.unwrap(systemId), ResourceId.unwrap(SMART_GATE_CUSTOM_MOCK_SYSTEM_ID));
   }
 
   function testCanJump() public {
-    testAnchorSmartGate(sourceGateId);
-    testAnchorSmartGate(destinationGateId);
-    testLinkSmartGates();
+    _anchorSmartGate(sourceGateId);
+    _anchorSmartGate(destinationGateId);
+    _linkSmartGates(sourceGateId, destinationGateId);
 
     bool canJump = smartGateSystem.canJump(characterId, sourceGateId, destinationGateId);
     assert(canJump);
   }
 
   function testCanJumpFalse() public {
-    testConfigureSmartGate();
-
-    testAnchorSmartGate(sourceGateId);
-    testAnchorSmartGate(destinationGateId);
-    testLinkSmartGates();
+    _anchorSmartGate(sourceGateId);
+    _configureSmartGate(sourceGateId, SMART_GATE_CUSTOM_MOCK_SYSTEM_ID);
+    _anchorSmartGate(destinationGateId);
+    _linkSmartGates(sourceGateId, destinationGateId);
 
     bool canJump = smartGateSystem.canJump(characterId, sourceGateId, destinationGateId);
     assert(!canJump);
   }
 
   function testCanJump2way() public {
-    testAnchorSmartGate(sourceGateId);
-    testAnchorSmartGate(destinationGateId);
-    testLinkSmartGates();
+    _anchorSmartGate(destinationGateId);
+    _anchorSmartGate(sourceGateId);
+    _linkSmartGates(destinationGateId, sourceGateId);
 
     bool canJump = smartGateSystem.canJump(characterId, destinationGateId, sourceGateId);
     assert(canJump);
+  }
+
+  function testDeployerCannotConfigureSmartGate() public {
+    _anchorSmartGate(sourceGateId);
+
+    vm.expectRevert(abi.encodeWithSelector(AccessSystem.Access_NotDeployableOwner.selector, deployer, sourceGateId));
+
+    vm.startPrank(deployer);
+    smartGateSystem.configureSmartGate(sourceGateId, SMART_GATE_CUSTOM_MOCK_SYSTEM_ID);
+    vm.stopPrank();
+  }
+
+  function testDeployerCannotLinkSmartGates() public {
+    _anchorSmartGate(sourceGateId);
+    _anchorSmartGate(destinationGateId);
+
+    vm.expectRevert(abi.encodeWithSelector(AccessSystem.Access_NotDeployableOwner.selector, deployer, sourceGateId));
+
+    vm.startPrank(deployer);
+    smartGateSystem.linkSmartGates(sourceGateId, destinationGateId);
+    vm.stopPrank();
+  }
+
+  function _anchorSmartGate(uint256 _id) internal {
+    vm.startPrank(deployer);
+    smartGateSystem.createAndAnchorSmartGate(
+      CreateAndAnchorDeployableParams({
+        smartObjectId: _id,
+        smartAssemblyType: SMART_GATE,
+        entityRecordData: entityRecord,
+        smartObjectData: smartObjectData,
+        fuelUnitVolume: fuelUnitVolume,
+        fuelConsumptionIntervalInSeconds: fuelConsumptionIntervalInSeconds,
+        fuelMaxCapacity: fuelMaxCapacity,
+        locationData: LocationData({
+          solarSystemId: worldPosition.solarSystemId,
+          x: worldPosition.position.x,
+          y: worldPosition.position.y,
+          z: worldPosition.position.z
+        })
+      }),
+      maxDistance
+    );
+
+    fuelSystem.depositFuel(_id, 1);
+    deployableSystem.bringOnline(_id);
+    vm.stopPrank();
+  }
+
+  function _configureSmartGate(uint256 _id, ResourceId _systemId) internal {
+    vm.startPrank(alice);
+    smartGateSystem.configureSmartGate(_id, _systemId);
+    vm.stopPrank();
+  }
+
+  function _linkSmartGates(uint256 _sourceId, uint256 _destinationId) internal {
+    vm.startPrank(alice);
+    smartGateSystem.linkSmartGates(_sourceId, _destinationId);
+    vm.stopPrank();
   }
 }

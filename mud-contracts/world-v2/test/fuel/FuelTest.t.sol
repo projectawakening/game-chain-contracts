@@ -3,7 +3,7 @@ pragma solidity >=0.8.24;
 
 import "forge-std/Test.sol";
 import { MudTest } from "@latticexyz/world/test/MudTest.t.sol";
-import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
+import { IWorldWithContext } from "@eveworld/smart-object-framework-v2/src/IWorldWithContext.sol";
 import { World } from "@latticexyz/world/src/World.sol";
 import { getKeysWithValue } from "@latticexyz/world-modules/src/modules/keyswithvalue/getKeysWithValue.sol";
 import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/FunctionSelectors.sol";
@@ -32,19 +32,18 @@ import { FuelSystemLib, fuelSystem } from "../../src/namespaces/evefrontier/code
 
 contract FuelTest is DeployableTest {
   LocationData location = LocationData({ solarSystemId: 1, x: 1, y: 1, z: 1 });
+
   function setUp() public virtual override {
     super.setUp();
-    world = IBaseWorld(worldAddress);
+    world = IWorldWithContext(worldAddress);
   }
 
   function testSetFuel(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     uint256 fuelAmount
   ) public {
-    vm.assume(smartObjectId != 0);
     vm.assume(fuelUnitVolume != 0 && fuelUnitVolume < type(uint128).max);
     vm.assume(fuelConsumptionIntervalInSeconds >= 1);
     vm.assume(fuelMaxCapacity != 0);
@@ -52,6 +51,8 @@ contract FuelTest is DeployableTest {
     vm.assume((fuelAmount * ONE_UNIT_IN_WEI) < type(uint64).max / 2);
     vm.assume(fuelMaxCapacity > (fuelAmount * fuelUnitVolume));
 
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    vm.startPrank(deployer);
     fuelSystem.configureFuelParameters(
       smartObjectId,
       fuelUnitVolume,
@@ -59,14 +60,20 @@ contract FuelTest is DeployableTest {
       fuelMaxCapacity,
       fuelAmount
     );
-
+    vm.stopPrank();
     FuelData memory fuel = Fuel.get(smartObjectId);
     assertEq(fuelAmount * ONE_UNIT_IN_WEI, fuel.fuelAmount);
   }
 
-  function testSetFuelUnitVolume(uint256 smartObjectId, uint256 fuelUnitVolume) public {
-    vm.assume(smartObjectId != 0);
+  function testSetFuelUnitVolume(
+    uint256 fuelUnitVolume,
+    uint256 fuelConsumptionIntervalInSeconds,
+    uint256 fuelMaxCapacity
+  ) public {
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    vm.startPrank(deployer);
     fuelSystem.setFuelUnitVolume(smartObjectId, fuelUnitVolume);
+    vm.stopPrank();
 
     FuelData memory fuel = Fuel.get(smartObjectId);
 
@@ -74,20 +81,29 @@ contract FuelTest is DeployableTest {
   }
 
   function testSetFuelConsumptionIntervalInSeconds(
-    uint256 smartObjectId,
-    uint256 fuelConsumptionIntervalInSeconds
+    uint256 fuelUnitVolume,
+    uint256 fuelConsumptionIntervalInSeconds,
+    uint256 fuelMaxCapacity
   ) public {
-    vm.assume(smartObjectId != 0);
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    vm.startPrank(deployer);
     fuelSystem.setFuelConsumptionIntervalInSeconds(smartObjectId, fuelConsumptionIntervalInSeconds);
+    vm.stopPrank();
 
     FuelData memory fuel = Fuel.get(smartObjectId);
 
     assertEq(fuelConsumptionIntervalInSeconds, fuel.fuelConsumptionIntervalInSeconds);
   }
 
-  function testSetFuelMaxCapacity(uint256 smartObjectId, uint256 fuelMaxCapacity) public {
-    vm.assume(smartObjectId != 0);
+  function testSetFuelMaxCapacity(
+    uint256 fuelUnitVolume,
+    uint256 fuelConsumptionIntervalInSeconds,
+    uint256 fuelMaxCapacity
+  ) public {
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    vm.startPrank(deployer);
     fuelSystem.setFuelMaxCapacity(smartObjectId, fuelMaxCapacity);
+    vm.stopPrank();
 
     FuelData memory fuel = Fuel.get(smartObjectId);
 
@@ -95,13 +111,11 @@ contract FuelTest is DeployableTest {
   }
 
   function testDepositFuel(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
     uint256 fuelAmount
   ) public {
-    vm.assume(smartObjectId != 0);
     vm.assume(fuelAmount > 0);
     vm.assume(fuelAmount < (type(uint64).max) / 2);
     vm.assume(fuelUnitVolume < (type(uint64).max) / 2);
@@ -111,9 +125,10 @@ contract FuelTest is DeployableTest {
 
     vm.assume(fuelConsumptionIntervalInSeconds < (type(uint256).max / 1e18) && fuelConsumptionIntervalInSeconds > 1); // Ensure ratePerMinute doesn't overflow when adjusted for precision
 
-    testAnchor(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    testAnchor(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, location);
+    vm.startPrank(deployer);
     fuelSystem.depositFuel(smartObjectId, fuelAmount);
-
+    vm.stopPrank();
     FuelData memory fuelData = Fuel.get(smartObjectId);
 
     assertEq(fuelData.fuelAmount, fuelAmount * ONE_UNIT_IN_WEI);
@@ -121,7 +136,6 @@ contract FuelTest is DeployableTest {
   }
 
   function testDepositFuelTwice(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
@@ -132,8 +146,10 @@ contract FuelTest is DeployableTest {
     vm.assume(fuelUnitVolume < type(uint64).max / 2);
     vm.assume(fuelAmount * fuelUnitVolume * 2 < fuelMaxCapacity);
 
-    testDepositFuel(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, fuelAmount);
+    testDepositFuel(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, fuelAmount);
+    vm.startPrank(deployer);
     fuelSystem.depositFuel(smartObjectId, fuelAmount);
+    vm.stopPrank();
 
     FuelData memory fuelData = Fuel.get(smartObjectId);
 
@@ -142,7 +158,6 @@ contract FuelTest is DeployableTest {
   }
 
   function testFuelConsumption(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelMaxCapacity,
@@ -160,13 +175,13 @@ contract FuelTest is DeployableTest {
       (1 * (10 ** DECIMALS)); // bringing online consumes exactly one wei's worth of gas for tick purposes
     vm.assume(fuelAmount * (10 ** DECIMALS) > fuelConsumption);
 
-    testDepositFuel(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, fuelAmount);
-
+    testDepositFuel(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, fuelAmount);
+    vm.startPrank(deployer);
     deployableSystem.bringOnline(smartObjectId);
 
     vm.warp(block.timestamp + timeElapsed);
     fuelSystem.updateFuel(smartObjectId);
-
+    vm.stopPrank();
     FuelData memory fuelData = Fuel.get(smartObjectId);
     assertEq(fuelData.fuelAmount, fuelAmount * (10 ** DECIMALS) - fuelConsumption);
     assertEq(fuelData.lastUpdatedAt, block.timestamp);
@@ -188,13 +203,13 @@ contract FuelTest is DeployableTest {
       (1 * ONE_UNIT_IN_WEI); // bringing online consumes exactly one wei's worth of gas for tick purposes
     vm.assume(fuelAmount * ONE_UNIT_IN_WEI < fuelConsumption);
 
-    uint256 smartObjectId = 1;
-
-    testDepositFuel(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, UINT256_MAX, fuelAmount);
+    testDepositFuel(fuelUnitVolume, fuelConsumptionIntervalInSeconds, UINT256_MAX, fuelAmount);
+    vm.startPrank(deployer);
     deployableSystem.bringOnline(smartObjectId);
 
     vm.warp(block.timestamp + timeElapsed);
     fuelSystem.updateFuel(smartObjectId);
+    vm.stopPrank();
 
     FuelData memory fuelData = Fuel.get(smartObjectId);
 
@@ -204,7 +219,6 @@ contract FuelTest is DeployableTest {
   }
 
   function testFuelRefundDuringGlobalOffline(
-    uint256 smartObjectId,
     uint256 fuelUnitVolume,
     uint256 fuelConsumptionIntervalInSeconds,
     uint256 fuelAmount,
@@ -224,7 +238,8 @@ contract FuelTest is DeployableTest {
     fuelConsumption += ((timeElapsedAfterOffline * (10 ** DECIMALS)) / fuelConsumptionIntervalInSeconds);
     vm.assume(fuelAmount * (10 ** DECIMALS) > fuelConsumption); // this time we want to run out of fuel
 
-    testDepositFuel(smartObjectId, fuelUnitVolume, fuelConsumptionIntervalInSeconds, UINT256_MAX, fuelAmount);
+    testDepositFuel(fuelUnitVolume, fuelConsumptionIntervalInSeconds, UINT256_MAX, fuelAmount);
+    vm.startPrank(deployer);
     deployableSystem.bringOnline(smartObjectId);
 
     vm.warp(block.timestamp + timeElapsedBeforeOffline);
@@ -234,10 +249,15 @@ contract FuelTest is DeployableTest {
     vm.warp(block.timestamp + timeElapsedAfterOffline);
 
     fuelSystem.updateFuel(smartObjectId);
+    vm.stopPrank();
 
     FuelData memory data = Fuel.get(smartObjectId);
 
-    assertEq((data.fuelAmount) / 1e18, (fuelAmount * (10 ** DECIMALS) - fuelConsumption) / 1e18);
+    // Round values to nearest whole number before comparison
+    uint256 expectedAmount = ((fuelAmount * (10 ** DECIMALS) - fuelConsumption) / ONE_UNIT_IN_WEI) * ONE_UNIT_IN_WEI;
+    uint256 actualAmount = (data.fuelAmount / ONE_UNIT_IN_WEI) * ONE_UNIT_IN_WEI;
+
+    assertEq(actualAmount, expectedAmount);
     assertEq(data.lastUpdatedAt, block.timestamp);
     assertEq(uint8(State.ONLINE), uint8(DeployableState.getCurrentState(smartObjectId)));
   }
