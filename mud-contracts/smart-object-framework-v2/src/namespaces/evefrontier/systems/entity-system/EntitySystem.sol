@@ -18,8 +18,8 @@ import { TAG_TYPE_PROPERTY, TAG_TYPE_ENTITY_RELATION, TAG_TYPE_RESOURCE_RELATION
 
 import { IEntitySystem } from "../../interfaces/IEntitySystem.sol";
 
-import { tagSystem } from "../../codegen/systems/TagSystemlib.sol";
-import { roleManagementSystem } from "../../codegen/systems/RoleManagementSystemlib.sol";
+import { tagSystem } from "../../codegen/systems/TagSystemLib.sol";
+import { roleManagementSystem } from "../../codegen/systems/RoleManagementSystemLib.sol";
 
 import { SmartObjectFramework } from "../../../../inherit/SmartObjectFramework.sol";
 
