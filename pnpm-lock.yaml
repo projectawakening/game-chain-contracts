@@ -288,9 +288,6 @@ importers:
 
   mud-contracts/smart-object-framework-v2:
     dependencies:
-      '@eveworld/world-v2':
-        specifier: link:../world-v2
-        version: link:../world-v2
       '@latticexyz/cli':
         specifier: 2.2.15-main-ba5191c3d6f74b3c4982afd465cf449d23d70bb7
         version: 2.2.15-main-ba5191c3d6f74b3c4982afd465cf449d23d70bb7(react@18.3.1)

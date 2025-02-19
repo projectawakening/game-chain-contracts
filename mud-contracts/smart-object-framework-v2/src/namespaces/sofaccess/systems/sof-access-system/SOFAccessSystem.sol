@@ -20,12 +20,12 @@ import { IWorldWithContext } from "../../../../IWorldWithContext.sol";
 
 import { IEntitySystem } from "../../../evefrontier/interfaces/IEntitySystem.sol";
 import { entitySystem } from "../../../evefrontier/codegen/systems/EntitySystemLib.sol";
-import { inventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/InventorySystemLib.sol";
-import { ephemeralInventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/EphemeralInventorySystemLib.sol";
-import { smartStorageUnitSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartStorageUnitSystemLib.sol";
-import { smartCharacterSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
-import { smartGateSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartGateSystemLib.sol";
-import { smartTurretSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartTurretSystemLib.sol";
+import { inventorySystem } from "../../../evefrontier/world-system-libs/InventorySystemLib.sol";
+import { ephemeralInventorySystem } from "../../../evefrontier/world-system-libs/EphemeralInventorySystemLib.sol";
+import { smartStorageUnitSystem } from "../../../evefrontier/world-system-libs/SmartStorageUnitSystemLib.sol";
+import { smartCharacterSystem } from "../../../evefrontier/world-system-libs/SmartCharacterSystemLib.sol";
+import { smartGateSystem } from "../../../evefrontier/world-system-libs/SmartGateSystemLib.sol";
+import { smartTurretSystem } from "../../../evefrontier/world-system-libs/SmartTurretSystemLib.sol";
 
 import { SmartObjectFramework } from "../../../../inherit/SmartObjectFramework.sol";
 
