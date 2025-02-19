@@ -178,15 +178,9 @@ importers:
       '@eveworld/smart-object-framework':
         specifier: 0.0.8
         version: link:../smart-object-framework
-      '@eveworld/smart-object-framework-v2':
-        specifier: link:../mud-contracts/smart-object-framework-v2
-        version: link:../mud-contracts/smart-object-framework-v2
       '@eveworld/world':
         specifier: 0.0.17
         version: 0.0.17(typescript@5.4.5)(zod@3.23.8)
-      '@eveworld/world-v2':
-        specifier: link:../mud-contracts/world-v2
-        version: link:../mud-contracts/world-v2
       '@latticexyz/cli':
         specifier: 2.2.14
         version: 2.2.14
