@@ -100,6 +100,9 @@ importers:
         specifier: link:../mud-contracts/smart-object-framework-v2
         version: link:../mud-contracts/smart-object-framework-v2
       '@eveworld/world-v2':
+        specifier: git+ssh://git@github.com/projectawakening/world-chain-contracts.git#4ed48276b125b5665ba6f569209b2ea54f6e0ba0
+        version: github.com/projectawakening/world-chain-contracts/4ed48276b125b5665ba6f569209b2ea54f6e0ba0
+      '@eveworld/world-v3':
         specifier: link:../mud-contracts/world-v2
         version: link:../mud-contracts/world-v2
       '@latticexyz/cli':
@@ -7472,3 +7475,11 @@ packages:
     name: forge-std
     version: 1.6.0
     dev: true
+
+  github.com/projectawakening/world-chain-contracts/4ed48276b125b5665ba6f569209b2ea54f6e0ba0:
+    resolution: {tarball: https://codeload.github.com/projectawakening/world-chain-contracts/tar.gz/4ed48276b125b5665ba6f569209b2ea54f6e0ba0}
+    name: root
+    version: 0.0.0
+    dependencies:
+      '@changesets/cli': 2.27.3
+    dev: false
