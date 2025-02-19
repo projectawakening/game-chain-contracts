@@ -79,4 +79,3 @@ struct AggressionParams {
   SmartTurretTarget aggressor;
   SmartTurretTarget victim;
 }
-
