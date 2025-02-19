@@ -7,7 +7,6 @@ import { ResourceId, WorldResourceIdLib } from "@latticexyz/world/src/WorldResou
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 
 import { InventoryItem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/types.sol";
-import { InventoryUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
 import { InventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/InventorySystem.sol";
 import { InventoryItemData, InventoryItem as InventoryItemTable } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/InventoryItem.sol";
 import { inventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/InventorySystemLib.sol";
@@ -22,7 +21,7 @@ contract WithdrawFromInventory is Script {
     // Start broadcasting transactions from the deployer account
     vm.startBroadcast(deployerPrivateKey);
     IBaseWorld world = IBaseWorld(worldAddress);
-    ResourceId inventorySystemId = InventoryUtils.inventorySystemId();
+    ResourceId inventorySystemId = inventorySystem.toResourceId();
 
     uint256 smartObjectId = uint256(keccak256(abi.encode("item:<tenant_id>-<db_id>-00001")));
     InventoryItem[] memory items = new InventoryItem[](3);
