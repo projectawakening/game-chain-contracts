@@ -9,7 +9,7 @@ import { RESOURCE_SYSTEM } from "@latticexyz/world/src/worldResourceTypes.sol";
 
 import { Entity, EntityData } from "../../codegen/tables/Entity.sol";
 import { EntityTagMap, EntityTagMapData } from "../../codegen/tables/EntityTagMap.sol";
-import { Utils as EntitySystemUtils } from "../entity-system/Utils.sol";
+import { entitySystem } from "../../codegen/systems/EntitySystemLib.sol";
 
 import { TagId, TagIdLib } from "../../../../libs/TagId.sol";
 
@@ -88,7 +88,7 @@ contract TagSystem is ITagSystem, SmartObjectFramework {
           } else {
             (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
             ResourceId callingSystemId = SystemRegistry.get(msgSender);
-            if (callingSystemId.unwrap() != EntitySystemUtils.entitySystemId().unwrap()) {
+            if (callingSystemId.unwrap() != entitySystem.toResourceId().unwrap()) {
               revert Tag_InvalidCaller(msgSender);
             }
           }
@@ -111,7 +111,7 @@ contract TagSystem is ITagSystem, SmartObjectFramework {
           } else {
             (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
             ResourceId callingSystemId = SystemRegistry.get(msgSender);
-            if (callingSystemId.unwrap() != EntitySystemUtils.entitySystemId().unwrap()) {
+            if (callingSystemId.unwrap() != entitySystem.toResourceId().unwrap()) {
               revert Tag_InvalidCaller(msgSender);
             }
           }
@@ -166,7 +166,7 @@ contract TagSystem is ITagSystem, SmartObjectFramework {
           } else {
             (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
             ResourceId callingSystemId = SystemRegistry.get(msgSender);
-            if (callingSystemId.unwrap() != EntitySystemUtils.entitySystemId().unwrap()) {
+            if (callingSystemId.unwrap() != entitySystem.toResourceId().unwrap()) {
               revert Tag_InvalidCaller(msgSender);
             }
           }
@@ -199,7 +199,7 @@ contract TagSystem is ITagSystem, SmartObjectFramework {
           } else {
             (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext();
             ResourceId callingSystemId = SystemRegistry.get(msgSender);
-            if (callingSystemId.unwrap() != EntitySystemUtils.entitySystemId().unwrap()) {
+            if (callingSystemId.unwrap() != entitySystem.toResourceId().unwrap()) {
               revert Tag_InvalidCaller(msgSender);
             }
           }

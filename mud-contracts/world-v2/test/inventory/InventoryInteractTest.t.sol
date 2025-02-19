@@ -125,9 +125,9 @@ contract InventoryInteractTest is EveTest {
     systemIds[2] = ephemeralInventorySystem.toResourceId();
     systemIds[3] = inventoryInteractSystem.toResourceId();
     systemIds[4] = fuelSystem.toResourceId();
-    entitySystem.registerClass(vendingMachineClassId, "admin", systemIds);
+    entitySystem.registerClass(vendingMachineClassId, systemIds);
 
-    entitySystem.instantiate(vendingMachineClassId, smartObjectId);
+    entitySystem.instantiate(vendingMachineClassId, smartObjectId, alice);
 
     deployableSystem.registerDeployable(
       smartObjectId,

@@ -15,11 +15,12 @@ import { ResourceIds } from "@latticexyz/store/src/codegen/tables/ResourceIds.so
 import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/FunctionSelectors.sol";
 
 import { DEPLOYMENT_NAMESPACE } from "../src/namespaces/evefrontier/constants.sol";
-import { IRoleManagementSystem } from "../src/namespaces/evefrontier/interfaces/IRoleManagementSystem.sol";
-import { Utils as RoleManagementSystemUtils } from "../src/namespaces/evefrontier/systems/role-management-system/Utils.sol";
+
 import { IEntitySystem } from "../src/namespaces/evefrontier/interfaces/IEntitySystem.sol";
-import { Utils as EntitySystemUtils } from "../src/namespaces/evefrontier/systems/entity-system/Utils.sol";
-import { Utils as TagSystemUtils } from "../src/namespaces/evefrontier/systems/tag-system/Utils.sol";
+import { entitySystem } from "../src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { tagSystem } from "../src/namespaces/evefrontier/codegen/systems/TagSystemLib.sol";
+import { roleManagementSystem } from "../src/namespaces/evefrontier/codegen/systems/RoleManagementSystemLib.sol";
+
 import { SystemMock } from "./mocks/SystemMock.sol";
 
 import "../src/namespaces/evefrontier/codegen/index.sol";
@@ -38,9 +39,7 @@ contract EntitySystemTest is MudTest {
 
   bytes14 constant NAMESPACE = DEPLOYMENT_NAMESPACE;
   ResourceId constant NAMESPACE_ID = ResourceId.wrap(bytes32(abi.encodePacked(RESOURCE_NAMESPACE, NAMESPACE)));
-  ResourceId ROLE_MANAGEMENT_SYSTEM_ID = RoleManagementSystemUtils.roleManagementSystemId();
-  ResourceId ENTITIES_SYSTEM_ID = EntitySystemUtils.entitySystemId();
-  ResourceId TAGS_SYSTEM_ID = TagSystemUtils.tagSystemId();
+
   ResourceId TAGGED_SYSTEM_ID =
     ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystem")))));
   ResourceId constant TAGGED_SYSTEM_ID_2 =
@@ -140,10 +139,10 @@ contract EntitySystemTest is MudTest {
     // reverts if classId is uint256(0)
     vm.startPrank(deployer);
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_InvalidEntityId.selector, uint256(0)));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (uint256(0), scopedSystemIds)));
+    entitySystem.registerClass(uint256(0), scopedSystemIds);
 
     // succesful direct call
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
+    entitySystem.registerClass(classId, scopedSystemIds);
 
     // after
     assertEq(Entity.getExists(classId), true);
@@ -194,7 +193,7 @@ contract EntitySystemTest is MudTest {
 
     // reverts if classId is already registered
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityAlreadyExists.selector, classId));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
+    entitySystem.registerClass(classId, scopedSystemIds);
     vm.stopPrank();
   }
 
@@ -207,14 +206,14 @@ contract EntitySystemTest is MudTest {
 
     // reverts if classId has NOT been registered
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityDoesNotExist.selector, classId));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
+    entitySystem.instantiate(classId, objectId, alice);
 
     // register classId
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, new ResourceId[](0))));
+    entitySystem.registerClass(classId, new ResourceId[](0));
 
     // reverts if objectId is uint256(0)
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_InvalidEntityId.selector, uint256(0)));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, uint256(0), alice)));
+    entitySystem.instantiate(classId, uint256(0), alice);
 
     // before checks
     assertEq(Entity.getExists(objectId), false);
@@ -227,13 +226,13 @@ contract EntitySystemTest is MudTest {
     assertEq(abi.decode(classEntityCountTagMapBefore.value, (uint256)), uint256(0));
 
     // successful call
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
+    entitySystem.instantiate(classId, objectId, alice);
 
     // reverts if object entity is used as class entity
     vm.expectRevert(
       abi.encodeWithSelector(IEntitySystem.Entity_PropertyTagNotFound.selector, objectId, CLASS_PROPERTY_TAG)
     );
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (objectId, objectId2, alice)));
+    entitySystem.instantiate(objectId, objectId2, alice);
 
     // after checks
     // creates an entry in the Entity table
@@ -278,7 +277,7 @@ contract EntitySystemTest is MudTest {
 
     // reverts if objectId is already instantiated
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityAlreadyExists.selector, objectId));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
+    entitySystem.instantiate(classId, objectId, alice);
     vm.stopPrank();
   }
 
@@ -286,15 +285,15 @@ contract EntitySystemTest is MudTest {
     vm.startPrank(deployer);
 
     // setup - register classId
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, new ResourceId[](0))));
+    entitySystem.registerClass(classId, new ResourceId[](0));
 
     // reverts if objectId doesn't exist (hasn't been instantiated)
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityDoesNotExist.selector, objectId));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteObject, (objectId)));
+    entitySystem.deleteObject(objectId);
 
     // create some objects
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId2, alice)));
+    entitySystem.instantiate(classId, objectId, alice);
+    entitySystem.instantiate(classId, objectId2, alice);
 
     // check data state
     // before
@@ -327,7 +326,7 @@ contract EntitySystemTest is MudTest {
 
     // successful call
     vm.prank(alice);
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteObject, (objectId)));
+    entitySystem.deleteObject(objectId);
 
     // after
     assertEq(Entity.getExists(objectId), false);
@@ -354,9 +353,9 @@ contract EntitySystemTest is MudTest {
     vm.startPrank(deployer);
 
     // correctly calls and executes deleteObject for multiple objectIds
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, new ResourceId[](0))));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId2, alice)));
+    entitySystem.registerClass(classId, new ResourceId[](0));
+    entitySystem.instantiate(classId, objectId, alice);
+    entitySystem.instantiate(classId, objectId2, alice);
 
     assertEq(Entity.getExists(objectId), true);
     assertEq(
@@ -376,7 +375,7 @@ contract EntitySystemTest is MudTest {
     objectsToDelete[1] = objectId2;
 
     vm.prank(alice);
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteObjects, (objectsToDelete)));
+    entitySystem.deleteObjects(objectsToDelete);
 
     assertEq(Entity.getExists(objectId), false);
     assertEq(
@@ -398,28 +397,28 @@ contract EntitySystemTest is MudTest {
 
     // reverts if classId doesn't exist (wasn't registered)
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityDoesNotExist.selector, classId));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteClass, (classId)));
+    entitySystem.deleteClass(classId);
 
     // setup
     ResourceId[] memory scopedSystemIds = new ResourceId[](1);
     scopedSystemIds[0] = TAGGED_SYSTEM_ID;
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
+    entitySystem.registerClass(classId, scopedSystemIds);
+    entitySystem.instantiate(classId, objectId, alice);
 
     // reverts if a non-class entity was passed to deleteClass
     vm.expectRevert(
       abi.encodeWithSelector(IEntitySystem.Entity_PropertyTagNotFound.selector, objectId, CLASS_PROPERTY_TAG)
     );
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteClass, (objectId)));
+    entitySystem.deleteClass(objectId);
 
     // reverts if Class has Object(s) instantiated still
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityRelationsFound.selector, classId, 1));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteClass, (classId)));
+    entitySystem.deleteClass(classId);
     vm.stopPrank();
 
     // delete the object
     vm.prank(alice);
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteObject, (objectId)));
+    entitySystem.deleteObject(objectId);
 
     // check data state updates
     // before
@@ -439,7 +438,7 @@ contract EntitySystemTest is MudTest {
 
     // successful call
     vm.prank(deployer);
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteClass, (classId)));
+    entitySystem.deleteClass(classId);
 
     // after
     assertEq(Entity.getExists(classId), false);
@@ -465,8 +464,8 @@ contract EntitySystemTest is MudTest {
     // corectly calls and executes deleteClass for multiple classIds
     ResourceId[] memory scopedSystemIds = new ResourceId[](1);
     scopedSystemIds[0] = TAGGED_SYSTEM_ID;
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId2, scopedSystemIds)));
+    entitySystem.registerClass(classId, scopedSystemIds);
+    entitySystem.registerClass(classId2, scopedSystemIds);
 
     // check data state updates
     // before
@@ -497,7 +496,7 @@ contract EntitySystemTest is MudTest {
     uint256[] memory classIds = new uint256[](2);
     classIds[0] = classId;
     classIds[1] = classId2;
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteClasses, (classIds)));
+    entitySystem.deleteClasses(classIds);
 
     // after
     bytes32[] memory class1PropertyTagsAfter = Entity.getPropertyTags(classId);
@@ -527,33 +526,29 @@ contract EntitySystemTest is MudTest {
     scopedSystemIds[0] = TAGGED_SYSTEM_ID;
 
     // register Class
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
+    entitySystem.registerClass(classId, scopedSystemIds);
+
     // set invalid params
     uint256 invalidClassId = uint256(bytes32("INVALID_CLASS_ID"));
     bytes32 invalidRole = bytes32("INVALID_ROLE");
 
     // reverts, if classId in not registered
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityDoesNotExist.selector, invalidClassId));
-    world.call(
-      ENTITIES_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.setClassAccessRole, (invalidClassId, newClassAccessRole))
-    );
+    entitySystem.setClassAccessRole(invalidClassId, newClassAccessRole);
 
     // reverts, if newAccessRole does not exist
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_RoleDoesNotExist.selector, invalidRole));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.setClassAccessRole, (classId, invalidRole)));
+    entitySystem.setClassAccessRole(classId, invalidRole);
 
     // check for old access role
     bytes32 accessRoleBefore = Entity.getAccessRole(classId);
     assertEq(accessRoleBefore, classAccessRole);
 
     // create new class access role
-    world.call(
-      ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.createRole, (newClassAccessRole, classAccessRole))
-    );
+    roleManagementSystem.createRole(newClassAccessRole, classAccessRole);
+
     // success
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.setClassAccessRole, (classId, newClassAccessRole)));
+    entitySystem.setClassAccessRole(classId, newClassAccessRole);
 
     //check for new access role
     bytes32 accessRoleAfter = Entity.getAccessRole(classId);
@@ -569,9 +564,9 @@ contract EntitySystemTest is MudTest {
     scopedSystemIds[0] = TAGGED_SYSTEM_ID;
 
     // register Class
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.registerClass, (classId, scopedSystemIds)));
+    entitySystem.registerClass(classId, scopedSystemIds);
     // instantiate Object
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId, alice)));
+    entitySystem.instantiate(classId, objectId, alice);
 
     // set invalid params
     uint256 invalidObjectId = uint256(bytes32("INVALID_OBJECT_ID"));
@@ -579,14 +574,11 @@ contract EntitySystemTest is MudTest {
 
     // reverts, if objectId in not instantiated
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_EntityDoesNotExist.selector, invalidObjectId));
-    world.call(
-      ENTITIES_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.setObjectAccessRole, (invalidObjectId, newObjectAccessRole))
-    );
+    entitySystem.setObjectAccessRole(invalidObjectId, newObjectAccessRole);
 
     // reverts, if newAccessRole does not exist
     vm.expectRevert(abi.encodeWithSelector(IEntitySystem.Entity_RoleDoesNotExist.selector, invalidRole));
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.setObjectAccessRole, (objectId, invalidRole)));
+    entitySystem.setObjectAccessRole(objectId, invalidRole);
 
     // check for old access role
     bytes32 accessRoleBefore = Entity.getAccessRole(objectId);
@@ -595,13 +587,11 @@ contract EntitySystemTest is MudTest {
     vm.stopPrank();
 
     vm.prank(alice);
-    world.call(
-      ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.createRole, (newObjectAccessRole, objectAccessRole))
-    );
+    roleManagementSystem.createRole(newObjectAccessRole, objectAccessRole);
+
     vm.prank(alice);
     // success
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(IEntitySystem.setObjectAccessRole, (objectId, newObjectAccessRole)));
+    entitySystem.setObjectAccessRole(objectId, newObjectAccessRole);
 
     // check for new access role
     bytes32 accessRoleAfter = Entity.getAccessRole(objectId);

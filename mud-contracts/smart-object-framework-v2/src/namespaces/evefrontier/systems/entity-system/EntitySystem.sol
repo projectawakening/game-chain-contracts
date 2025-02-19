@@ -16,12 +16,10 @@ import { TagId, TagIdLib } from "../../../../libs/TagId.sol";
 
 import { TAG_TYPE_PROPERTY, TAG_TYPE_ENTITY_RELATION, TAG_TYPE_RESOURCE_RELATION, TAG_IDENTIFIER_CLASS, TAG_IDENTIFIER_OBJECT, TAG_IDENTIFIER_ENTITY_COUNT, TagParams, EntityRelationValue, ResourceRelationValue } from "../tag-system/types.sol";
 
-import { ITagSystem } from "../../interfaces/ITagSystem.sol";
 import { IEntitySystem } from "../../interfaces/IEntitySystem.sol";
-import { IRoleManagementSystem } from "../../interfaces/IRoleManagementSystem.sol";
 
-import { Utils as TagSystemUtils } from "../tag-system/Utils.sol";
-import { Utils as RoleManagementSystemUtils } from "../role-management-system/Utils.sol";
+import { tagSystem } from "../../codegen/systems/TagSystemlib.sol";
+import { roleManagementSystem } from "../../codegen/systems/RoleManagementSystemlib.sol";
 
 import { SmartObjectFramework } from "../../../../inherit/SmartObjectFramework.sol";
 
@@ -122,10 +120,7 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
       propertyTagIds[i] = TagId.wrap(class.propertyTags[i]);
     }
     if (propertyTagIds.length > 0) {
-      IWorldKernel(_world()).call(
-        TagSystemUtils.tagSystemId(),
-        abi.encodeCall(ITagSystem.removeTags, (classId, propertyTagIds))
-      );
+      tagSystem.removeTags(classId, propertyTagIds);
     }
 
     TagId[] memory resourceRelationTagIds = new TagId[](class.resourceRelationTags.length);
@@ -133,19 +128,13 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
       resourceRelationTagIds[i] = TagId.wrap(class.resourceRelationTags[i]);
     }
     if (resourceRelationTagIds.length > 0) {
-      IWorldKernel(_world()).call(
-        TagSystemUtils.tagSystemId(),
-        abi.encodeCall(ITagSystem.removeTags, (classId, resourceRelationTagIds))
-      );
+      tagSystem.removeTags(classId, resourceRelationTagIds);
     }
 
     // delete the class access role data
     bytes32 classAccessRole = keccak256(abi.encodePacked("ACCESS_ROLE", classId));
 
-    IWorldKernel(_world()).call(
-      RoleManagementSystemUtils.roleManagementSystemId(),
-      abi.encodeCall(IRoleManagementSystem.scopedRevokeAll, (classId, classAccessRole))
-    );
+    roleManagementSystem.scopedRevokeAll(classId, classAccessRole);
 
     Role.deleteRecord(classAccessRole);
 
@@ -191,10 +180,7 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
 
     bytes32 objectAccessRole = keccak256(abi.encodePacked("ACCESS_ROLE", objectId));
 
-    IWorldKernel(_world()).call(
-      RoleManagementSystemUtils.roleManagementSystemId(),
-      abi.encodeCall(IRoleManagementSystem.scopedCreateRole, (0, objectAccessRole, objectAccessRole, accessRoleMember))
-    );
+    roleManagementSystem.scopedCreateRole(0, objectAccessRole, objectAccessRole, accessRoleMember);
 
     Entity.set(objectId, true, objectAccessRole, TagId.wrap(bytes32(0)), new bytes32[](0), new bytes32[](0));
 
@@ -212,17 +198,11 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
       abi.encode(EntityRelationValue("INHERITANCE", classId))
     );
 
-    IWorldKernel(_world()).call(
-      TagSystemUtils.tagSystemId(),
-      abi.encodeCall(ITagSystem.setTag, (objectId, entityRelationTag))
-    );
+    tagSystem.setTag(objectId, entityRelationTag);
 
     TagParams memory propertyTag = TagParams(OBJECT_PROPERTY_TAG, bytes(""));
 
-    IWorldKernel(_world()).call(
-      TagSystemUtils.tagSystemId(),
-      abi.encodeCall(ITagSystem.setTag, (objectId, propertyTag))
-    );
+    tagSystem.setTag(objectId, propertyTag);
   }
 
   /**
@@ -276,20 +256,14 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
     );
 
     // remove all tags attached to this object
-    IWorldKernel(_world()).call(
-      TagSystemUtils.tagSystemId(),
-      abi.encodeCall(ITagSystem.removeTag, (objectId, object.entityRelationTag))
-    );
+    tagSystem.removeTag(objectId, object.entityRelationTag);
 
     TagId[] memory propertyTagIds = new TagId[](object.propertyTags.length);
     for (uint i = 0; i < object.propertyTags.length; i++) {
       propertyTagIds[i] = TagId.wrap(object.propertyTags[i]);
     }
     if (propertyTagIds.length > 0) {
-      IWorldKernel(_world()).call(
-        TagSystemUtils.tagSystemId(),
-        abi.encodeCall(ITagSystem.removeTags, (objectId, propertyTagIds))
-      );
+      tagSystem.removeTags(objectId, propertyTagIds);
     }
 
     TagId[] memory resourceRelationTagIds = new TagId[](object.resourceRelationTags.length);
@@ -297,23 +271,14 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
       resourceRelationTagIds[i] = TagId.wrap(object.resourceRelationTags[i]);
     }
     if (resourceRelationTagIds.length > 0) {
-      IWorldKernel(_world()).call(
-        TagSystemUtils.tagSystemId(),
-        abi.encodeCall(ITagSystem.removeTags, (objectId, resourceRelationTagIds))
-      );
+      tagSystem.removeTags(objectId, resourceRelationTagIds);
     }
 
     // delete the object access role data
     bytes32 objectAccessRole = keccak256(abi.encodePacked("ACCESS_ROLE", objectId));
 
     // scoped to `classid` because this function is only callable directly by a member of the object's class access role
-    IWorldKernel(_world()).call(
-      RoleManagementSystemUtils.roleManagementSystemId(),
-      abi.encodeCall(
-        IRoleManagementSystem.scopedRevokeAll,
-        (objectEntityRelationValue.relatedEntityId, objectAccessRole)
-      )
-    );
+    roleManagementSystem.scopedRevokeAll(objectEntityRelationValue.relatedEntityId, objectAccessRole);
 
     Role.deleteRecord(objectAccessRole);
 
@@ -341,13 +306,7 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
 
     bytes32 classAccessRole = keccak256(abi.encodePacked("ACCESS_ROLE", classId));
 
-    IWorldKernel(_world()).call(
-      RoleManagementSystemUtils.roleManagementSystemId(),
-      abi.encodeCall(
-        IRoleManagementSystem.scopedCreateRole,
-        (classId, classAccessRole, classAccessRole, accessRoleMember)
-      )
-    );
+    roleManagementSystem.scopedCreateRole(classId, classAccessRole, classAccessRole, accessRoleMember);
 
     Entity.set(classId, true, classAccessRole, TagId.wrap(bytes32(0)), new bytes32[](0), new bytes32[](0));
 
@@ -355,10 +314,7 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
     propertyTags[0] = TagParams(CLASS_PROPERTY_TAG, bytes(""));
     propertyTags[1] = TagParams(ENTITY_COUNT_PROPERTY_TAG, abi.encode(uint256(0)));
 
-    IWorldKernel(_world()).call(
-      TagSystemUtils.tagSystemId(),
-      abi.encodeCall(ITagSystem.setTags, (classId, propertyTags))
-    );
+    tagSystem.setTags(classId, propertyTags);
 
     TagParams[] memory systemResourceTags = new TagParams[](scopedSystemIds.length);
     for (uint i = 0; i < scopedSystemIds.length; i++) {
@@ -370,10 +326,7 @@ contract EntitySystem is IEntitySystem, SmartObjectFramework {
       );
     }
     if (systemResourceTags.length > 0) {
-      IWorldKernel(_world()).call(
-        TagSystemUtils.tagSystemId(),
-        abi.encodeCall(ITagSystem.setTags, (classId, systemResourceTags))
-      );
+      tagSystem.setTags(classId, systemResourceTags);
     }
   }
 }

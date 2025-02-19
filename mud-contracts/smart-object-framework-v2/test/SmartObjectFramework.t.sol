@@ -12,14 +12,9 @@ import { RESOURCE_NAMESPACE, RESOURCE_SYSTEM } from "@latticexyz/world/src/world
 import { ResourceIds } from "@latticexyz/store/src/codegen/tables/ResourceIds.sol";
 
 import { DEPLOYMENT_NAMESPACE } from "../src/namespaces/evefrontier/constants.sol";
-import { IRoleManagementSystem } from "../src/namespaces/evefrontier/interfaces/IRoleManagementSystem.sol";
-import { Utils as RoleManagementSystemUtils } from "../src/namespaces/evefrontier/systems/role-management-system/Utils.sol";
-import { EntitySystem } from "../src/namespaces/evefrontier/systems/entity-system/EntitySystem.sol";
-import { Utils as EntitySystemUtils } from "../src/namespaces/evefrontier/systems/entity-system/Utils.sol";
-import { IAccessConfigSystem } from "../src/namespaces/evefrontier/interfaces/IAccessConfigSystem.sol";
-import { Utils as AccessConfigSystemUtils } from "../src/namespaces/evefrontier/systems/access-config-system/Utils.sol";
-import { ITagSystem } from "../src/namespaces/evefrontier/interfaces/ITagSystem.sol";
-import { Utils as TagSystemUtils } from "../src/namespaces/evefrontier/systems/tag-system/Utils.sol";
+import { entitySystem } from "../src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { tagSystem } from "../src/namespaces/evefrontier/codegen/systems/TagSystemLib.sol";
+import { accessConfigSystem } from "../src/namespaces/evefrontier/codegen/systems/AccessConfigSystemLib.sol";
 
 import { SystemMock } from "./mocks/SystemMock.sol";
 import { AccessSystemMock } from "./mocks/AccessSystemMock.sol";
@@ -33,8 +28,6 @@ import { TAG_TYPE_PROPERTY, TAG_TYPE_ENTITY_RELATION, TAG_TYPE_RESOURCE_RELATION
 import { SmartObjectFramework } from "../src/inherit/SmartObjectFramework.sol";
 
 contract SmartObjectFrameworkTest is MudTest {
-  using EntitySystemUtils for bytes14;
-
   IBaseWorld world;
   SystemMock taggedSystemMock;
   SystemMock unTaggedSystemMock;
@@ -42,10 +35,7 @@ contract SmartObjectFrameworkTest is MudTest {
 
   bytes14 constant NAMESPACE = DEPLOYMENT_NAMESPACE;
   ResourceId constant NAMESPACE_ID = ResourceId.wrap(bytes32(abi.encodePacked(RESOURCE_NAMESPACE, NAMESPACE)));
-  ResourceId ROLE_MANAGEMENT_SYSTEM_ID = RoleManagementSystemUtils.roleManagementSystemId();
-  ResourceId ENTITY_SYSTEM_ID = EntitySystemUtils.entitySystemId();
-  ResourceId ACCESS_CONFIG_SYSTEM_ID = AccessConfigSystemUtils.accessConfigSystemId();
-  ResourceId TAGS_SYSTEM_ID = TagSystemUtils.tagSystemId();
+
   ResourceId constant TAGGED_SYSTEM_ID =
     ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystemMock")))));
   ResourceId constant UNTAGGED_SYSTEM_ID =
@@ -98,16 +88,16 @@ contract SmartObjectFrameworkTest is MudTest {
     scopedSystemIds[0] = TAGGED_SYSTEM_ID;
 
     // register Class (with a taggedSystem tag)
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (classId, scopedSystemIds)));
+    entitySystem.registerClass(classId, scopedSystemIds);
 
     // register Class without system tags
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.registerClass, (unTaggedClassId, new ResourceId[](0))));
+    entitySystem.registerClass(unTaggedClassId, new ResourceId[](0));
 
     // instantiate system resource tagged Class->Object
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (classId, objectId, alice)));
+    entitySystem.instantiate(classId, objectId, alice);
 
     // instantiate Class->Object without system tags
-    world.call(ENTITY_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (unTaggedClassId, unTaggedObjectId, alice)));
+    entitySystem.instantiate(unTaggedClassId, unTaggedObjectId, alice);
 
     vm.stopPrank();
   }
@@ -177,7 +167,7 @@ contract SmartObjectFrameworkTest is MudTest {
 
     // check scope direct by Object (only)
     // remove classTag
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(ITagSystem.removeTag, (classId, taggedSystemTagId)));
+    tagSystem.removeTag(classId, taggedSystemTagId);
 
     // revert call SystemMock using objectId (but tag was temporarily removed)
     vm.expectRevert(
@@ -186,17 +176,11 @@ contract SmartObjectFrameworkTest is MudTest {
     world.call(TAGGED_SYSTEM_ID, abi.encodeCall(SystemMock.objectLevelScope, (objectId)));
 
     // add Object tag
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(
-        ITagSystem.setTag,
-        (
-          objectId,
-          TagParams(
-            taggedSystemTagId,
-            abi.encode(ResourceRelationValue("COMPOSITION", RESOURCE_SYSTEM, TAGGED_SYSTEM_ID.getResourceName()))
-          )
-        )
+    tagSystem.setTag(
+      objectId,
+      TagParams(
+        taggedSystemTagId,
+        abi.encode(ResourceRelationValue("COMPOSITION", RESOURCE_SYSTEM, TAGGED_SYSTEM_ID.getResourceName()))
       )
     );
 
@@ -240,26 +224,15 @@ contract SmartObjectFrameworkTest is MudTest {
   function test_access() public {
     vm.startPrank(deployer);
     // configure Access configuration for SystemMock
-    world.call(
-      ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(
-        IAccessConfigSystem.configureAccess,
-        (
-          TAGGED_SYSTEM_ID,
-          SystemMock.accessControlled.selector,
-          ACCESS_SYSTEM_ID,
-          AccessSystemMock.invalidAccessController.selector
-        )
-      )
+    accessConfigSystem.configureAccess(
+      TAGGED_SYSTEM_ID,
+      SystemMock.accessControlled.selector,
+      ACCESS_SYSTEM_ID,
+      AccessSystemMock.invalidAccessController.selector
     );
+
     // set enforcement
-    world.call(
-      ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(
-        IAccessConfigSystem.setAccessEnforcement,
-        (TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, true)
-      )
-    );
+    accessConfigSystem.setAccessEnforcement(TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, true);
 
     // revert, if a non-static call was made yto access logic
     vm.expectRevert(bytes(""));
@@ -269,27 +242,15 @@ contract SmartObjectFrameworkTest is MudTest {
     );
 
     // re-configure Access configuration for SystemMock
-    world.call(
-      ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(
-        IAccessConfigSystem.configureAccess,
-        (
-          TAGGED_SYSTEM_ID,
-          SystemMock.accessControlled.selector,
-          ACCESS_SYSTEM_ID,
-          AccessSystemMock.accessController.selector
-        )
-      )
+    accessConfigSystem.configureAccess(
+      TAGGED_SYSTEM_ID,
+      SystemMock.accessControlled.selector,
+      ACCESS_SYSTEM_ID,
+      AccessSystemMock.accessController.selector
     );
 
     // re-set enforcement
-    world.call(
-      ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(
-        IAccessConfigSystem.setAccessEnforcement,
-        (TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, true)
-      )
-    );
+    accessConfigSystem.setAccessEnforcement(TAGGED_SYSTEM_ID, SystemMock.accessControlled.selector, true);
 
     // revert, to check verification data failure
     vm.expectRevert(abi.encodeWithSelector(AccessSystemMock.AccessSystemMock_IncorrectCallData.selector));

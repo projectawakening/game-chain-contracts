@@ -13,7 +13,7 @@ import { ResourceIds } from "@latticexyz/store/src/codegen/tables/ResourceIds.so
 
 import { DEPLOYMENT_NAMESPACE } from "../src/namespaces/evefrontier/constants.sol";
 import { IAccessConfigSystem } from "../src/namespaces/evefrontier/interfaces/IAccessConfigSystem.sol";
-import { Utils as AccessConfigSystemUtils } from "../src/namespaces/evefrontier/systems/access-config-system/Utils.sol";
+import { accessConfigSystem } from "../src/namespaces/evefrontier/codegen/systems/AccessConfigSystemLib.sol";
 
 import "../src/namespaces/evefrontier/codegen/index.sol";
 
@@ -21,15 +21,13 @@ import { SystemMock } from "./mocks/SystemMock.sol";
 import { AccessSystemMock } from "./mocks/AccessSystemMock.sol";
 
 contract AccessConfigSystemTest is MudTest {
-  using AccessConfigSystemUtils for bytes14;
-
   IBaseWorld world;
   SystemMock targetSystemMock;
   AccessSystemMock accessSystemMock;
 
   bytes14 constant NAMESPACE = DEPLOYMENT_NAMESPACE;
   ResourceId constant NAMESPACE_ID = ResourceId.wrap(bytes32(abi.encodePacked(RESOURCE_NAMESPACE, NAMESPACE)));
-  ResourceId ACCESS_CONFIG_SYSTEM_ID = AccessConfigSystemUtils.accessConfigSystemId();
+  ResourceId ACCESS_CONFIG_SYSTEM_ID = accessConfigSystem.toResourceId();
   ResourceId TARGET_SYSTEM_ID =
     ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TargetSystemMock")))));
   ResourceId constant ACCESS_NAMESPACE_ID =
@@ -63,17 +61,11 @@ contract AccessConfigSystemTest is MudTest {
     vm.expectRevert(
       abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_InvalidTargetSystem.selector, TARGET_SYSTEM_ID)
     );
-    world.call(
-      ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(
-        IAccessConfigSystem.configureAccess,
-        (
-          TARGET_SYSTEM_ID,
-          SystemMock.accessControlled.selector,
-          ACCESS_SYSTEM_ID,
-          AccessSystemMock.accessController.selector
-        )
-      )
+    accessConfigSystem.configureAccess(
+      TARGET_SYSTEM_ID,
+      SystemMock.accessControlled.selector,
+      ACCESS_SYSTEM_ID,
+      AccessSystemMock.accessController.selector
     );
 
     // register target system
@@ -83,17 +75,11 @@ contract AccessConfigSystemTest is MudTest {
     vm.expectRevert(
       abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_InvalidAccessSystem.selector, ACCESS_SYSTEM_ID)
     );
-    world.call(
-      ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(
-        IAccessConfigSystem.configureAccess,
-        (
-          TARGET_SYSTEM_ID,
-          SystemMock.accessControlled.selector,
-          ACCESS_SYSTEM_ID,
-          AccessSystemMock.accessController.selector
-        )
-      )
+    accessConfigSystem.configureAccess(
+      TARGET_SYSTEM_ID,
+      SystemMock.accessControlled.selector,
+      ACCESS_SYSTEM_ID,
+      AccessSystemMock.accessController.selector
     );
 
     // register access namespace and system
@@ -101,18 +87,13 @@ contract AccessConfigSystemTest is MudTest {
     world.registerSystem(ACCESS_SYSTEM_ID, System(accessSystemMock), true);
 
     // success
-    world.call(
-      ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(
-        IAccessConfigSystem.configureAccess,
-        (
-          TARGET_SYSTEM_ID,
-          SystemMock.accessControlled.selector,
-          ACCESS_SYSTEM_ID,
-          AccessSystemMock.accessController.selector
-        )
-      )
+    accessConfigSystem.configureAccess(
+      TARGET_SYSTEM_ID,
+      SystemMock.accessControlled.selector,
+      ACCESS_SYSTEM_ID,
+      AccessSystemMock.accessController.selector
     );
+
     bytes32 target = keccak256(abi.encodePacked(TARGET_SYSTEM_ID, SystemMock.accessControlled.selector));
     // check that the access config is set correctly in the AccessConfig table
     AccessConfigData memory accessConfig = AccessConfig.get(target);
@@ -128,17 +109,11 @@ contract AccessConfigSystemTest is MudTest {
     vm.expectRevert(
       abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_AccessDenied.selector, TARGET_SYSTEM_ID, address(this))
     );
-    world.call(
-      ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(
-        IAccessConfigSystem.configureAccess,
-        (
-          TARGET_SYSTEM_ID,
-          SystemMock.accessControlled.selector,
-          ACCESS_SYSTEM_ID,
-          AccessSystemMock.accessController.selector
-        )
-      )
+    accessConfigSystem.configureAccess(
+      TARGET_SYSTEM_ID,
+      SystemMock.accessControlled.selector,
+      ACCESS_SYSTEM_ID,
+      AccessSystemMock.accessController.selector
     );
   }
 
@@ -159,26 +134,14 @@ contract AccessConfigSystemTest is MudTest {
         SystemMock.accessControlled.selector
       )
     );
-    world.call(
-      ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(
-        IAccessConfigSystem.setAccessEnforcement,
-        (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, true)
-      )
-    );
+    accessConfigSystem.setAccessEnforcement(TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, true);
 
     // configure access
-    world.call(
-      ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(
-        IAccessConfigSystem.configureAccess,
-        (
-          TARGET_SYSTEM_ID,
-          SystemMock.accessControlled.selector,
-          ACCESS_SYSTEM_ID,
-          AccessSystemMock.accessController.selector
-        )
-      )
+    accessConfigSystem.configureAccess(
+      TARGET_SYSTEM_ID,
+      SystemMock.accessControlled.selector,
+      ACCESS_SYSTEM_ID,
+      AccessSystemMock.accessController.selector
     );
 
     // check that the access enforcement is not on
@@ -186,13 +149,7 @@ contract AccessConfigSystemTest is MudTest {
     bool enforcementBefore = AccessConfig.getEnforcement(target);
     assertEq(enforcementBefore, false);
     // success
-    world.call(
-      ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(
-        IAccessConfigSystem.setAccessEnforcement,
-        (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, true)
-      )
-    );
+    accessConfigSystem.setAccessEnforcement(TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, true);
     // check that the access enforcement is on
     bool enforcementAfter = AccessConfig.getEnforcement(target);
     assertEq(enforcementAfter, true);
@@ -202,12 +159,6 @@ contract AccessConfigSystemTest is MudTest {
     vm.expectRevert(
       abi.encodeWithSelector(IAccessConfigSystem.AccessConfig_AccessDenied.selector, TARGET_SYSTEM_ID, address(this))
     );
-    world.call(
-      ACCESS_CONFIG_SYSTEM_ID,
-      abi.encodeCall(
-        IAccessConfigSystem.setAccessEnforcement,
-        (TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, true)
-      )
-    );
+    accessConfigSystem.setAccessEnforcement(TARGET_SYSTEM_ID, SystemMock.accessControlled.selector, true);
   }
 }

@@ -25,9 +25,9 @@ contract LocationTest is EveTest {
     uint256 locationTestClassId = uint256(bytes32("LOCATION_TEST"));
     ResourceId[] memory locationTestSystemIds = new ResourceId[](1);
     locationTestSystemIds[0] = locationSystem.toResourceId();
-    entitySystem.registerClass(locationTestClassId, "admin", locationTestSystemIds);
+    entitySystem.registerClass(locationTestClassId, locationTestSystemIds);
 
-    entitySystem.instantiate(locationTestClassId, smartObjectId);
+    entitySystem.instantiate(locationTestClassId, smartObjectId, deployer);
     vm.stopPrank();
   }
 

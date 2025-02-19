@@ -19,12 +19,13 @@ import { ISOFAccessSystem } from "../../interfaces/ISOFAccessSystem.sol";
 import { IWorldWithContext } from "../../../../IWorldWithContext.sol";
 
 import { IEntitySystem } from "../../../evefrontier/interfaces/IEntitySystem.sol";
-import { Utils as EntitySystemUtils } from "../../../evefrontier/systems/entity-system/Utils.sol";
-import { InventoryUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
-import { SmartStorageUnitUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-storage-unit/SmartStorageUnitUtils.sol";
-import { SmartCharacterUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
-import { SmartGateUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-gate/SmartGateUtils.sol";
-import { SmartTurretUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-turret/SmartTurretUtils.sol";
+import { entitySystem } from "../../../evefrontier/codegen/systems/EntitySystemLib.sol";
+import { inventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/InventorySystemLib.sol";
+import { ephemeralInventorySystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/EphemeralInventorySystemLib.sol";
+import { smartStorageUnitSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartStorageUnitSystemLib.sol";
+import { smartCharacterSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartCharacterSystemLib.sol";
+import { smartGateSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartGateSystemLib.sol";
+import { smartTurretSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/SmartTurretSystemLib.sol";
 
 import { SmartObjectFramework } from "../../../../inherit/SmartObjectFramework.sol";
 
@@ -145,7 +146,7 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
     (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
     ResourceId callingSystemId = SystemRegistry.get(msgSender);
 
-    if (callCount > 1 && (callingSystemId.unwrap() == EntitySystemUtils.entitySystemId().unwrap())) {
+    if (callCount > 1 && (callingSystemId.unwrap() == entitySystem.toResourceId().unwrap())) {
       return;
     } else if (callCount == 1 && _checkAccessRole(entityId, _callMsgSender(1))) {
       return;
@@ -165,12 +166,12 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
     (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
     ResourceId callingSystemId = SystemRegistry.get(msgSender);
 
-    if (callCount > 1 && callingSystemId.unwrap() != EntitySystemUtils.entitySystemId().unwrap()) {
+    if (callCount > 1 && callingSystemId.unwrap() != entitySystem.toResourceId().unwrap()) {
       uint256 classId = _getClassId(entityId);
       if (_checkClassScopedSystem(classId, callingSystemId)) {
         return;
       }
-    } else if (callCount > 1 && callingSystemId.unwrap() == EntitySystemUtils.entitySystemId().unwrap()) {
+    } else if (callCount > 1 && callingSystemId.unwrap() == entitySystem.toResourceId().unwrap()) {
       // EntitySystem.registerClass, EntitySyste.scopedRegisterClass, EntitySystem.initialize, EntitySystem.deleteClass, EntitySystem.deleteObject
       return;
     }
@@ -191,12 +192,12 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
       // system-to-system call case
       ResourceId callingSystemId = SystemRegistry.get(msgSender);
       if (
-        callingSystemId.unwrap() == InventoryUtils.ephemeralInventorySystemId().unwrap() ||
-        callingSystemId.unwrap() == InventoryUtils.inventorySystemId().unwrap() ||
-        callingSystemId.unwrap() == SmartStorageUnitUtils.smartStorageUnitSystemId().unwrap() ||
-        callingSystemId.unwrap() == SmartCharacterUtils.smartCharacterSystemId().unwrap() ||
-        callingSystemId.unwrap() == SmartTurretUtils.smartTurretSystemId().unwrap() ||
-        callingSystemId.unwrap() == SmartGateUtils.smartGateSystemId().unwrap()
+        callingSystemId.unwrap() == inventorySystem.toResourceId().unwrap() ||
+        callingSystemId.unwrap() == ephemeralInventorySystem.toResourceId().unwrap() ||
+        callingSystemId.unwrap() == smartStorageUnitSystem.toResourceId().unwrap() ||
+        callingSystemId.unwrap() == smartCharacterSystem.toResourceId().unwrap() ||
+        callingSystemId.unwrap() == smartTurretSystem.toResourceId().unwrap() ||
+        callingSystemId.unwrap() == smartGateSystem.toResourceId().unwrap()
       ) {
         return;
       }

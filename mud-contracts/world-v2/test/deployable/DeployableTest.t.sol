@@ -63,7 +63,7 @@ contract DeployableTest is EveTest {
     systemIds[3] = fuelSystem.toResourceId();
     systemIds[4] = locationSystem.toResourceId();
     systemIds[5] = smartAssemblySystem.toResourceId();
-    entitySystem.registerClass(testClassId, "admin", systemIds);
+    entitySystem.registerClass(testClassId, systemIds);
 
     smartCharacterSystem.createCharacter(characterId, alice, tribeId, entityRecord, entityRecordMetadata);
 
@@ -89,7 +89,7 @@ contract DeployableTest is EveTest {
     vm.assume(fuelMaxCapacity != 0);
 
     vm.startPrank(deployer);
-    entitySystem.instantiate(testClassId, smartObjectId);
+    entitySystem.instantiate(testClassId, smartObjectId, smartObjectData.owner);
     deployableSystem.globalResume();
 
     DeployableStateData memory data = DeployableStateData({
@@ -210,7 +210,7 @@ contract DeployableTest is EveTest {
     vm.assume((keccak256(abi.encodePacked(smartAssemblyType)) != keccak256(abi.encodePacked(""))));
 
     vm.startPrank(deployer);
-    entitySystem.instantiate(testClassId, smartObjectId);
+    entitySystem.instantiate(testClassId, smartObjectId, smartObjectData.owner);
 
     deployableSystem.globalResume();
     deployableSystem.createAndAnchorDeployable(
