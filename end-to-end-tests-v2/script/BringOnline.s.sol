@@ -22,7 +22,7 @@ contract BringOnline is Script {
     vm.startBroadcast(deployerPrivateKey);
     IBaseWorld world = IBaseWorld(worldAddress);
 
-    ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
+    ResourceId deployableSystemId = deployableSystem.toResourceId();
     uint256 smartObjectId = uint256(keccak256(abi.encode("item:<tenant_id>-<db_id>-00001")));
 
     // check global state and resume if needed
