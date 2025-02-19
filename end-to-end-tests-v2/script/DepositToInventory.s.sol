@@ -20,7 +20,7 @@ contract DepositToInventory is Script {
     // Start broadcasting transactions from the deployer account
     vm.startBroadcast(deployerPrivateKey);
     IBaseWorld world = IBaseWorld(worldAddress);
-    ResourceId inventorySystemId = InventorySystem.toResourceId();
+    ResourceId inventorySystemId = inventorySystem.toResourceId();
 
     uint256 smartObjectId = uint256(keccak256(abi.encode("item:<tenant_id>-<db_id>-00001")));
     InventoryItem[] memory items = new InventoryItem[](3);
