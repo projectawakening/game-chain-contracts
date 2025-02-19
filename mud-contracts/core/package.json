@@ -27,7 +27,9 @@
     "@latticexyz/world-modules": "2.2.8",
     "@eveworld/common-constants": "0.0.13",
     "@eveworld/smart-object-framework": "0.0.8",
-    "@eveworld/world": "0.0.17"
+    "@eveworld/world": "0.0.17",
+    "@eveworld/world-v2": "link:../mud-contracts/world-v2",
+    "@eveworld/smart-object-framework-v2": "link:../mud-contracts/smart-object-framework-v2"
   },
   "devDependencies": {
     "@types/node": "^18.15.11",
