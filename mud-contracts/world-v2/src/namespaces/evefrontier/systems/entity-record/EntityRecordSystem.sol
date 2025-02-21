@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.24;
 
-import { System } from "@latticexyz/world/src/System.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 import { EntityRecord, EntityRecordMetadata, EntityRecordMetadataData } from "../../codegen/index.sol";
 import { EntityRecordData, EntityMetadata } from "./types.sol";
-import { EveSystem } from "../EveSystem.sol";
 
 /**
  * @title EntityRecordSystem
  * @author CCP Games
  * EntityRecordSystem stores an in game entity record on chain.
  */
-contract EntityRecordSystem is EveSystem {
+contract EntityRecordSystem is SmartObjectFramework {
   /**
    * @dev creates a new entity record
    * @param smartObjectId the id of a in game entity referred as smart object id

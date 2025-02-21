@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.24;
 
-import { EveSystem } from "../EveSystem.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 import { Fuel, FuelData } from "../../codegen/index.sol";
 import { DeployableState, GlobalDeployableState, GlobalDeployableStateData } from "../../codegen/index.sol";
 
@@ -13,7 +13,7 @@ import { DECIMALS, ONE_UNIT_IN_WEI } from "./../constants.sol";
  * @author CCP Games
  * FuelSystem: stores the Fuel balance of a Deployable
  */
-contract FuelSystem is EveSystem {
+contract FuelSystem is SmartObjectFramework {
   error Fuel_NoFuel(uint256 smartObjectId);
   error Fuel_ExceedsMaxCapacity(uint256 smartObjectId, uint256 maxCapacity, uint256 fuelAmount);
   error Fuel_InvalidFuelConsumptionInterval(uint256 smartObjectId);

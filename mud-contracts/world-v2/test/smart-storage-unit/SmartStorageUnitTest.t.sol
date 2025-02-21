@@ -8,9 +8,6 @@ import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
 
 import { SmartStorageUnitSystem } from "../../src/namespaces/evefrontier/systems/smart-storage-unit/SmartStorageUnitSystem.sol";
 import { DeployableSystem } from "../../src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
-import { SmartStorageUnitUtils } from "../../src/namespaces/evefrontier/systems/smart-storage-unit/SmartStorageUnitUtils.sol";
-import { DeployableUtils } from "../../src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
-import { SmartCharacterUtils } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterUtils.sol";
 import { InventoryUtils } from "../../src/namespaces/evefrontier/systems/inventory/InventoryUtils.sol";
 import { InventorySystem } from "../../src/namespaces/evefrontier/systems/inventory/InventorySystem.sol";
 import { SmartCharacterSystem } from "../../src/namespaces/evefrontier/systems/smart-character/SmartCharacterSystem.sol";

@@ -2,14 +2,14 @@
 pragma solidity >=0.8.24;
 
 import { StaticData, StaticDataMetadata } from "../../codegen/index.sol";
-import { EveSystem } from "../EveSystem.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 
 /**
  * @title StaticData
  * @author CCP Games
  * StaticDataSystem stores an in game entity record on chain.
  */
-contract StaticDataSystem is EveSystem {
+contract StaticDataSystem is SmartObjectFramework {
   /**
    * @dev updates the cid of the in-game object
    * @param smartObjectId on-chain id of the in-game object

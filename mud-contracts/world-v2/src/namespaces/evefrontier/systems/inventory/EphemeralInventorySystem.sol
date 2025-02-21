@@ -2,6 +2,7 @@
 pragma solidity >=0.8.21;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 
 import { DeployableSystem } from "../deployable/DeployableSystem.sol";
 import { InventorySystem } from "./InventorySystem.sol";
@@ -19,7 +20,6 @@ import { EntityRecordSystem } from "../entity-record/EntityRecordSystem.sol";
 import { InventoryItem } from "./types.sol";
 import { InventorySystem } from "./InventorySystem.sol";
 import { State, SmartObjectData } from "../deployable/types.sol";
-import { EveSystem } from "../EveSystem.sol";
 import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
 /**
@@ -27,7 +27,7 @@ import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces
  * @author CCP Games
  * @notice EphemeralInventorySystem stores the ephemeral inventory of a smart object on-chain
  */
-contract EphemeralInventorySystem is EveSystem {
+contract EphemeralInventorySystem is SmartObjectFramework {
   error InvalidEphemeralInventoryOwner(string message, address ephemeralInvOwner);
   error Ephemeral_Inventory_InsufficientCapacity(string message, uint256 maxCapacity, uint256 usedCapacity);
   error Ephemeral_Inventory_InvalidCapacity(string message);

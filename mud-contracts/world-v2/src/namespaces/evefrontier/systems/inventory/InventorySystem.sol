@@ -2,22 +2,19 @@
 pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
-import { DeployableUtils } from "../deployable/DeployableUtils.sol";
-import { EntityRecordUtils } from "../entity-record/EntityRecordUtils.sol";
 import { GlobalDeployableState, GlobalDeployableStateData } from "../../codegen/index.sol";
 import { Inventory } from "../../codegen/index.sol";
 import { EntityRecord, EntityRecordData } from "../../codegen/index.sol";
 import { DeployableState, DeployableStateData } from "../../codegen/index.sol";
 import { DeployableSystem } from "../deployable/DeployableSystem.sol";
 import { InventoryItemData, InventoryItem as InventoryItemTable } from "../../codegen/index.sol";
-import { EntityRecordUtils } from "../entity-record/EntityRecordUtils.sol";
 import { EntityRecordSystem } from "../entity-record/EntityRecordSystem.sol";
 import { EntityRecordData as EntityRecordStruct } from "../entity-record/types.sol";
 import { EntityRecordSystemLib, entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.sol";
 
 import { InventoryItem } from "./types.sol";
-import { State, SmartObjectData } from "../deployable/types.sol";
-import { EveSystem } from "../EveSystem.sol";
+import { State } from "../deployable/types.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 import { roleManagementSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/RoleManagementSystemLib.sol";
 import { Role } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/index.sol";
 import { InventoryUtils } from "./InventoryUtils.sol";
@@ -31,7 +28,7 @@ import { IERC721 } from "../eve-erc721-puppet/IERC721.sol";
  * @author CCP Games
  * @notice InventorySystem stores the inventory of a smart object on-chain
  */
-contract InventorySystem is EveSystem {
+contract InventorySystem is SmartObjectFramework {
   error Inventory_InvalidCapacity(string message);
   error Inventory_InsufficientCapacity(string message, uint256 maxCapacity, uint256 usedCapacity);
   error Inventory_InvalidItemQuantity(string message, uint256 quantity, uint256 maxQuantity);
@@ -43,8 +40,6 @@ contract InventorySystem is EveSystem {
     address expectedOwner
   );
   error Inventory_InvalidDeployable(string message, uint256 deployableId);
-
-  ResourceId entityRecordUtils = EntityRecordUtils.entityRecordSystemId();
 
   /**
    * modifier to enforce deployable state changes can happen only when the game server is running

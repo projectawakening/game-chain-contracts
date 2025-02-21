@@ -2,7 +2,7 @@
 pragma solidity >=0.8.24;
 
 import { ResourceId } from "@latticexyz/store/src/ResourceId.sol";
-import { System } from "@latticexyz/world/src/System.sol";
+import { SmartObjectFramework } from "@eveworld/smart-object-framework-v2/src/inherit/SmartObjectFramework.sol";
 import { WorldResourceIdInstance } from "@latticexyz/world/src/WorldResourceId.sol";
 import { SystemRegistry } from "@latticexyz/world/src/codegen/tables/SystemRegistry.sol";
 
@@ -23,16 +23,12 @@ import { TokenURI } from "../../codegen/tables/TokenURI.sol";
 import { _balancesTableId, _metadataTableId, _tokenUriTableId, _operatorApprovalTableId, _ownersTableId, _tokenApprovalTableId } from "./utils.sol";
 import { LibString } from "@latticexyz/world-modules/src/modules/erc721-puppet/libraries/LibString.sol";
 
-import { StaticDataUtils } from "../static-data/StaticDataUtils.sol";
 import { StaticDataSystem } from "../static-data/StaticDataSystem.sol";
 import { StaticData, StaticDataMetadata } from "../../codegen/index.sol";
 
-import { EveSystem } from "../EveSystem.sol";
-
-contract ERC721System is IERC721Mintable, EveSystem, PuppetMaster {
+contract ERC721System is IERC721Mintable, SmartObjectFramework, PuppetMaster {
   using WorldResourceIdInstance for ResourceId;
   using LibString for uint256;
-  using StaticDataUtils for bytes14;
 
   /**
    * @dev See {IERC721-balanceOf}.
