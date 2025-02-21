@@ -7,16 +7,16 @@ pragma solidity ^0.8.24;
  */
 interface ISOFAccessSystem {
   // EntitySystem.sol access
-  function allowAccessRole(uint256 entityId, bytes memory targetCallData) external view;
-  function allowClassScopedSystem(uint256 entityId, bytes memory targetCallData) external view;
-  function allowDirectClassAccessRole(uint256 entityId, bytes memory targetCallData) external view;
   function allowDirectAccessRole(uint256 entityId, bytes memory targetCallData) external view;
+  function allowDirectClassAccessRole(uint256 entityId, bytes memory targetCallData) external view;
   function allowClassScopedSystemOrDirectClassAccessRole(uint256 entityId, bytes memory targetCallData) external view;
-  function allowClassScopedSystemOrDirectAccessRole(uint256 objectId, bytes memory targetCallData) external view;
+  function allowClassScopedSystemOrDirectAccessRole(uint256 entityId, bytes memory targetCallData) external view;
+  function allowDefinedSystems(uint256 entityId, bytes memory targetCallData) external view;
   // TagSystem.sol access
   function allowEntitySystemOrDirectAccessRole(uint256 entityId, bytes memory targetCallData) external view;
+  // RoleManagerSystem.sol access
+  function allowEntitySystemOrClassScopedSystem(uint256 entityId, bytes memory targetCallData) external view;
+  function allowClassScopedSystem(uint256 entityId, bytes memory targetCallData) external view;
 
-  error SOFAccess_RoleAccessDenied(bytes32 accessRole, address account);
-  error SOFAccess_SystemAccessDenied(uint256 entityId, address systemAddress);
-  error SOFAccess_DirectCall();
+  error SOFAccess_AccessDenied(uint256 entityId, address caller);
 }

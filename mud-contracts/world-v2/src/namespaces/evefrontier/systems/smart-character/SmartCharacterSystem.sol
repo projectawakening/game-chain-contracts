@@ -55,7 +55,7 @@ contract SmartCharacterSystem is EveSystem {
       revert SmartCharacter_AlreadyCreated(characterAddress, characterId);
     }
 
-    entitySystem.instantiate(getSmartCharacterClassId(), characterId);
+    entitySystem.instantiate(getSmartCharacterClassId(), characterId, characterAddress);
 
     Characters.set(characterId, characterAddress, tribeId, createdAt);
     CharactersByAddress.set(characterAddress, characterId);

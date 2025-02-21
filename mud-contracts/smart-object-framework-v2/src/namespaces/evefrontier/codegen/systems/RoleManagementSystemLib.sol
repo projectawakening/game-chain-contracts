@@ -60,8 +60,14 @@ library RoleManagementSystemLib {
     return CallWrapper(self.toResourceId(), address(0)).revokeAll(role);
   }
 
-  function scopedCreateRole(RoleManagementSystemType self, uint256 entityId, bytes32 role, bytes32 admin) internal {
-    return CallWrapper(self.toResourceId(), address(0)).scopedCreateRole(entityId, role, admin);
+  function scopedCreateRole(
+    RoleManagementSystemType self,
+    uint256 entityId,
+    bytes32 role,
+    bytes32 admin,
+    address roleMember
+  ) internal {
+    return CallWrapper(self.toResourceId(), address(0)).scopedCreateRole(entityId, role, admin, roleMember);
   }
 
   function scopedTransferRoleAdmin(
@@ -154,13 +160,19 @@ library RoleManagementSystemLib {
       : _world().callFrom(self.from, self.systemId, systemCall);
   }
 
-  function scopedCreateRole(CallWrapper memory self, uint256 entityId, bytes32 role, bytes32 admin) internal {
+  function scopedCreateRole(
+    CallWrapper memory self,
+    uint256 entityId,
+    bytes32 role,
+    bytes32 admin,
+    address roleMember
+  ) internal {
     // if the contract calling this function is a root system, it should use `callAsRoot`
     if (address(_world()) == address(this)) revert RoleManagementSystemLib_CallingFromRootSystem();
 
     bytes memory systemCall = abi.encodeCall(
-      _scopedCreateRole_uint256_bytes32_bytes32.scopedCreateRole,
-      (entityId, role, admin)
+      _scopedCreateRole_uint256_bytes32_bytes32_address.scopedCreateRole,
+      (entityId, role, admin, roleMember)
     );
     self.from == address(0)
       ? _world().call(self.systemId, systemCall)
@@ -264,10 +276,16 @@ library RoleManagementSystemLib {
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
   }
 
-  function scopedCreateRole(RootCallWrapper memory self, uint256 entityId, bytes32 role, bytes32 admin) internal {
+  function scopedCreateRole(
+    RootCallWrapper memory self,
+    uint256 entityId,
+    bytes32 role,
+    bytes32 admin,
+    address roleMember
+  ) internal {
     bytes memory systemCall = abi.encodeCall(
-      _scopedCreateRole_uint256_bytes32_bytes32.scopedCreateRole,
-      (entityId, role, admin)
+      _scopedCreateRole_uint256_bytes32_bytes32_address.scopedCreateRole,
+      (entityId, role, admin, roleMember)
     );
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
   }
@@ -381,8 +399,8 @@ interface _revokeAll_bytes32 {
   function revokeAll(bytes32 role) external;
 }
 
-interface _scopedCreateRole_uint256_bytes32_bytes32 {
-  function scopedCreateRole(uint256 entityId, bytes32 role, bytes32 admin) external;
+interface _scopedCreateRole_uint256_bytes32_bytes32_address {
+  function scopedCreateRole(uint256 entityId, bytes32 role, bytes32 admin, address roleMember) external;
 }
 
 interface _scopedTransferRoleAdmin_uint256_bytes32_bytes32 {

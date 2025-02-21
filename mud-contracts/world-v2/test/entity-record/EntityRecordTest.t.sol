@@ -31,7 +31,7 @@ contract EntityRecordTest is EveTest {
     vm.startPrank(deployer);
     ResourceId[] memory systemIds = new ResourceId[](1);
     systemIds[0] = entityRecordSystem.toResourceId();
-    entitySystem.registerClass(testClassId, "admin", systemIds);
+    entitySystem.registerClass(testClassId, systemIds);
     vm.stopPrank();
   }
 
@@ -46,7 +46,7 @@ contract EntityRecordTest is EveTest {
 
   function testEntityRecord(uint256 itemId, uint256 typeId, uint256 volume) public {
     vm.startPrank(deployer);
-    entitySystem.instantiate(testClassId, smartObjectId);
+    entitySystem.instantiate(testClassId, smartObjectId, deployer);
     EntityRecordInput memory entityRecordInput = EntityRecordInput({ typeId: typeId, itemId: itemId, volume: volume });
 
     entityRecordSystem.createEntityRecord(smartObjectId, entityRecordInput);
@@ -60,7 +60,7 @@ contract EntityRecordTest is EveTest {
 
   function testEntityRecordMetadata() public {
     vm.startPrank(deployer);
-    entitySystem.instantiate(testClassId, smartObjectId);
+    entitySystem.instantiate(testClassId, smartObjectId, deployer);
     EntityMetadata memory entityMetadata = EntityMetadata({ name: name, dappURL: dappURL, description: description });
 
     entityRecordSystem.createEntityRecordMetadata(smartObjectId, entityMetadata);
@@ -75,7 +75,7 @@ contract EntityRecordTest is EveTest {
 
   function testSetName() public {
     vm.startPrank(deployer);
-    entitySystem.instantiate(testClassId, smartObjectId);
+    entitySystem.instantiate(testClassId, smartObjectId, deployer);
     entityRecordSystem.setName(smartObjectId, name);
 
     EntityRecordMetadataData memory entityRecordMetaData = EntityRecordMetadata.get(smartObjectId);

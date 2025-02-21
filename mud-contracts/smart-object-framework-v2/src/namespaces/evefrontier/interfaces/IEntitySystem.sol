@@ -9,11 +9,12 @@ import { TagId } from "../../../libs/TagId.sol";
  * @dev An interface for the Entity System functionality
  */
 interface IEntitySystem {
-  function registerClass(uint256 classId, bytes32 accessRole, ResourceId[] memory scopedSystems) external;
+  function registerClass(uint256 classId, ResourceId[] memory scopedSystems) external;
+  function scopedRegisterClass(uint256 classId, address accessRoleMember, ResourceId[] memory scopedSystems) external;
   function setClassAccessRole(uint256 classId, bytes32 newAccessRole) external;
   function deleteClass(uint256 classId) external;
   function deleteClasses(uint256[] memory classIds) external;
-  function instantiate(uint256 classId, uint256 objectId) external;
+  function instantiate(uint256 classId, uint256 objectId, address accessRoleMember) external;
   function setObjectAccessRole(uint256 objectId, bytes32 newAccessRole) external;
   function deleteObject(uint256 objectId) external;
   function deleteObjects(uint256[] memory objectIds) external;
@@ -23,6 +24,6 @@ interface IEntitySystem {
   error Entity_EntityDoesNotExist(uint256 classId);
   error Entity_PropertyTagNotFound(uint256 entityId, TagId tagId);
   error Entity_EntityRelationsFound(uint256 classId, uint256 numOfTags);
-  error Entity_RoleAccessDenied(bytes32 accessRole, address caller);
+  error Entity_BadRoleConfirmation();
   error Entity_RoleDoesNotExist(bytes32 role);
 }

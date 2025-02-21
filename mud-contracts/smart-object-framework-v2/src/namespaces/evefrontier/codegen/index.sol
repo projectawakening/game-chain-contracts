@@ -8,3 +8,4 @@ import { Role, RoleData } from "./tables/Role.sol";
 import { HasRole, HasRoleData } from "./tables/HasRole.sol";
 import { Entity, EntityData } from "./tables/Entity.sol";
 import { EntityTagMap, EntityTagMapData } from "./tables/EntityTagMap.sol";
+import { Initialized } from "./tables/Initialized.sol";

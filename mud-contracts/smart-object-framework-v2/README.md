@@ -408,7 +408,7 @@ world.call( // caller MUST be a member of adminRole
 // Called from an existing entityId COMPOSITION resource tagged system
 world.call( // initial entry point caller MUST still be a member of adminRole
     roleManagementSystemId,
-    abi.encodeCall(IRoleManagementSystem.scopedCreateRole, (entityId, newRole, adminRole))
+    abi.encodeCall(IRoleManagementSystem.scopedCreateRole, (entityId, newRole, adminRole, roleMember))
 );
 ```
 

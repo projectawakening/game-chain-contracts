@@ -37,13 +37,17 @@ struct RootCallWrapper {
 library EntitySystemLib {
   error EntitySystemLib_CallingFromRootSystem();
 
-  function registerClass(
+  function registerClass(EntitySystemType self, uint256 classId, ResourceId[] memory scopedSystemIds) internal {
+    return CallWrapper(self.toResourceId(), address(0)).registerClass(classId, scopedSystemIds);
+  }
+
+  function scopedRegisterClass(
     EntitySystemType self,
     uint256 classId,
-    bytes32 accessRole,
+    address accessRoleMember,
     ResourceId[] memory scopedSystemIds
   ) internal {
-    return CallWrapper(self.toResourceId(), address(0)).registerClass(classId, accessRole, scopedSystemIds);
+    return CallWrapper(self.toResourceId(), address(0)).scopedRegisterClass(classId, accessRoleMember, scopedSystemIds);
   }
 
   function setClassAccessRole(EntitySystemType self, uint256 classId, bytes32 newAccessRole) internal {
@@ -58,8 +62,8 @@ library EntitySystemLib {
     return CallWrapper(self.toResourceId(), address(0)).deleteClasses(classIds);
   }
 
-  function instantiate(EntitySystemType self, uint256 classId, uint256 objectId) internal {
-    return CallWrapper(self.toResourceId(), address(0)).instantiate(classId, objectId);
+  function instantiate(EntitySystemType self, uint256 classId, uint256 objectId, address accessRoleMember) internal {
+    return CallWrapper(self.toResourceId(), address(0)).instantiate(classId, objectId, accessRoleMember);
   }
 
   function setObjectAccessRole(EntitySystemType self, uint256 objectId, bytes32 newAccessRole) internal {
@@ -74,18 +78,31 @@ library EntitySystemLib {
     return CallWrapper(self.toResourceId(), address(0)).deleteObjects(objectIds);
   }
 
-  function registerClass(
+  function registerClass(CallWrapper memory self, uint256 classId, ResourceId[] memory scopedSystemIds) internal {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert EntitySystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(
+      _registerClass_uint256_ResourceIdArray.registerClass,
+      (classId, scopedSystemIds)
+    );
+    self.from == address(0)
+      ? _world().call(self.systemId, systemCall)
+      : _world().callFrom(self.from, self.systemId, systemCall);
+  }
+
+  function scopedRegisterClass(
     CallWrapper memory self,
     uint256 classId,
-    bytes32 accessRole,
+    address accessRoleMember,
     ResourceId[] memory scopedSystemIds
   ) internal {
     // if the contract calling this function is a root system, it should use `callAsRoot`
     if (address(_world()) == address(this)) revert EntitySystemLib_CallingFromRootSystem();
 
     bytes memory systemCall = abi.encodeCall(
-      _registerClass_uint256_bytes32_ResourceIdArray.registerClass,
-      (classId, accessRole, scopedSystemIds)
+      _scopedRegisterClass_uint256_address_ResourceIdArray.scopedRegisterClass,
+      (classId, accessRoleMember, scopedSystemIds)
     );
     self.from == address(0)
       ? _world().call(self.systemId, systemCall)
@@ -125,11 +142,14 @@ library EntitySystemLib {
       : _world().callFrom(self.from, self.systemId, systemCall);
   }
 
-  function instantiate(CallWrapper memory self, uint256 classId, uint256 objectId) internal {
+  function instantiate(CallWrapper memory self, uint256 classId, uint256 objectId, address accessRoleMember) internal {
     // if the contract calling this function is a root system, it should use `callAsRoot`
     if (address(_world()) == address(this)) revert EntitySystemLib_CallingFromRootSystem();
 
-    bytes memory systemCall = abi.encodeCall(_instantiate_uint256_uint256.instantiate, (classId, objectId));
+    bytes memory systemCall = abi.encodeCall(
+      _instantiate_uint256_uint256_address.instantiate,
+      (classId, objectId, accessRoleMember)
+    );
     self.from == address(0)
       ? _world().call(self.systemId, systemCall)
       : _world().callFrom(self.from, self.systemId, systemCall);
@@ -168,15 +188,23 @@ library EntitySystemLib {
       : _world().callFrom(self.from, self.systemId, systemCall);
   }
 
-  function registerClass(
+  function registerClass(RootCallWrapper memory self, uint256 classId, ResourceId[] memory scopedSystemIds) internal {
+    bytes memory systemCall = abi.encodeCall(
+      _registerClass_uint256_ResourceIdArray.registerClass,
+      (classId, scopedSystemIds)
+    );
+    SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function scopedRegisterClass(
     RootCallWrapper memory self,
     uint256 classId,
-    bytes32 accessRole,
+    address accessRoleMember,
     ResourceId[] memory scopedSystemIds
   ) internal {
     bytes memory systemCall = abi.encodeCall(
-      _registerClass_uint256_bytes32_ResourceIdArray.registerClass,
-      (classId, accessRole, scopedSystemIds)
+      _scopedRegisterClass_uint256_address_ResourceIdArray.scopedRegisterClass,
+      (classId, accessRoleMember, scopedSystemIds)
     );
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
   }
@@ -199,8 +227,16 @@ library EntitySystemLib {
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
   }
 
-  function instantiate(RootCallWrapper memory self, uint256 classId, uint256 objectId) internal {
-    bytes memory systemCall = abi.encodeCall(_instantiate_uint256_uint256.instantiate, (classId, objectId));
+  function instantiate(
+    RootCallWrapper memory self,
+    uint256 classId,
+    uint256 objectId,
+    address accessRoleMember
+  ) internal {
+    bytes memory systemCall = abi.encodeCall(
+      _instantiate_uint256_uint256_address.instantiate,
+      (classId, objectId, accessRoleMember)
+    );
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
   }
 
@@ -260,8 +296,12 @@ library EntitySystemLib {
  * Each interface is uniquely named based on the function name and parameters to prevent collisions.
  */
 
-interface _registerClass_uint256_bytes32_ResourceIdArray {
-  function registerClass(uint256 classId, bytes32 accessRole, ResourceId[] memory scopedSystemIds) external;
+interface _registerClass_uint256_ResourceIdArray {
+  function registerClass(uint256 classId, ResourceId[] memory scopedSystemIds) external;
+}
+
+interface _scopedRegisterClass_uint256_address_ResourceIdArray {
+  function scopedRegisterClass(uint256 classId, address accessRoleMember, ResourceId[] memory scopedSystemIds) external;
 }
 
 interface _setClassAccessRole_uint256_bytes32 {
@@ -276,8 +316,8 @@ interface _deleteClasses_uint256Array {
   function deleteClasses(uint256[] memory classIds) external;
 }
 
-interface _instantiate_uint256_uint256 {
-  function instantiate(uint256 classId, uint256 objectId) external;
+interface _instantiate_uint256_uint256_address {
+  function instantiate(uint256 classId, uint256 objectId, address accessRoleMember) external;
 }
 
 interface _setObjectAccessRole_uint256_bytes32 {

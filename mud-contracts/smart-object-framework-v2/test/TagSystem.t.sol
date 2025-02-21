@@ -15,12 +15,12 @@ import { ResourceIds } from "@latticexyz/store/src/codegen/tables/ResourceIds.so
 import { FunctionSelectors } from "@latticexyz/world/src/codegen/tables/FunctionSelectors.sol";
 
 import { DEPLOYMENT_NAMESPACE } from "../src/namespaces/evefrontier/constants.sol";
+
+import { entitySystem } from "../src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { tagSystem } from "../src/namespaces/evefrontier/codegen/systems/TagSystemLib.sol";
 import { IRoleManagementSystem } from "../src/namespaces/evefrontier/interfaces/IRoleManagementSystem.sol";
-import { Utils as RoleManagementSystemUtils } from "../src/namespaces/evefrontier/systems/role-management-system/Utils.sol";
-import { EntitySystem } from "../src/namespaces/evefrontier/systems/entity-system/EntitySystem.sol";
-import { Utils as EntitySystemUtils } from "../src/namespaces/evefrontier/systems/entity-system/Utils.sol";
-import { TagSystem } from "../src/namespaces/evefrontier/systems/tag-system/TagSystem.sol";
-import { Utils as TagSystemUtils } from "../src/namespaces/evefrontier/systems/tag-system/Utils.sol";
+import { roleManagementSystem } from "../src/namespaces/evefrontier/codegen/systems/RoleManagementSystemLib.sol";
+
 import { SystemMock } from "./mocks/SystemMock.sol";
 
 import "../src/namespaces/evefrontier/codegen/index.sol";
@@ -34,8 +34,6 @@ import { TAG_TYPE_PROPERTY, TAG_TYPE_ENTITY_RELATION, TAG_TYPE_RESOURCE_RELATION
 
 contract TagSystemTest is MudTest {
   IBaseWorld world;
-  EntitySystem entitySystem;
-  TagSystem tagSystem;
   SystemMock taggedSystemMock;
   SystemMock taggedSystemMock2;
   SystemMock taggedSystemMock3;
@@ -43,9 +41,9 @@ contract TagSystemTest is MudTest {
 
   bytes14 constant NAMESPACE = DEPLOYMENT_NAMESPACE;
   ResourceId constant NAMESPACE_ID = ResourceId.wrap(bytes32(abi.encodePacked(RESOURCE_NAMESPACE, NAMESPACE)));
-  ResourceId ROLE_MANAGEMENT_SYSTEM_ID = RoleManagementSystemUtils.roleManagementSystemId();
-  ResourceId ENTITIES_SYSTEM_ID = EntitySystemUtils.entitySystemId();
-  ResourceId TAGS_SYSTEM_ID = TagSystemUtils.tagSystemId();
+  ResourceId ROLE_MANAGEMENT_SYSTEM_ID = roleManagementSystem.toResourceId();
+  ResourceId ENTITY_SYSTEM_ID = entitySystem.toResourceId();
+  ResourceId TAG_SYSTEM_ID = tagSystem.toResourceId();
   ResourceId constant TAGGED_SYSTEM_ID =
     ResourceId.wrap((bytes32(abi.encodePacked(RESOURCE_SYSTEM, NAMESPACE, bytes16("TaggedSystem")))));
   ResourceId constant TAGGED_SYSTEM_ID_2 =
@@ -59,7 +57,6 @@ contract TagSystemTest is MudTest {
 
   uint256 invalidEntityId = uint256(bytes32("INVALID_ENTITY"));
   uint256 classId = uint256(bytes32("TEST_CLASS"));
-  bytes32 classAccessRole = bytes32("TEST_CLASS_ACCESS_ROLE");
   uint256 classId2 = uint256(bytes32("TEST_CLASS_2"));
   uint256 objectId = uint256(bytes32("TEST_OBJECT"));
   uint256 objectId2 = uint256(bytes32("TEST_OBJECT_2"));
@@ -85,6 +82,8 @@ contract TagSystemTest is MudTest {
   string constant mnemonic = "test test test test test test test test test test test junk";
   uint256 deployerPK = vm.deriveKey(mnemonic, 0);
   address deployer = vm.addr(deployerPK);
+  uint256 alicePK = vm.deriveKey(mnemonic, 1);
+  address alice = vm.addr(alicePK);
 
   function setUp() public override {
     // DEPLOY AND REGISTER A MUD WORLD
@@ -106,23 +105,11 @@ contract TagSystemTest is MudTest {
     unTaggedSystemMock = new SystemMock();
     world.registerSystem(UNTAGGED_SYSTEM_ID, System(unTaggedSystemMock), true);
 
-    // create the Class Access Role with the deployer as the only member
-    world.call(
-      ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.createRole, (classAccessRole, classAccessRole))
-    );
-
     // register Class without any additional tags
-    world.call(
-      ENTITIES_SYSTEM_ID,
-      abi.encodeCall(EntitySystem.registerClass, (classId, classAccessRole, new ResourceId[](0)))
-    );
+    entitySystem.registerClass(classId, new ResourceId[](0));
 
     // register Class2 without any additional tags
-    world.call(
-      ENTITIES_SYSTEM_ID,
-      abi.encodeCall(EntitySystem.registerClass, (classId2, classAccessRole, new ResourceId[](0)))
-    );
+    entitySystem.registerClass(classId2, new ResourceId[](0));
     vm.stopPrank();
   }
 
@@ -143,54 +130,37 @@ contract TagSystemTest is MudTest {
 
     // revert for bytes32(0) tagId
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidTagId.selector, TagId.wrap(bytes32(0))));
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(TagSystem.setTag, (classId, TagParams(TagId.wrap(bytes32(0)), bytes(""))))
-    );
+
+    tagSystem.setTag(classId, TagParams(TagId.wrap(bytes32(0)), bytes("")));
 
     // TAG_TYPE_PROPERTY
     // ONLY EntitySystem can set CLASS, OBJECT, ENTITY_COUNT tags
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setTag, (objectId, TagParams(CLASS_PROPERTY_TAG, bytes("")))));
+    tagSystem.setTag(objectId, TagParams(CLASS_PROPERTY_TAG, bytes("")));
 
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setTag, (objectId, TagParams(OBJECT_PROPERTY_TAG, bytes("")))));
+    tagSystem.setTag(objectId, TagParams(OBJECT_PROPERTY_TAG, bytes("")));
 
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(TagSystem.setTag, (objectId, TagParams(ENTITY_COUNT_PROPERTY_TAG, bytes(""))))
-    );
+    tagSystem.setTag(objectId, TagParams(ENTITY_COUNT_PROPERTY_TAG, bytes("")));
 
     // TAG_TYPE_ENTITY_RELATION
     // ONLY EntitySystem can set INHERITANCE type ENTITY_RELATION tags
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(
-        TagSystem.setTag,
-        (objectId, TagParams(OBJECT_RELATION_TAG, abi.encode(EntityRelationValue("INHERITANCE", classId))))
-      )
-    );
+    tagSystem.setTag(objectId, TagParams(OBJECT_RELATION_TAG, abi.encode(EntityRelationValue("INHERITANCE", classId))));
 
     // TAG_TYPE_RESOURCE_RELATION
     // reverts if the RESOURCE RELATION Tag's correlated resourceId has not been registered on the World
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_ResourceNotRegistered.selector, UNREGISTERED_SYSTEM_ID));
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(
-        TagSystem.setTag,
-        (
-          classId,
-          TagParams(
-            unregisteredSystemTagId,
-            abi.encode(
-              ResourceRelationValue(
-                "COMPOSITION",
-                UNREGISTERED_SYSTEM_ID.getType(),
-                UNREGISTERED_SYSTEM_ID.getResourceName()
-              )
-            )
+    tagSystem.setTag(
+      classId,
+      TagParams(
+        unregisteredSystemTagId,
+        abi.encode(
+          ResourceRelationValue(
+            "COMPOSITION",
+            UNREGISTERED_SYSTEM_ID.getType(),
+            UNREGISTERED_SYSTEM_ID.getResourceName()
           )
         )
       )
@@ -199,13 +169,7 @@ contract TagSystemTest is MudTest {
     // INVALID TAG TYPE
     // revert Tag_TagTypeNotDefined(TagId.getType(inputTagData.tagId));
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_TagTypeNotDefined.selector, bytes2("XX")));
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(
-        TagSystem.setTag,
-        (classId, TagParams(TagIdLib.encode(bytes2("XX"), bytes30("INVALID_TAG_TYPE")), bytes("")))
-      )
-    );
+    tagSystem.setTag(classId, TagParams(TagIdLib.encode(bytes2("XX"), bytes30("INVALID_TAG_TYPE")), bytes("")));
 
     // SUCCESS CASE
 
@@ -245,66 +209,38 @@ contract TagSystemTest is MudTest {
     // successfull calls
 
     // instantiating object adds classId to the Entity.entityRealtionTag of the object
-    world.call(ENTITIES_SYSTEM_ID, abi.encodeCall(EntitySystem.instantiate, (classId, objectId)));
+    entitySystem.instantiate(classId, objectId, alice);
 
     // add an entityRelationTag for the class (class2 as its super class)
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(
-        TagSystem.setTag,
-        (
-          classId,
-          TagParams(
-            TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId))),
-            abi.encode(EntityRelationValue("SUPER_CLASS", classId2))
-          )
-        )
+    tagSystem.setTag(
+      classId,
+      TagParams(
+        TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId))),
+        abi.encode(EntityRelationValue("SUPER_CLASS", classId2))
       )
     );
 
     // add the COLOR property tag (with value BLUE) for the class
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(TagSystem.setTag, (classId, TagParams(COLOR_TAG, bytes(abi.encode("BLUE")))))
-    );
+    tagSystem.setTag(classId, TagParams(COLOR_TAG, bytes(abi.encode("BLUE"))));
 
     // a system resource tag for the class
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(
-        TagSystem.setTag,
-        (
-          classId,
-          TagParams(
-            taggedSystemTagId,
-            abi.encode(
-              ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID.getType(), TAGGED_SYSTEM_ID.getResourceName())
-            )
-          )
-        )
+    tagSystem.setTag(
+      classId,
+      TagParams(
+        taggedSystemTagId,
+        abi.encode(ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID.getType(), TAGGED_SYSTEM_ID.getResourceName()))
       )
     );
 
     // add the COLOR property tag (with value GREEN) for the object
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(TagSystem.setTag, (objectId, TagParams(COLOR_TAG, bytes(abi.encode("GREEN")))))
-    );
+    tagSystem.setTag(objectId, TagParams(COLOR_TAG, bytes(abi.encode("GREEN"))));
 
     // a system resource tag for the object
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(
-        TagSystem.setTag,
-        (
-          objectId,
-          TagParams(
-            taggedSystemTagId,
-            abi.encode(
-              ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID.getType(), TAGGED_SYSTEM_ID.getResourceName())
-            )
-          )
-        )
+    tagSystem.setTag(
+      objectId,
+      TagParams(
+        taggedSystemTagId,
+        abi.encode(ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID.getType(), TAGGED_SYSTEM_ID.getResourceName()))
       )
     );
 
@@ -383,19 +319,11 @@ contract TagSystemTest is MudTest {
 
     // revert if Entity already has this Tag
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_EntityAlreadyHasTag.selector, classId, taggedSystemTagId));
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(
-        TagSystem.setTag,
-        (
-          classId,
-          TagParams(
-            taggedSystemTagId,
-            abi.encode(
-              ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID.getType(), TAGGED_SYSTEM_ID.getResourceName())
-            )
-          )
-        )
+    tagSystem.setTag(
+      classId,
+      TagParams(
+        taggedSystemTagId,
+        abi.encode(ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID.getType(), TAGGED_SYSTEM_ID.getResourceName()))
       )
     );
 
@@ -426,7 +354,7 @@ contract TagSystemTest is MudTest {
       )
     );
 
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setTags, (classId, tags)));
+    tagSystem.setTags(classId, tags);
 
     // check stored tag results
     bytes32[] memory classResourceTagsAfter = Entity.getResourceRelationTags(classId);
@@ -466,20 +394,14 @@ contract TagSystemTest is MudTest {
     // add additional property and resource tags so we can test removing a tag from the middle of a list
     // a SHAPE property tag (with value SQUARE) for the class
     TagId SHAPE_TAG = TagIdLib.encode(TAG_TYPE_PROPERTY, bytes30("SHAPE"));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setTag, (classId, TagParams(SHAPE_TAG, abi.encode("SQUARE")))));
+    tagSystem.setTag(classId, TagParams(SHAPE_TAG, abi.encode("SQUARE")));
     // another system resource tag for the class
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(
-        TagSystem.setTag,
-        (
-          classId,
-          TagParams(
-            taggedSystemTagId2,
-            abi.encode(
-              ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID_2.getType(), TAGGED_SYSTEM_ID_2.getResourceName())
-            )
-          )
+    tagSystem.setTag(
+      classId,
+      TagParams(
+        taggedSystemTagId2,
+        abi.encode(
+          ResourceRelationValue("COMPOSITION", TAGGED_SYSTEM_ID_2.getType(), TAGGED_SYSTEM_ID_2.getResourceName())
         )
       )
     );
@@ -488,44 +410,38 @@ contract TagSystemTest is MudTest {
     vm.expectRevert(
       abi.encodeWithSelector(ITagSystem.Tag_TagNotFound.selector, unregisteredClassId, taggedSystemTagId)
     );
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (unregisteredClassId, taggedSystemTagId)));
+    tagSystem.removeTag(unregisteredClassId, taggedSystemTagId);
 
     // reverts if entityId/tagId map not found
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_TagNotFound.selector, classId, untaggedSystemTagId));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (classId, untaggedSystemTagId)));
+    tagSystem.removeTag(classId, untaggedSystemTagId);
 
     // TAG_TYPE_PROPERTY
     // ONLY EntitySystem can remove CLASS, OBJECT, ENTITY_COUNT tags
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (classId, CLASS_PROPERTY_TAG)));
+    tagSystem.removeTag(classId, CLASS_PROPERTY_TAG);
 
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (objectId, OBJECT_PROPERTY_TAG)));
+    tagSystem.removeTag(objectId, OBJECT_PROPERTY_TAG);
 
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (classId, ENTITY_COUNT_PROPERTY_TAG)));
+    tagSystem.removeTag(classId, ENTITY_COUNT_PROPERTY_TAG);
 
     // TAG_TYPE_ENTITY_RELATION
     // ONLY EntitySystem can remove INHERITANCE type ENTITY_RELATION tags
     vm.expectRevert(abi.encodeWithSelector(ITagSystem.Tag_InvalidCaller.selector, deployer));
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (objectId, OBJECT_RELATION_TAG)));
+    tagSystem.removeTag(objectId, OBJECT_RELATION_TAG);
 
     // successfull calls
 
     // remove the entity relation tag from classId
-    world.call(
-      TAGS_SYSTEM_ID,
-      abi.encodeCall(
-        TagSystem.removeTag,
-        (classId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId))))
-      )
-    );
+    tagSystem.removeTag(classId, TagIdLib.encode(TAG_TYPE_ENTITY_RELATION, bytes30(bytes32(classId))));
 
     // remove the color tag from classId
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (classId, COLOR_TAG)));
+    tagSystem.removeTag(classId, COLOR_TAG);
 
     // remove the first tagged system tag from classId
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTag, (classId, taggedSystemTagId)));
+    tagSystem.removeTag(classId, taggedSystemTagId);
 
     // check data state after
     assertEq(TagId.unwrap(Entity.getEntityRelationTag(classId)), bytes32(0));
@@ -583,7 +499,7 @@ contract TagSystemTest is MudTest {
       )
     );
 
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.setTags, (classId2, tags)));
+    tagSystem.setTags(classId2, tags);
 
     // check data state before
     bytes32[] memory class1ResourceTagsBefore = Entity.getResourceRelationTags(classId);
@@ -608,12 +524,12 @@ contract TagSystemTest is MudTest {
     TagId[] memory class1RemoveTags = new TagId[](2);
     class1RemoveTags[0] = taggedSystemTagId3;
     class1RemoveTags[1] = taggedSystemTagId;
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTags, (classId, class1RemoveTags)));
+    tagSystem.removeTags(classId, class1RemoveTags);
 
     TagId[] memory class2RemoveTags = new TagId[](2);
     class2RemoveTags[0] = taggedSystemTagId;
     class2RemoveTags[1] = taggedSystemTagId2;
-    world.call(TAGS_SYSTEM_ID, abi.encodeCall(TagSystem.removeTags, (classId2, class2RemoveTags)));
+    tagSystem.removeTags(classId2, class2RemoveTags);
 
     // check data state after
     bytes32[] memory class1ResourceTagsAfter = Entity.getResourceRelationTags(classId);

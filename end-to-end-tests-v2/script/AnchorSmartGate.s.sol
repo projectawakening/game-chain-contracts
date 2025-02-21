@@ -7,12 +7,10 @@ import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.
 
 import { GlobalDeployableState } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/GlobalDeployableState.sol";
 import { LocationData } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/Location.sol";
-import { DeployableUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
 import { DeployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
 import { State, SmartObjectData } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/types.sol";
 import { Coord, WorldPosition } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/location/types.sol";
 import { SmartGateSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-gate/SmartGateSystem.sol";
-import { SmartGateUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-gate/SmartGateUtils.sol";
 import { EntityRecordData, EntityMetadata } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/entity-record/types.sol";
 
 import { deployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
@@ -27,8 +25,8 @@ contract AnchorSmartGate is Script {
     uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
     address player = vm.addr(deployerPrivateKey);
 
-    ResourceId smartGateSystemId = SmartGateUtils.smartGateSystemId();
-    ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
+    ResourceId smartGateSystemId = smartGateSystem.toResourceId();
+    ResourceId deployableSystemId = deployableSystem.toResourceId();
 
     // Start broadcasting transactions from the deployer account
     vm.startBroadcast(deployerPrivateKey);

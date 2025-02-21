@@ -13,7 +13,7 @@ interface IRoleManagementSystem {
   function renounceRole(bytes32 role, address callerConfirmation) external;
   function revokeAll(bytes32 role) external;
 
-  function scopedCreateRole(uint256 entityId, bytes32 role, bytes32 admin) external;
+  function scopedCreateRole(uint256 entityId, bytes32 role, bytes32 admin, address roleMember) external;
   function scopedTransferRoleAdmin(uint256 entityId, bytes32 role, bytes32 newAdmin) external;
   function scopedGrantRole(uint256 entityId, bytes32 role, address account) external;
   function scopedRevokeRole(uint256 entityId, bytes32 role, address account) external;
@@ -21,6 +21,7 @@ interface IRoleManagementSystem {
   function scopedRevokeAll(uint256 entityId, bytes32 role) external;
 
   error RoleManagement_InvalidRole();
+  error RoleManagement_InvalidRoleMember();
   error RoleManagement_RoleAlreadyCreated(bytes32 role);
   error RoleManagement_UnauthorizedAccount(bytes32 role, address caller);
   error RoleManagement_MustRenounceSelf();

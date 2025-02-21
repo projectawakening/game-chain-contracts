@@ -4,12 +4,9 @@ pragma solidity ^0.8.24;
 import { IWorldKernel } from "@latticexyz/world/src/IWorldKernel.sol";
 import { ResourceId } from "@latticexyz/world/src/WorldResourceId.sol";
 
-import { IEntitySystem } from "../../src/namespaces/evefrontier/interfaces/IEntitySystem.sol";
-import { Utils as EntitySystemUtils } from "../../src/namespaces/evefrontier/systems/entity-system/Utils.sol";
-import { ITagSystem } from "../../src/namespaces/evefrontier/interfaces/ITagSystem.sol";
-import { Utils as TagSystemUtils } from "../../src/namespaces/evefrontier/systems/tag-system/Utils.sol";
-import { IRoleManagementSystem } from "../../src/namespaces/evefrontier/interfaces/IRoleManagementSystem.sol";
-import { Utils as RoleManagementUtils } from "../../src/namespaces/evefrontier/systems/role-management-system/Utils.sol";
+import { entitySystem } from "../../src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { tagSystem } from "../../src/namespaces/evefrontier/codegen/systems/TagSystemLib.sol";
+import { roleManagementSystem } from "../../src/namespaces/evefrontier/codegen/systems/RoleManagementSystemLib.sol";
 
 import { TagId } from "../../src/libs/TagId.sol";
 import { TagParams } from "../../src/namespaces/evefrontier/systems/tag-system/types.sol";
@@ -17,82 +14,58 @@ import { TagParams } from "../../src/namespaces/evefrontier/systems/tag-system/t
 import { SmartObjectFramework } from "../../src/inherit/SmartObjectFramework.sol";
 
 contract UnscopedMock is SmartObjectFramework {
-  ResourceId ENTITY_SYSTEM_ID = EntitySystemUtils.entitySystemId();
-  ResourceId TAG_SYSTEM_ID = TagSystemUtils.tagSystemId();
-  ResourceId ROLE_MANAGEMENT_SYSTEM_ID = RoleManagementUtils.roleManagementSystemId();
-
   // TagSystem.sol
-  function callSetTag(uint256 entityId, TagParams memory tagParams) public {
-    IWorldKernel(_world()).call(TAG_SYSTEM_ID, abi.encodeCall(ITagSystem.setTag, (entityId, tagParams)));
+  function callSetTag(uint256 entityId, TagParams memory tagParams) public scope(entityId) {
+    tagSystem.setTag(entityId, tagParams);
   }
 
-  function callRemoveTag(uint256 entityId, TagId tagId) public {
-    IWorldKernel(_world()).call(TAG_SYSTEM_ID, abi.encodeCall(ITagSystem.removeTag, (entityId, tagId)));
+  function callRemoveTag(uint256 entityId, TagId tagId) public scope(entityId) {
+    tagSystem.removeTag(entityId, tagId);
   }
 
   // EntitySystem.sol
-  function callSetClassAccessRole(uint256 classId, bytes32 newAccessRole) public {
-    IWorldKernel(_world()).call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.setClassAccessRole, (classId, newAccessRole))
-    );
+  function callSetClassAccessRole(uint256 classId, bytes32 newAccessRole) public scope(classId) {
+    entitySystem.setClassAccessRole(classId, newAccessRole);
   }
 
-  function callSetObjectAccessRole(uint256 objectId, bytes32 newAccessRole) public {
-    IWorldKernel(_world()).call(
-      ENTITY_SYSTEM_ID,
-      abi.encodeCall(IEntitySystem.setObjectAccessRole, (objectId, newAccessRole))
-    );
+  function callSetObjectAccessRole(uint256 objectId, bytes32 newAccessRole) public scope(objectId) {
+    entitySystem.setObjectAccessRole(objectId, newAccessRole);
   }
 
-  function callInstantiate(uint256 classId, uint256 objectId) public {
-    IWorldKernel(_world()).call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.instantiate, (classId, objectId)));
+  function callInstantiate(uint256 classId, uint256 objectId, address account) public scope(classId) {
+    entitySystem.instantiate(classId, objectId, account);
   }
 
-  function callDeleteObject(uint256 objectId) public {
-    IWorldKernel(_world()).call(ENTITY_SYSTEM_ID, abi.encodeCall(IEntitySystem.deleteObject, (objectId)));
+  function callDeleteClass(uint256 classId) public scope(classId) {
+    entitySystem.deleteClass(classId);
   }
 
-  // RoleManagementSystem.sol
-  function callScopedCreateRole(uint256 objectId, bytes32 role, bytes32 admin) public {
-    IWorldKernel(_world()).call(
-      ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.scopedCreateRole, (objectId, role, admin))
-    );
+  function callDeleteObject(uint256 objectId) public scope(objectId) {
+    entitySystem.deleteObject(objectId);
+  }
+
+  // RoleManagement.sol
+  function callScopedCreateRole(uint256 objectId, bytes32 role, bytes32 admin, address account) public {
+    roleManagementSystem.scopedCreateRole(objectId, role, admin, account);
   }
 
   function callScopedTransferRoleAdmin(uint256 objectId, bytes32 role, bytes32 newAdmin) public {
-    IWorldKernel(_world()).call(
-      ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.scopedTransferRoleAdmin, (objectId, role, newAdmin))
-    );
+    roleManagementSystem.scopedTransferRoleAdmin(objectId, role, newAdmin);
   }
 
   function callScopedGrantRole(uint256 objectId, bytes32 role, address account) public {
-    IWorldKernel(_world()).call(
-      ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.scopedGrantRole, (objectId, role, account))
-    );
+    roleManagementSystem.scopedGrantRole(objectId, role, account);
   }
 
   function callScopedRevokeRole(uint256 objectId, bytes32 role, address account) public {
-    IWorldKernel(_world()).call(
-      ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.scopedRevokeRole, (objectId, role, account))
-    );
+    roleManagementSystem.scopedRevokeRole(objectId, role, account);
   }
 
   function callScopedRenounceRole(uint256 objectId, bytes32 role, address account) public {
-    IWorldKernel(_world()).call(
-      ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.scopedRenounceRole, (objectId, role, account))
-    );
+    roleManagementSystem.scopedRenounceRole(objectId, role, account);
   }
 
   function callScopedRevokeAll(uint256 objectId, bytes32 role) public {
-    IWorldKernel(_world()).call(
-      ROLE_MANAGEMENT_SYSTEM_ID,
-      abi.encodeCall(IRoleManagementSystem.scopedRevokeAll, (objectId, role))
-    );
+    roleManagementSystem.scopedRevokeAll(objectId, role);
   }
 }

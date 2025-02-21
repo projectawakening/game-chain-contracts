@@ -23,6 +23,9 @@ import { Role } from "@eveworld/smart-object-framework-v2/src/namespaces/evefron
 import { InventoryUtils } from "./InventoryUtils.sol";
 import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 
+import { DeployableToken } from "../../codegen/index.sol";
+import { IERC721 } from "../eve-erc721-puppet/IERC721.sol";
+
 /**
  * @title InventorySystem
  * @author CCP Games
@@ -93,7 +96,8 @@ contract InventorySystem is EveSystem {
   /**
    * @notice Create and deposit items to the inventory
    * @dev Create and deposit items to the inventory by smart object
-   * //TODO Only admin can use this function
+   * @param smartObjectId on-chain id of the in-game object
+   * @param items array of InventoryItem structs
    */
   function createAndDepositItemsToInventory(
     uint256 smartObjectId,
@@ -105,8 +109,9 @@ contract InventorySystem is EveSystem {
         itemId: items[i].itemId,
         volume: items[i].volume
       });
-
-      entitySystem.instantiate(uint256(bytes32("INVENTORY_ITEM")), items[i].inventoryItemId);
+      address erc721Address = DeployableToken.getErc721Address();
+      address owner = IERC721(erc721Address).ownerOf(smartObjectId);
+      entitySystem.instantiate(uint256(bytes32("INVENTORY_ITEM")), items[i].inventoryItemId, owner);
       entityRecordSystem.createEntityRecord(items[i].inventoryItemId, entityRecord);
     }
 
@@ -116,7 +121,6 @@ contract InventorySystem is EveSystem {
   /**
    * @notice Deposit items to the inventory
    * @dev Deposit items to the inventory by smart storage unit id
-   * //TODO Only owner(msg.sender) of the smart storage unit can deposit items in the inventory
    * @param smartObjectId The smart storage unit id
    * @param items The items to deposit to the inventory
    */
@@ -140,7 +144,6 @@ contract InventorySystem is EveSystem {
    * @notice Withdraw items from the inventory
    * @dev Withdraw items from the inventory by smart storage unit id
    * @param smartObjectId The smart storage unit id
-   * //TODO Only owner(msg.sender) of the smart storage unit can withdraw items in the inventory
    * @param items The items to withdraw from the inventory
    */
   function withdrawFromInventory(

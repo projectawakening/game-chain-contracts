@@ -29,8 +29,8 @@ contract SmartAssemblyTest is EveTest {
     ResourceId[] memory systemIds = new ResourceId[](2);
     systemIds[0] = entityRecordSystem.toResourceId();
     systemIds[1] = smartAssemblySystem.toResourceId();
-    entitySystem.registerClass(testClassId, "admin", systemIds);
-    entitySystem.instantiate(testClassId, smartObjectId);
+    entitySystem.registerClass(testClassId, systemIds);
+    entitySystem.instantiate(testClassId, smartObjectId, deployer);
     vm.stopPrank();
   }
 

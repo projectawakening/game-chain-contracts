@@ -68,7 +68,7 @@ contract InventoryTest is EveTest {
     });
     tokenCID = "Qm1234abcdxxxx";
 
-    //   create SSU Inventory Owner character
+    // create SSU Inventory Owner character
     smartCharacterSystem.createCharacter(characterId, alice, tribeId, charEntityRecordData, characterMetadata);
 
     item1 = InventoryItem(4235, alice, 4235, 12, 100, 1);
@@ -88,41 +88,42 @@ contract InventoryTest is EveTest {
     uint256 inventoryItemClassId = uint256(bytes32("INVENTORY_ITEM"));
 
     //Mock Item creation
+
     EntityRecord.set(item1.inventoryItemId, item1.itemId, item1.typeId, item1.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item1.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item1.inventoryItemId, alice);
     EntityRecord.set(item2.inventoryItemId, item2.itemId, item2.typeId, item2.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item2.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item2.inventoryItemId, alice);
     EntityRecord.set(item3.inventoryItemId, item3.itemId, item3.typeId, item3.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item3.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item3.inventoryItemId, alice);
     EntityRecord.set(item4.inventoryItemId, item4.itemId, item4.typeId, item4.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item4.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item4.inventoryItemId, alice);
     EntityRecord.set(item5.inventoryItemId, item5.itemId, item5.typeId, item5.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item5.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item5.inventoryItemId, alice);
     EntityRecord.set(item6.inventoryItemId, item6.itemId, item6.typeId, item6.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item6.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item6.inventoryItemId, alice);
     EntityRecord.set(item7.inventoryItemId, item7.itemId, item7.typeId, item7.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item7.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item7.inventoryItemId, alice);
     EntityRecord.set(item8.inventoryItemId, item8.itemId, item8.typeId, item8.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item8.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item8.inventoryItemId, alice);
     EntityRecord.set(item9.inventoryItemId, item9.itemId, item9.typeId, item9.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item9.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item9.inventoryItemId, alice);
     EntityRecord.set(item10.inventoryItemId, item10.itemId, item10.typeId, item10.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item10.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item10.inventoryItemId, alice);
     EntityRecord.set(item11.inventoryItemId, item11.itemId, item11.typeId, item11.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item11.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item11.inventoryItemId, alice);
     EntityRecord.set(item12.inventoryItemId, item12.itemId, item12.typeId, item12.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item12.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item12.inventoryItemId, alice);
     EntityRecord.set(item13.inventoryItemId, item13.itemId, item13.typeId, item13.volume, true);
-    entitySystem.instantiate(inventoryItemClassId, item13.inventoryItemId);
+    entitySystem.instantiate(inventoryItemClassId, item13.inventoryItemId, bob);
 
     uint256 inventoryTestClassId = uint256(bytes32("INVENTORY_TEST"));
     ResourceId[] memory inventoryTestSystemIds = new ResourceId[](3);
     inventoryTestSystemIds[0] = inventorySystem.toResourceId();
     inventoryTestSystemIds[1] = deployableSystem.toResourceId();
     inventoryTestSystemIds[2] = fuelSystem.toResourceId();
-    entitySystem.registerClass(inventoryTestClassId, "admin", inventoryTestSystemIds);
+    entitySystem.registerClass(inventoryTestClassId, inventoryTestSystemIds);
 
-    entitySystem.instantiate(inventoryTestClassId, smartObjectId);
+    entitySystem.instantiate(inventoryTestClassId, smartObjectId, alice);
 
     SmartObjectData memory smartObjectData = SmartObjectData({ owner: alice, tokenURI: "test" });
     uint256 fuelUnitVolume = 1;

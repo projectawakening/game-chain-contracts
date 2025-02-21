@@ -25,7 +25,7 @@ contract StaticDataTest is EveTest {
     vm.startPrank(deployer);
     ResourceId[] memory systemIds = new ResourceId[](1);
     systemIds[0] = staticDataSystem.toResourceId();
-    entitySystem.registerClass(testClassId, "admin", systemIds);
+    entitySystem.registerClass(testClassId, systemIds);
     vm.stopPrank();
   }
 
@@ -49,7 +49,7 @@ contract StaticDataTest is EveTest {
 
   function testSetCid(string memory cid) public {
     vm.startPrank(deployer);
-    entitySystem.instantiate(testClassId, smartObjectId);
+    entitySystem.instantiate(testClassId, smartObjectId, deployer);
     staticDataSystem.setCid(smartObjectId, cid);
 
     string memory storedCid = StaticData.get(smartObjectId);
