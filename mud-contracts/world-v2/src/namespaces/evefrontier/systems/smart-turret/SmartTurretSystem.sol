@@ -31,7 +31,7 @@ contract SmartTurretSystem is SmartObjectFramework {
   function createAndAnchorSmartTurret(
     CreateAndAnchorDeployableParams memory params
   ) public context access(params.smartObjectId) scope(getSmartTurretClassId()) {
-    entitySystem.instantiate(getSmartTurretClassId(), params.smartObjectId);
+    entitySystem.instantiate(getSmartTurretClassId(), params.smartObjectId, params.smartObjectData.owner);
 
     params.smartAssemblyType = SMART_TURRET;
     deployableSystem.createAndAnchorDeployable(params);

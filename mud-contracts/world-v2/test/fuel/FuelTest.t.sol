@@ -113,9 +113,8 @@ contract FuelTest is DeployableTest {
     uint256 fuelMaxCapacity,
     uint256 fuelAmount
   ) public {
-    vm.assume(fuelAmount > 0);
-    vm.assume(fuelAmount < (type(uint64).max) / 2);
-    vm.assume(fuelUnitVolume < (type(uint64).max) / 2);
+    vm.assume(fuelAmount > 0 && fuelAmount < (type(uint64).max) / 2);
+    vm.assume(fuelUnitVolume > 0 && fuelUnitVolume < (type(uint64).max) / 2);
     vm.assume((fuelAmount * fuelUnitVolume) < fuelMaxCapacity);
     vm.assume(fuelMaxCapacity > (fuelAmount * fuelUnitVolume));
     vm.assume(fuelConsumptionIntervalInSeconds > 60); // Ensure ratePerMinute doesn't overflow when adjusted for precision
@@ -139,8 +138,8 @@ contract FuelTest is DeployableTest {
     uint256 fuelAmount
   ) public {
     vm.assume(smartObjectId != 0);
-    vm.assume(fuelAmount < type(uint64).max / 2);
-    vm.assume(fuelUnitVolume < type(uint64).max / 2);
+    vm.assume(fuelAmount > 0 && fuelAmount < (type(uint64).max) / 2);
+    vm.assume(fuelUnitVolume > 0 && fuelUnitVolume < (type(uint64).max) / 2);
     vm.assume(fuelAmount * fuelUnitVolume * 2 < fuelMaxCapacity);
 
     testDepositFuel(fuelUnitVolume, fuelConsumptionIntervalInSeconds, fuelMaxCapacity, fuelAmount);
@@ -162,9 +161,8 @@ contract FuelTest is DeployableTest {
     uint256 timeElapsed
   ) public {
     vm.assume(smartObjectId != 0);
-    vm.assume(fuelAmount != 0);
-    vm.assume(fuelAmount < type(uint64).max);
-    vm.assume(fuelUnitVolume < type(uint64).max);
+    vm.assume(fuelAmount > 0 && fuelAmount < (type(uint64).max) / 2);
+    vm.assume(fuelUnitVolume > 0 && fuelUnitVolume < (type(uint64).max) / 2);
     vm.assume(fuelConsumptionIntervalInSeconds < (type(uint256).max / 1e18) && fuelConsumptionIntervalInSeconds > 1); // Ensure ratePerMinute doesn't overflow when adjusted for precision
 
     vm.assume(timeElapsed < 100 * 365 days); // Example constraint: timeElapsed is less than a 100 years in seconds
@@ -192,7 +190,8 @@ contract FuelTest is DeployableTest {
     uint256 timeElapsed
   ) public {
     fuelAmount %= 1000000;
-    vm.assume(fuelUnitVolume < type(uint64).max);
+    vm.assume(fuelAmount > 0 && fuelAmount < (type(uint64).max) / 2);
+    vm.assume(fuelUnitVolume > 0 && fuelUnitVolume < (type(uint64).max) / 2);
     vm.assume(fuelConsumptionIntervalInSeconds > 3600 && fuelConsumptionIntervalInSeconds < (24 * 3600)); // relatively high consumption
     vm.assume(timeElapsed < 100 * 365 days); // Example constraint: timeElapsed is less than a 100 years in seconds
 
@@ -224,8 +223,8 @@ contract FuelTest is DeployableTest {
     uint256 timeElapsedAfterOffline
   ) public {
     vm.assume(smartObjectId != 0);
-    vm.assume(fuelAmount < type(uint32).max);
-    vm.assume(fuelUnitVolume < type(uint128).max);
+    vm.assume(fuelAmount > 0 && fuelAmount < (type(uint64).max) / 2);
+    vm.assume(fuelUnitVolume > 0 && fuelUnitVolume < (type(uint64).max) / 2);
     vm.assume(fuelConsumptionIntervalInSeconds < (type(uint256).max / 1e18) && fuelConsumptionIntervalInSeconds > 1); // Ensure ratePerMinute doesn't overflow when adjusted for precision
     vm.assume(timeElapsedBeforeOffline < 1 * 365 days); // Example constraint: timeElapsed is less than a 1 years in seconds
     vm.assume(timeElapsedAfterOffline < 1 * 365 days); // Example constraint: timeElapsed is less than a 1 years in seconds

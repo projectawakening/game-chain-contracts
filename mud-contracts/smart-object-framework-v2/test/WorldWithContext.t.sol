@@ -14,10 +14,6 @@ import { IWorldCall } from "@latticexyz/world/src/IWorldKernel.sol";
 import { Balances } from "@latticexyz/world/src/codegen/tables/Balances.sol";
 import { UNLIMITED_DELEGATION } from "@latticexyz/world/src/constants.sol";
 
-import { DEPLOYMENT_NAMESPACE } from "../src/namespaces/evefrontier/constants.sol";
-import { EntitySystem } from "../src/namespaces/evefrontier/systems/entity-system/EntitySystem.sol";
-import { Utils as EntitySystemUtils } from "../src/namespaces/evefrontier/systems/entity-system/Utils.sol";
-
 import { SystemMock } from "./mocks/SystemMock.sol";
 import { TransientContext } from "./mocks/types.sol";
 
@@ -28,8 +24,6 @@ import { SmartObjectFramework } from "../src/inherit/SmartObjectFramework.sol";
 import { IWorldWithContext } from "../src/IWorldWithContext.sol";
 
 contract WorldWithContextTest is MudTest {
-  using EntitySystemUtils for bytes14;
-
   IBaseWorld world;
   SystemMock systemMock;
 

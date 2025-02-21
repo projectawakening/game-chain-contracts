@@ -75,25 +75,25 @@ contract EphemeralInventoryTest is EveTest {
     //Mock Item creation
     // Note: this only works because deployer currently owns `ENTITY_RECORD` namespace so direct calls to its tables are allowed
     EntityRecord.set(4235, 4235, 12, 100, true);
-    entitySystem.instantiate(inventoryItemClassId, 4235);
+    entitySystem.instantiate(inventoryItemClassId, 4235, owner);
     EntityRecord.set(4236, 4236, 12, 200, true);
-    entitySystem.instantiate(inventoryItemClassId, 4236);
+    entitySystem.instantiate(inventoryItemClassId, 4236, owner);
     EntityRecord.set(4237, 4237, 12, 150, true);
-    entitySystem.instantiate(inventoryItemClassId, 4237);
+    entitySystem.instantiate(inventoryItemClassId, 4237, owner);
     EntityRecord.set(8235, 8235, 12, 100, true);
-    entitySystem.instantiate(inventoryItemClassId, 8235);
+    entitySystem.instantiate(inventoryItemClassId, 8235, owner);
     EntityRecord.set(8236, 8236, 12, 200, true);
-    entitySystem.instantiate(inventoryItemClassId, 8236);
+    entitySystem.instantiate(inventoryItemClassId, 8236, owner);
     EntityRecord.set(8237, 8237, 12, 150, true);
-    entitySystem.instantiate(inventoryItemClassId, 8237);
+    entitySystem.instantiate(inventoryItemClassId, 8237, owner);
 
     uint256 inventoryTestClassId = uint256(bytes32("INVENTORY_TEST"));
     ResourceId[] memory inventoryTestSystemIds = new ResourceId[](3);
     inventoryTestSystemIds[0] = deployableSystem.toResourceId();
     inventoryTestSystemIds[1] = fuelSystem.toResourceId();
     inventoryTestSystemIds[2] = ephemeralInventorySystem.toResourceId();
-    entitySystem.registerClass(inventoryTestClassId, "admin", inventoryTestSystemIds);
-    entitySystem.instantiate(inventoryTestClassId, smartObjectId);
+    entitySystem.registerClass(inventoryTestClassId, inventoryTestSystemIds);
+    entitySystem.instantiate(inventoryTestClassId, smartObjectId, owner);
 
     SmartObjectData memory smartObjectData = SmartObjectData({ owner: alice, tokenURI: "test" });
     uint256 fuelUnitVolume = 1;

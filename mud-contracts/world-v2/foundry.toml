@@ -16,6 +16,7 @@ allow_paths = [
   "../../../../packages",
   # projects created from this template and using linked mud packages
   "../../../mud/packages",
+  "../smart-object-framework-v2",
 ]
 extra_output_files = [
   "abi",

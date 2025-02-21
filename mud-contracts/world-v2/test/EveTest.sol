@@ -507,7 +507,7 @@ abstract contract EveTest is Test {
     systemIds[6] = smartAssemblySystem.toResourceId();
     systemIds[7] = fuelSystem.toResourceId();
     systemIds[8] = locationSystem.toResourceId();
-    entitySystem.registerClass(smartStorageUnitSystem.getClassId(), adminRole, systemIds);
+    entitySystem.registerClass(smartStorageUnitSystem.getClassId(), systemIds);
   }
 
   function registerInventoryItemClass(bytes32 adminRole) internal {
@@ -516,7 +516,7 @@ abstract contract EveTest is Test {
     systemIds[0] = inventorySystem.toResourceId();
     systemIds[1] = entityRecordSystem.toResourceId();
     systemIds[2] = ephemeralInventorySystem.toResourceId();
-    entitySystem.registerClass(inventoryItemClassId, adminRole, systemIds);
+    entitySystem.registerClass(inventoryItemClassId, systemIds);
   }
 
   function registerSmartCharacterClass(bytes32 adminRole) internal {
@@ -524,7 +524,7 @@ abstract contract EveTest is Test {
     ResourceId[] memory systemIds = new ResourceId[](2);
     systemIds[0] = entityRecordSystem.toResourceId();
     systemIds[1] = smartCharacterSystem.toResourceId();
-    entitySystem.registerClass(smartCharacterClassId, adminRole, systemIds);
+    entitySystem.registerClass(smartCharacterClassId, systemIds);
   }
 
   function registerSmartTurretClass(bytes32 adminRole) internal {
@@ -535,7 +535,7 @@ abstract contract EveTest is Test {
     smartTurretSystemIds[3] = locationSystem.toResourceId();
     smartTurretSystemIds[4] = deployableSystem.toResourceId();
     smartTurretSystemIds[5] = smartAssemblySystem.toResourceId();
-    entitySystem.registerClass(uint256(bytes32("SMART_TURRET")), adminRole, smartTurretSystemIds);
+    entitySystem.registerClass(uint256(bytes32("SMART_TURRET")), smartTurretSystemIds);
   }
 
   function registerSmartGateClass(bytes32 adminRole) internal {
@@ -546,7 +546,7 @@ abstract contract EveTest is Test {
     smartGateSystemIds[3] = locationSystem.toResourceId();
     smartGateSystemIds[4] = deployableSystem.toResourceId();
     smartGateSystemIds[5] = smartAssemblySystem.toResourceId();
-    entitySystem.registerClass(uint256(bytes32("SMART_GATE")), adminRole, smartGateSystemIds);
+    entitySystem.registerClass(uint256(bytes32("SMART_GATE")), smartGateSystemIds);
   }
 
   function configureSmartGateAccess() internal {

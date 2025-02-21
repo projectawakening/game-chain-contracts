@@ -19,7 +19,7 @@ contract SmartStorageUnitSystem is SmartObjectFramework {
     uint256 storageCapacity,
     uint256 ephemeralStorageCapacity
   ) public context access(params.smartObjectId) scope(getClassId()) {
-    entitySystem.instantiate(getClassId(), params.smartObjectId);
+    entitySystem.instantiate(getClassId(), params.smartObjectId, params.smartObjectData.owner);
 
     params.smartAssemblyType = SMART_STORAGE_UNIT;
     deployableSystem.createAndAnchorDeployable(params);

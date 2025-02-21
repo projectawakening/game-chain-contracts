@@ -11,9 +11,11 @@ import { ResourceId } from "@latticexyz/world/src/WorldResourceId.sol";
  * @dev This interface is automatically generated from the corresponding system contract. Do not edit manually.
  */
 interface IEntitySystem {
-  function evefrontier__registerClass(
+  function evefrontier__registerClass(uint256 classId, ResourceId[] memory scopedSystemIds) external;
+
+  function evefrontier__scopedRegisterClass(
     uint256 classId,
-    bytes32 accessRole,
+    address accessRoleMember,
     ResourceId[] memory scopedSystemIds
   ) external;
 
@@ -23,7 +25,7 @@ interface IEntitySystem {
 
   function evefrontier__deleteClasses(uint256[] memory classIds) external;
 
-  function evefrontier__instantiate(uint256 classId, uint256 objectId) external;
+  function evefrontier__instantiate(uint256 classId, uint256 objectId, address accessRoleMember) external;
 
   function evefrontier__setObjectAccessRole(uint256 objectId, bytes32 newAccessRole) external;
 

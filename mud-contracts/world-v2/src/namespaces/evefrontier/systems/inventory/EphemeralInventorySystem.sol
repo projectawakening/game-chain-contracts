@@ -68,6 +68,7 @@ contract EphemeralInventorySystem is SmartObjectFramework {
    * @param smartObjectId The smart storage unit id
    * @param ephemeralInventoryOwner The owner of the ephemeral inventory
    * @param items The items to deposit to the inventory
+   * NOTE: This function assumes that the user is assigned as the _callMsgSender(1)
    */
   function createAndDepositItemsToEphemeralInventory(
     uint256 smartObjectId,
@@ -80,7 +81,7 @@ contract EphemeralInventorySystem is SmartObjectFramework {
         itemId: items[i].itemId,
         volume: items[i].volume
       });
-      entitySystem.instantiate(uint256(bytes32("INVENTORY_ITEM")), items[i].inventoryItemId);
+      entitySystem.instantiate(uint256(bytes32("INVENTORY_ITEM")), items[i].inventoryItemId, ephemeralInventoryOwner);
       entityRecordSystem.createEntityRecord(items[i].inventoryItemId, entityRecord);
     }
 

@@ -21,7 +21,7 @@ interface IRoleManagementSystem {
 
   function evefrontier__revokeAll(bytes32 role) external;
 
-  function evefrontier__scopedCreateRole(uint256 entityId, bytes32 role, bytes32 admin) external;
+  function evefrontier__scopedCreateRole(uint256 entityId, bytes32 role, bytes32 admin, address roleMember) external;
 
   function evefrontier__scopedTransferRoleAdmin(uint256 entityId, bytes32 role, bytes32 newAdmin) external;
 

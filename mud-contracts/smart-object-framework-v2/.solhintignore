@@ -1,2 +1,3 @@
 /src/WorldWithContext.sol
 /src/namespaces/**/codegen/**
+/src/namespaces/evefrontier/world-system-libs/**

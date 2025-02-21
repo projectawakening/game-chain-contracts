@@ -6,12 +6,10 @@ import { ResourceId, WorldResourceIdLib } from "@latticexyz/world/src/WorldResou
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 
 import { GlobalDeployableState } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/tables/GlobalDeployableState.sol";
-import { DeployableUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableUtils.sol";
 import { DeployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/DeployableSystem.sol";
 import { State, SmartObjectData } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/deployable/types.sol";
 import { Coord, WorldPosition } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/location/types.sol";
 import { SmartTurretSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-turret/SmartTurretSystem.sol";
-import { SmartTurretUtils } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/smart-turret/SmartTurretUtils.sol";
 import { EntityRecordData, EntityMetadata } from "@eveworld/world-v2/src/namespaces/evefrontier/systems/entity-record/types.sol";
 
 import { deployableSystem } from "@eveworld/world-v2/src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
@@ -27,8 +25,8 @@ contract AnchorSmartTurret is Script {
     uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
     address player = vm.addr(deployerPrivateKey);
 
-    ResourceId smartTurretSystemId = SmartTurretUtils.smartTurretSystemId();
-    ResourceId deployableSystemId = DeployableUtils.deployableSystemId();
+    ResourceId smartTurretSystemId = smartTurretSystem.toResourceId();
+    ResourceId deployableSystemId = deployableSystem.toResourceId();
 
     // Start broadcasting transactions from the deployer account
     vm.startBroadcast(deployerPrivateKey);
