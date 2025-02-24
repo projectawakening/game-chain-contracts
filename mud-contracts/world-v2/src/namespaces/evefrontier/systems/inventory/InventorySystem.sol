@@ -124,9 +124,13 @@ contract InventorySystem is SmartObjectFramework {
     InventoryItem[] memory items
   ) public onlyActive context access(smartObjectId) scope(smartObjectId) {
     {
-      State currentState = DeployableState.getCurrentState(smartObjectId);
-      if (currentState != State.ONLINE) {
-        revert DeployableSystem.Deployable_IncorrectState(smartObjectId, currentState);
+      bool isDeployable = DeployableState.getCreatedAt(smartObjectId) != 0;
+
+      if (isDeployable) {
+        State currentState = DeployableState.getCurrentState(smartObjectId);
+        if (currentState != State.ONLINE) {
+          revert DeployableSystem.Deployable_IncorrectState(smartObjectId, currentState);
+        }
       }
     }
 
@@ -146,9 +150,13 @@ contract InventorySystem is SmartObjectFramework {
     InventoryItem[] memory items
   ) public onlyActive context access(smartObjectId) scope(smartObjectId) {
     {
-      State currentState = DeployableState.getCurrentState(smartObjectId);
-      if (!(currentState == State.ANCHORED || currentState == State.ONLINE)) {
-        revert DeployableSystem.Deployable_IncorrectState(smartObjectId, currentState);
+      bool isDeployable = DeployableState.getCreatedAt(smartObjectId) != 0;
+
+      if (isDeployable) {
+        State currentState = DeployableState.getCurrentState(smartObjectId);
+        if (!(currentState == State.ANCHORED || currentState == State.ONLINE)) {
+          revert DeployableSystem.Deployable_IncorrectState(smartObjectId, currentState);
+        }
       }
     }
 
