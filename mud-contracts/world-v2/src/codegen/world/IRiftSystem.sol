@@ -15,4 +15,6 @@ interface IRiftSystem {
   function evefrontier__createRift(uint256 riftId, uint256 crudeAmount) external;
 
   function evefrontier__destroyRift(uint256 riftId) external;
+
+  function evefrontier__getRiftClassId() external pure returns (uint256);
 }

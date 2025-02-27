@@ -46,6 +46,10 @@ library RiftSystemLib {
     return CallWrapper(self.toResourceId(), address(0)).destroyRift(riftId);
   }
 
+  function getRiftClassId(RiftSystemType self) internal view returns (uint256) {
+    return CallWrapper(self.toResourceId(), address(0)).getRiftClassId();
+  }
+
   function createRift(CallWrapper memory self, uint256 riftId, uint256 crudeAmount) internal {
     // if the contract calling this function is a root system, it should use `callAsRoot`
     if (address(_world()) == address(this)) revert RiftSystemLib_CallingFromRootSystem();
@@ -66,6 +70,21 @@ library RiftSystemLib {
       : _world().callFrom(self.from, self.systemId, systemCall);
   }
 
+  function getRiftClassId(CallWrapper memory self) internal view returns (uint256) {
+    // if the contract calling this function is a root system, it should use `callAsRoot`
+    if (address(_world()) == address(this)) revert RiftSystemLib_CallingFromRootSystem();
+
+    bytes memory systemCall = abi.encodeCall(_getRiftClassId.getRiftClassId, ());
+    bytes memory worldCall = self.from == address(0)
+      ? abi.encodeCall(IWorldCall.call, (self.systemId, systemCall))
+      : abi.encodeCall(IWorldCall.callFrom, (self.from, self.systemId, systemCall));
+    (bool success, bytes memory returnData) = address(_world()).staticcall(worldCall);
+    if (!success) revertWithBytes(returnData);
+
+    bytes memory result = abi.decode(returnData, (bytes));
+    return abi.decode(result, (uint256));
+  }
+
   function createRift(RootCallWrapper memory self, uint256 riftId, uint256 crudeAmount) internal {
     bytes memory systemCall = abi.encodeCall(_createRift_uint256_uint256.createRift, (riftId, crudeAmount));
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
@@ -74,6 +93,13 @@ library RiftSystemLib {
   function destroyRift(RootCallWrapper memory self, uint256 riftId) internal {
     bytes memory systemCall = abi.encodeCall(_destroyRift_uint256.destroyRift, (riftId));
     SystemCall.callWithHooksOrRevert(self.from, self.systemId, systemCall, msg.value);
+  }
+
+  function getRiftClassId(RootCallWrapper memory self) internal view returns (uint256) {
+    bytes memory systemCall = abi.encodeCall(_getRiftClassId.getRiftClassId, ());
+
+    bytes memory result = SystemCall.staticcallOrRevert(self.from, self.systemId, systemCall);
+    return abi.decode(result, (uint256));
   }
 
   function callFrom(RiftSystemType self, address from) internal pure returns (CallWrapper memory) {
@@ -120,6 +146,10 @@ interface _createRift_uint256_uint256 {
 
 interface _destroyRift_uint256 {
   function destroyRift(uint256 riftId) external;
+}
+
+interface _getRiftClassId {
+  function getRiftClassId() external;
 }
 
 using RiftSystemLib for RiftSystemType global;

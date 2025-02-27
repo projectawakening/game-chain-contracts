@@ -39,6 +39,8 @@ import { entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.
 import { DeployableSystem } from "../deployable/DeployableSystem.sol";
 import { FuelSystem } from "../fuel/FuelSystem.sol";
 
+import "forge-std/console.sol";
+
 uint256 constant CRUDE_MATTER = 1;
 uint256 constant LENS = 2;
 
@@ -119,7 +121,11 @@ contract CrudeLiftSystem is SmartObjectFramework {
 
     uint256 riftId = CrudeLift.getMiningRiftId(crudeLiftId);
     uint256 riftCollapsedAt = Rift.getCollapsedAt(riftId);
-    uint256 miningTimeUntilRiftCollapse = riftCollapsedAt - CrudeLift.getStartMiningTime(crudeLiftId);
+    uint256 miningTimeUntilRiftCollapse = type(uint256).max;
+    if (riftCollapsedAt > 0) {
+      miningTimeUntilRiftCollapse = riftCollapsedAt - lift.startMiningTime;
+    }
+
     if (miningTimeUntilRiftCollapse < miningDuration) {
       miningDuration = miningTimeUntilRiftCollapse;
     }

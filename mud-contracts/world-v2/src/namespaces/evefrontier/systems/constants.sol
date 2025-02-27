@@ -7,6 +7,7 @@ string constant CRUDE_LIFT = "CL";
 string constant CRUDE_RIFT = "CR";
 string constant SMART_TURRET = "ST";
 string constant SMART_GATE = "SG";
+string constant RIFT = "RIFT";
 
 uint256 constant DECIMALS = 18;
 uint256 constant ONE_UNIT_IN_WEI = 1 * (10 ** DECIMALS);

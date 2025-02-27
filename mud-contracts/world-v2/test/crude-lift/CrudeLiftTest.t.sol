@@ -8,6 +8,7 @@ import { EveTest } from "../EveTest.sol";
 import { IWorldWithContext } from "@eveworld/smart-object-framework-v2/src/IWorldWithContext.sol";
 import { ResourceId, WorldResourceIdLib } from "@latticexyz/world/src/WorldResourceId.sol";
 import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
+import { roleManagementSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/RoleManagementSystemLib.sol";
 
 // Tables
 import { CrudeLift } from "../../src/namespaces/evefrontier/codegen/tables/CrudeLift.sol";
@@ -62,7 +63,8 @@ contract CrudeLiftTest is EveTest {
   uint256 riftId = 9012;
 
   uint256 totalCrudeInRift = 250;
-  uint256 liftInitialFuel = 100;
+  uint256 liftInitialFuel = 150;
+  uint256 lensDurability = 125;
 
   EntityRecordData entityRecord;
   SmartObjectData smartObjectData;
@@ -87,7 +89,9 @@ contract CrudeLiftTest is EveTest {
 
     vm.startPrank(deployer);
 
-    ResourceId[] memory systemIds = new ResourceId[](9);
+    bytes32 adminRole = bytes32("ADMIN_ROLE");
+
+    ResourceId[] memory systemIds = new ResourceId[](10);
     systemIds[0] = deployableSystem.toResourceId();
     systemIds[1] = inventorySystem.toResourceId();
     systemIds[2] = ephemeralInventorySystem.toResourceId();
@@ -97,7 +101,16 @@ contract CrudeLiftTest is EveTest {
     systemIds[6] = locationSystem.toResourceId();
     systemIds[7] = smartAssemblySystem.toResourceId();
     systemIds[8] = crudeLiftSystem.toResourceId();
+    systemIds[9] = riftSystem.toResourceId();
     entitySystem.registerClass(uint256(bytes32("CL")), systemIds);
+
+    systemIds = new ResourceId[](5);
+    systemIds[0] = smartAssemblySystem.toResourceId();
+    systemIds[1] = riftSystem.toResourceId();
+    systemIds[2] = inventorySystem.toResourceId();
+    systemIds[3] = crudeLiftSystem.toResourceId();
+    systemIds[4] = entityRecordSystem.toResourceId();
+    entitySystem.registerClass(uint256(bytes32("RIFT")), systemIds);
 
     deployableSystem.globalResume();
     smartCharacterSystem.createCharacter(characterId, alice, tribeId, entityRecord, entityRecordMetadata);
@@ -129,21 +142,21 @@ contract CrudeLiftTest is EveTest {
 
     vm.startPrank(deployer);
     crudeLiftSystem.createAndAnchorCrudeLift(params, storageCapacity, ephemeralStorageCapacity);
-    // fuelSystem.depositFuel(liftId, liftInitialFuel);
-    // deployableSystem.bringOnline(liftId);
+    fuelSystem.depositFuel(liftId, liftInitialFuel);
+    deployableSystem.bringOnline(liftId);
     vm.stopPrank();
 
     assertEq(SmartAssembly.getSmartAssemblyType(liftId), CRUDE_LIFT);
     assertEq(uint8(DeployableState.getCurrentState(liftId)), uint8(State.ONLINE));
   }
 
-  function testCraftLens() public {
+  function craftLens() public {
     vm.startPrank(deployer);
     Lens.setDurability(lensId, 100);
     vm.stopPrank();
   }
 
-  function testCreateRift() public {
+  function createRift() public {
     vm.startPrank(deployer);
     riftSystem.createRift(riftId, totalCrudeInRift);
     vm.stopPrank();
@@ -153,7 +166,7 @@ contract CrudeLiftTest is EveTest {
 
   function testInsertLens() public {
     testAnchorCrudeLift();
-    testCraftLens();
+    craftLens();
 
     // Create lens inventory item
     InventoryItem[] memory items = new InventoryItem[](1);
@@ -169,19 +182,20 @@ contract CrudeLiftTest is EveTest {
     // Deposit lens into crude lift's inventory
     vm.startPrank(deployer);
     inventorySystem.createAndDepositItemsToInventory(liftId, items);
-    vm.stopPrank();
-
     // Now insert the lens
     crudeLiftSystem.insertLens(liftId);
+    vm.stopPrank();
 
     assertEq(CrudeLift.getLensId(liftId), lensId);
   }
 
   function testStartMining() public {
     testInsertLens();
-    testCreateRift();
+    createRift();
 
+    vm.startPrank(deployer);
     crudeLiftSystem.startMining(liftId, riftId, 1);
+    vm.stopPrank();
 
     assertEq(CrudeLift.getMiningRiftId(liftId), riftId);
     assertTrue(CrudeLift.getStartMiningTime(liftId) > 0);
@@ -192,7 +206,9 @@ contract CrudeLiftTest is EveTest {
 
     vm.warp(block.timestamp + 100); // Advance time by 100 seconds
 
+    vm.startPrank(deployer);
     crudeLiftSystem.stopMining(liftId);
+    vm.stopPrank();
 
     assertEq(CrudeLift.getStartMiningTime(liftId), 0);
 
@@ -209,12 +225,18 @@ contract CrudeLiftTest is EveTest {
     uint256 originalFuelAmount = Fuel.getFuelAmount(liftId);
 
     // leave 20 fuel in the Lift, should only be able to mine for 20 blocks
+    vm.startPrank(deployer);
     fuelSystem.withdrawFuel(liftId, originalFuelAmount / ONE_UNIT_IN_WEI - 20);
+    vm.stopPrank();
+
     uint256 fuelRemaining = Fuel.getFuelAmount(liftId);
     assertEq(fuelRemaining / ONE_UNIT_IN_WEI, 20, "Fuel remaining should be 20 after withdrawing");
 
     vm.warp(block.timestamp + 100); // Advance time by 100 seconds
+
+    vm.startPrank(deployer);
     crudeLiftSystem.stopMining(liftId);
+    vm.stopPrank();
 
     uint256 crudeMined = getCrudeAmount(liftId);
     assertEq(crudeMined, 20, "mining did not stop after fuel ran out");
@@ -233,7 +255,9 @@ contract CrudeLiftTest is EveTest {
     vm.stopPrank();
 
     vm.warp(block.timestamp + 100); // Advance time by 100 seconds
+    vm.startPrank(deployer);
     crudeLiftSystem.stopMining(liftId);
+    vm.stopPrank();
 
     uint256 crudeMined = getCrudeAmount(liftId);
     assertEq(crudeMined, 19, "mining did not stop after capacity ran out");
@@ -251,7 +275,9 @@ contract CrudeLiftTest is EveTest {
     vm.stopPrank();
 
     vm.warp(block.timestamp + 100); // Advance time by 100 seconds
+    vm.startPrank(deployer);
     crudeLiftSystem.stopMining(liftId);
+    vm.stopPrank();
 
     assertEq(Lens.getDurability(lensId), 0, "lens durability not reduced");
 
@@ -270,7 +296,9 @@ contract CrudeLiftTest is EveTest {
     vm.stopPrank();
 
     vm.warp(block.timestamp + 100); // Advance time by 100 seconds
+    vm.startPrank(deployer);
     crudeLiftSystem.stopMining(liftId);
+    vm.stopPrank();
 
     uint256 crudeMined = getCrudeAmount(liftId);
     assertEq(crudeMined, 10, "mining did not stop after rift collapsed");
