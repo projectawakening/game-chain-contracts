@@ -9,6 +9,7 @@ import { IWorldWithContext } from "@eveworld/smart-object-framework-v2/src/IWorl
 import { ResourceId, WorldResourceIdLib } from "@latticexyz/world/src/WorldResourceId.sol";
 import { entitySystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/EntitySystemLib.sol";
 import { roleManagementSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/RoleManagementSystemLib.sol";
+import { accessConfigSystem } from "@eveworld/smart-object-framework-v2/src/namespaces/evefrontier/codegen/systems/AccessConfigSystemLib.sol";
 
 // Tables
 import { CrudeLift } from "../../src/namespaces/evefrontier/codegen/tables/CrudeLift.sol";
@@ -36,6 +37,7 @@ import { EntityRecordSystem } from "../../src/namespaces/evefrontier/systems/ent
 import { LocationSystem } from "../../src/namespaces/evefrontier/systems/location/LocationSystem.sol";
 import { SmartAssemblySystem } from "../../src/namespaces/evefrontier/systems/smart-assembly/SmartAssemblySystem.sol";
 import { InventoryInteractSystem } from "../../src/namespaces/evefrontier/systems/inventory/InventoryInteractSystem.sol";
+import { AccessSystem } from "../../src/namespaces/evefrontier/systems/access-systems/AccessSystem.sol";
 
 // System Libraries
 import { deployableSystem } from "../../src/namespaces/evefrontier/codegen/systems/DeployableSystemLib.sol";
@@ -50,6 +52,7 @@ import { ephemeralInventorySystem } from "../../src/namespaces/evefrontier/codeg
 import { inventorySystem } from "../../src/namespaces/evefrontier/codegen/systems/InventorySystemLib.sol";
 import { locationSystem } from "../../src/namespaces/evefrontier/codegen/systems/LocationSystemLib.sol";
 import { entityRecordSystem } from "../../src/namespaces/evefrontier/codegen/systems/EntityRecordSystemLib.sol";
+import { accessSystem } from "../../src/namespaces/evefrontier/codegen/systems/AccessSystemLib.sol";
 
 // Constants
 import { CRUDE_LIFT } from "../../src/namespaces/evefrontier/systems/constants.sol";
@@ -111,6 +114,27 @@ contract CrudeLiftTest is EveTest {
     systemIds[3] = crudeLiftSystem.toResourceId();
     systemIds[4] = entityRecordSystem.toResourceId();
     entitySystem.registerClass(uint256(bytes32("RIFT")), systemIds);
+
+    // selector list
+    bytes4[] memory onlyAdminSelectors = new bytes4[](8);
+    onlyAdminSelectors[0] = CrudeLiftSystem.createAndAnchorCrudeLift.selector;
+    onlyAdminSelectors[1] = CrudeLiftSystem.insertLens.selector;
+    onlyAdminSelectors[2] = CrudeLiftSystem.startMining.selector;
+    onlyAdminSelectors[3] = CrudeLiftSystem.stopMining.selector;
+    onlyAdminSelectors[4] = CrudeLiftSystem.removeLens.selector;
+    onlyAdminSelectors[5] = CrudeLiftSystem.addCrude.selector;
+    onlyAdminSelectors[6] = CrudeLiftSystem.removeCrude.selector;
+    onlyAdminSelectors[7] = CrudeLiftSystem.clearCrude.selector;
+
+    for (uint256 i = 0; i < onlyAdminSelectors.length; i++) {
+      accessConfigSystem.configureAccess(
+        crudeLiftSystem.toResourceId(),
+        onlyAdminSelectors[i],
+        accessSystem.toResourceId(),
+        AccessSystem.onlyAdmin.selector
+      );
+      accessConfigSystem.setAccessEnforcement(crudeLiftSystem.toResourceId(), onlyAdminSelectors[i], true);
+    }
 
     deployableSystem.globalResume();
     smartCharacterSystem.createCharacter(characterId, alice, tribeId, entityRecord, entityRecordMetadata);
