@@ -136,6 +136,20 @@ contract CrudeLiftTest is EveTest {
       accessConfigSystem.setAccessEnforcement(crudeLiftSystem.toResourceId(), onlyAdminSelectors[i], true);
     }
 
+    onlyAdminSelectors = new bytes4[](2);
+    onlyAdminSelectors[0] = RiftSystem.createRift.selector;
+    onlyAdminSelectors[1] = RiftSystem.destroyRift.selector;
+
+    for (uint256 i = 0; i < onlyAdminSelectors.length; i++) {
+      accessConfigSystem.configureAccess(
+        riftSystem.toResourceId(),
+        onlyAdminSelectors[i],
+        accessSystem.toResourceId(),
+        AccessSystem.onlyAdmin.selector
+      );
+      accessConfigSystem.setAccessEnforcement(riftSystem.toResourceId(), onlyAdminSelectors[i], true);
+    }
+
     deployableSystem.globalResume();
     smartCharacterSystem.createCharacter(characterId, alice, tribeId, entityRecord, entityRecordMetadata);
     vm.stopPrank();
