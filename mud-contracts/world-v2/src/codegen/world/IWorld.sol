@@ -5,6 +5,7 @@ pragma solidity >=0.8.24;
 
 import { IBaseWorld } from "@latticexyz/world/src/codegen/interfaces/IBaseWorld.sol";
 import { IAccessSystem } from "./IAccessSystem.sol";
+import { ICrudeLiftSystem } from "./ICrudeLiftSystem.sol";
 import { IDeployableSystem } from "./IDeployableSystem.sol";
 import { IEntityRecordSystem } from "./IEntityRecordSystem.sol";
 import { IERC721System } from "./IERC721System.sol";
@@ -13,6 +14,7 @@ import { IEphemeralInventorySystem } from "./IEphemeralInventorySystem.sol";
 import { IInventoryInteractSystem } from "./IInventoryInteractSystem.sol";
 import { IInventorySystem } from "./IInventorySystem.sol";
 import { ILocationSystem } from "./ILocationSystem.sol";
+import { IRiftSystem } from "./IRiftSystem.sol";
 import { ISmartAssemblySystem } from "./ISmartAssemblySystem.sol";
 import { ISmartCharacterSystem } from "./ISmartCharacterSystem.sol";
 import { ISmartGateSystem } from "./ISmartGateSystem.sol";
@@ -30,6 +32,7 @@ import { IStaticDataSystem } from "./IStaticDataSystem.sol";
 interface IWorld is
   IBaseWorld,
   IAccessSystem,
+  ICrudeLiftSystem,
   IDeployableSystem,
   IEntityRecordSystem,
   IERC721System,
@@ -38,6 +41,7 @@ interface IWorld is
   IInventoryInteractSystem,
   IInventorySystem,
   ILocationSystem,
+  IRiftSystem,
   ISmartAssemblySystem,
   ISmartCharacterSystem,
   ISmartGateSystem,
