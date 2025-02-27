@@ -39,8 +39,6 @@ import { entityRecordSystem } from "../../codegen/systems/EntityRecordSystemLib.
 import { DeployableSystem } from "../deployable/DeployableSystem.sol";
 import { FuelSystem } from "../fuel/FuelSystem.sol";
 
-import "forge-std/console.sol";
-
 uint256 constant CRUDE_MATTER = 1;
 uint256 constant LENS = 2;
 
