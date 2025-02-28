@@ -39,14 +39,10 @@ contract PostDeploy is Script {
     // Start broadcasting transactions from the deployer account
     vm.startBroadcast(deployerPrivateKey);
 
+    // install all the necessary tokens
     _installPuppet(world);
-
-    // register new ERC20 EVE Token
     _createEVEToken(world);
-
-    // register new ERC721 puppets for SmartCharacter and SmartDeployable modules
     _createCharacterToken(world);
-
     _createDeployableToken(world);
 
     vm.stopBroadcast();
