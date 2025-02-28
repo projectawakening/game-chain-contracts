@@ -14,8 +14,14 @@ interface ISOFAccessSystem {
   function allowCallAccessOnly(uint256 entityId, bytes memory targetCallData) external view;
   function allowCallAccessOrDirectAccessRole(uint256 entityId, bytes memory targetCallData) external view;
   function allowCallAccessOrClassScopedSystem(uint256 entityId, bytes memory targetCallData) external view;
-  function allowCallAccessOrClassScopedSystemOrDirectAccessRole(uint256 entityId, bytes memory targetCallData) external view;
-  function allowCallAccessOrClassScopedSystemOrDirectClassAccessRole(uint256 entityId, bytes memory targetCallData) external view;
+  function allowCallAccessOrClassScopedSystemOrDirectAccessRole(
+    uint256 entityId,
+    bytes memory targetCallData
+  ) external view;
+  function allowCallAccessOrClassScopedSystemOrDirectClassAccessRole(
+    uint256 entityId,
+    bytes memory targetCallData
+  ) external view;
 
   error SOFAccess_AccessDenied(uint256 entityId, address caller);
 }

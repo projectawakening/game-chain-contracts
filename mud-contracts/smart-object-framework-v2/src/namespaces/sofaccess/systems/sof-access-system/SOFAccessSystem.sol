@@ -97,7 +97,9 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
   function allowClassScopedSystemOrDirectAccessRole(uint256 entityId, bytes memory targetCallData) public view {
     uint256 classId = _getClassId(entityId);
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
-    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(
+      callCount
+    );
     ResourceId callingSystemId = SystemRegistry.get(msgSender);
 
     if (callCount > 1 && _checkClassScopedSystem(classId, callingSystemId)) {
@@ -120,7 +122,9 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
   function allowClassScopedSystemOrDirectClassAccessRole(uint256 entityId, bytes memory targetCallData) public view {
     uint256 classId = _getClassId(entityId);
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
-    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(
+      callCount
+    );
     ResourceId callingSystemId = SystemRegistry.get(msgSender);
 
     if (callCount > 1 && _checkClassScopedSystem(classId, callingSystemId)) {
@@ -142,7 +146,9 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
    */
   function allowCallAccessOnly(uint256 entityId, bytes memory targetCallData) public view {
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
-    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(
+      callCount
+    );
 
     if (callCount > 1 && CallAccess.get(systemId, functionId, msgSender)) {
       return;
@@ -160,7 +166,9 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
    */
   function allowCallAccessOrDirectAccessRole(uint256 entityId, bytes memory targetCallData) public view {
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
-    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(
+      callCount
+    );
 
     if (CallAccess.get(systemId, functionId, msgSender)) {
       return;
@@ -179,9 +187,11 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
    */
   function allowCallAccessOrClassScopedSystem(uint256 entityId, bytes memory targetCallData) public view {
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
-    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(
+      callCount
+    );
     ResourceId callingSystemId = SystemRegistry.get(msgSender);
-    
+
     uint256 classId = _getClassId(entityId);
 
     if (CallAccess.get(systemId, functionId, msgSender)) {
@@ -199,10 +209,15 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
    * @param targetCallData The calldata of the target function
    * @dev Handles both direct calls (call depth 1) and class system-scoped calls (call depth > 1)
    */
-  function allowCallAccessOrClassScopedSystemOrDirectAccessRole(uint256 entityId, bytes memory targetCallData) public view {
+  function allowCallAccessOrClassScopedSystemOrDirectAccessRole(
+    uint256 entityId,
+    bytes memory targetCallData
+  ) public view {
     uint256 classId = _getClassId(entityId);
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
-    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(
+      callCount
+    );
     ResourceId callingSystemId = SystemRegistry.get(msgSender);
 
     if (CallAccess.get(systemId, functionId, msgSender)) {
@@ -224,10 +239,15 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
    * @param targetCallData The calldata of the target function
    * @dev Handles both direct calls (call depth 1) and class system-scoped calls (call depth > 1) and CallAccess defined calls
    */
-  function allowCallAccessOrClassScopedSystemOrDirectClassAccessRole(uint256 entityId, bytes memory targetCallData) public view {
+  function allowCallAccessOrClassScopedSystemOrDirectClassAccessRole(
+    uint256 entityId,
+    bytes memory targetCallData
+  ) public view {
     uint256 classId = _getClassId(entityId);
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
-    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
+    (ResourceId systemId, bytes4 functionId, address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(
+      callCount
+    );
     ResourceId callingSystemId = SystemRegistry.get(msgSender);
 
     if (CallAccess.get(systemId, functionId, msgSender)) {
@@ -245,7 +265,8 @@ contract SOFAccessSystem is ISOFAccessSystem, SmartObjectFramework {
 
   function _getClassId(uint256 entityId) private view returns (uint256) {
     uint256 classId;
-    if (entityId != 0) { // entityRelationValue requires an entry in EntityTagMap and entityId 0 cannot have an entry
+    if (entityId != 0) {
+      // entityRelationValue requires an entry in EntityTagMap and entityId 0 cannot have an entry
       if (EntityTagMap.getHasTag(entityId, TagIdLib.encode(TAG_TYPE_PROPERTY, TAG_IDENTIFIER_CLASS))) {
         classId = entityId;
       } else {

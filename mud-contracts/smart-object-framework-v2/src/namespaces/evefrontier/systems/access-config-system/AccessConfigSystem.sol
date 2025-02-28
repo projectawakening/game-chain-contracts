@@ -35,7 +35,7 @@ contract AccessConfigSystem is IAccessConfigSystem, SmartObjectFramework {
 
     // check if caller has access to configure access
     if (
-      !(CallAccess.get(systemId, this.configureAccess.selector, msgSender) || 
+      !(CallAccess.get(systemId, this.configureAccess.selector, msgSender) ||
         (callCount == 1 && NamespaceOwner.getOwner(targetSystemId.getNamespaceId()) == _callMsgSender(1)))
     ) {
       revert AccessConfig_AccessDenied(targetSystemId, msgSender);
@@ -56,18 +56,14 @@ contract AccessConfigSystem is IAccessConfigSystem, SmartObjectFramework {
     AccessConfig.set(target, true, targetSystemId, targetFunctionId, accessSystemId, accessFunctionId, false);
   }
 
-  function setAccessEnforcement(
-    ResourceId targetSystemId,
-    bytes4 targetFunctionId,
-    bool enforced
-  ) public context {
+  function setAccessEnforcement(ResourceId targetSystemId, bytes4 targetFunctionId, bool enforced) public context {
     ResourceId systemId = SystemRegistry.get(address(this));
     uint256 callCount = IWorldWithContext(_world()).getWorldCallCount();
     (, , address msgSender, ) = IWorldWithContext(_world()).getWorldCallContext(callCount);
 
     // check if caller has access to set access enforcement
     if (
-      !(CallAccess.get(systemId, this.setAccessEnforcement.selector, msgSender) || 
+      !(CallAccess.get(systemId, this.setAccessEnforcement.selector, msgSender) ||
         (callCount == 1 && NamespaceOwner.getOwner(targetSystemId.getNamespaceId()) == _callMsgSender(1)))
     ) {
       revert AccessConfig_AccessDenied(targetSystemId, msgSender);
