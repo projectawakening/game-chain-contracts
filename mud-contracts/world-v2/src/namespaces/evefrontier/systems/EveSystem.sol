@@ -39,6 +39,7 @@ import { smartTurretSystem } from "../codegen/systems/SmartTurretSystemLib.sol";
 import { SmartGateSystem } from "../systems/smart-gate/SmartGateSystem.sol";
 import { smartGateSystem } from "../codegen/systems/SmartGateSystemLib.sol";
 import { Initialize } from "../codegen/index.sol";
+import { IEveSystem } from "../interfaces/IEveSystem.sol";
 
 /**
  * @title EveSystem
@@ -46,7 +47,7 @@ import { Initialize } from "../codegen/index.sol";
  * @notice This is the base system to be inherited by all other systems.
  * @dev Consider combining this with the SmartObjectSystem which is extended by all systems.
  */
-contract EveSystem is SmartObjectFramework {
+contract EveSystem is SmartObjectFramework, IEveSystem {
   /**
    * @notice Get the world instance
    * @return The IWorld instance
@@ -441,11 +442,7 @@ contract EveSystem is SmartObjectFramework {
   function initialize(uint256 typeId, ResourceId[] memory systemIds) internal returns (uint256) {
     if (typeId == 0) revert("Invalid typeId");
     uint256 classId = uint256(keccak256(abi.encodePacked(typeId)));
-    entitySystem.registerClass(classId, systemIds);
-
-    //Create access role for this class and add the _callMsgSender(1) as a memeber by calling RoleManagementSystem.scopedCreateRole()
-    bytes32 adminRole = bytes32("ADMIN_ROLE");
-    roleManagementSystem.scopedCreateRole(classId, adminRole, adminRole, _callMsgSender(1));
+    entitySystem.scopedRegisterClass(classId, _callMsgSender(1), systemIds);
 
     return classId;
   }
